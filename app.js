@@ -22,6 +22,7 @@ const btnLogout = document.getElementById('btn-logout');
 // Navigation
 const navItems = document.querySelectorAll('.nav-item');
 const contentSections = document.querySelectorAll('.content-section');
+const menuDashboard = document.getElementById('menu-dashboard');
 const menuUsers = document.getElementById('menu-users');
 const menuInput = document.getElementById('menu-input');
 
@@ -86,6 +87,7 @@ function setupEventListeners() {
       contentSections.forEach(sec => sec.classList.add('hidden'));
       document.getElementById(targetId).classList.remove('hidden');
 
+      if (targetId === 'section-dashboard') loadDashboardData();
       if (targetId === 'section-validasi') fetchSiswaData(true);
       if (targetId === 'section-list') loadAllSiswa();
       if (targetId === 'section-users') loadAllUsers();
@@ -216,7 +218,53 @@ function showDashboard() {
     menuUsers.classList.add('hidden');
   }
   
-  document.querySelector('#main-menu li').click();
+  document.querySelector('#main-menu li[data-target="section-dashboard"]').click();
+}
+
+// ======================= DASHBOARD DATA =======================
+async function loadDashboardData() {
+  showLoader("Memuat Dashboard...");
+  try {
+    const data = await callAPI({ action: "getSiswa", pendingOnly: false });
+    siswaDataList = data;
+    
+    // Hitung Stat
+    const total = data.length;
+    const pending = data.filter(s => s.status === 'Pending' || s.status === '').length;
+    const aktif = data.filter(s => s.statusAktif === 'Aktif').length;
+    const ditolak = data.filter(s => s.status === 'Perlu Perbaikan').length;
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-pending').textContent = pending;
+    document.getElementById('stat-aktif').textContent = aktif;
+    document.getElementById('stat-ditolak').textContent = ditolak;
+
+    // Render Aktivitas Terbaru (Max 5)
+    const recentTable = document.getElementById('table-recent-body');
+    recentTable.innerHTML = '';
+    
+    if (total === 0) {
+      recentTable.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada aktivitas...</td></tr>';
+    } else {
+      const recentData = data.slice().reverse().slice(0, 5); // Ambil 5 data paling baru
+      recentData.forEach(s => {
+        let badgeColor = s.status === 'Selesai' ? 'green' : (s.status === 'Perlu Perbaikan' ? 'red' : 'orange');
+        let statusBadge = `<span style="background:${badgeColor}; color:white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${s.status || 'Pending'}</span>`;
+        
+        recentTable.innerHTML += `
+          <tr>
+            <td>${s.nama}</td>
+            <td>${s.program}</td>
+            <td>${s.createdBy || 'N/A'}</td>
+            <td>${statusBadge}</td>
+          </tr>
+        `;
+      });
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  hideLoader();
 }
 
 

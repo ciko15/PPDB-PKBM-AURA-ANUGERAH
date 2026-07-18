@@ -219,6 +219,42 @@ h2, h3, h4 {
   min-height: 100%;
 }
 
+/* ==================== DASHBOARD (HOME) ==================== */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+.stat-card {
+  background: var(--surface-color);
+  padding: 1.5rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.stat-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+.stat-info h3 {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+  font-weight: 500;
+}
+.stat-info p {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+
 /* ==================== VALIDATION NESTED LAYOUT ==================== */
 .nested-layout {
   display: flex;

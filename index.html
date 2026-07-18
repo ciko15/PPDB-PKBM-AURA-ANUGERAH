@@ -57,7 +57,8 @@
     <div class="layout-container">
       <aside class="sidebar main-nav" id="sidebar-nav">
         <ul id="main-menu" class="siswa-list">
-          <li class="active" data-target="section-input" id="menu-input">📝 Pendaftaran Baru</li>
+          <li class="active" data-target="section-dashboard" id="menu-dashboard">🏠 Beranda Dashboard</li>
+          <li data-target="section-input" id="menu-input">📝 Pendaftaran Baru</li>
           <li data-target="section-validasi">✅ Antrean Validasi AI</li>
           <li data-target="section-list">📋 Daftar Peserta Didik</li>
           <li data-target="section-users" id="menu-users" class="hidden">⚙️ Kelola Pengguna</li>
@@ -68,8 +69,63 @@
 
       <main class="main-content">
         
+        <!-- ==================== SECTION: DASHBOARD (HOME) ==================== -->
+        <div id="section-dashboard" class="content-section">
+          <h2 style="margin-bottom: 1.5rem;">Dashboard Ringkasan</h2>
+          
+          <div class="stat-cards">
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#e0f2fe; color:#0284c7;">👨‍🎓</div>
+              <div class="stat-info">
+                <h3>Total Pendaftar</h3>
+                <p id="stat-total">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#fef3c7; color:#d97706;">⏳</div>
+              <div class="stat-info">
+                <h3>Menunggu Validasi</h3>
+                <p id="stat-pending">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#dcfce7; color:#16a34a;">✅</div>
+              <div class="stat-info">
+                <h3>Siswa Aktif</h3>
+                <p id="stat-aktif">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#fee2e2; color:#dc2626;">❌</div>
+              <div class="stat-info">
+                <h3>Validasi Ditolak</h3>
+                <p id="stat-ditolak">0</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-panel" style="margin-top: 2rem;">
+            <h3>Aktivitas Pendaftaran Terbaru</h3>
+            <div class="table-container" style="margin-top: 1rem;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nama Lengkap</th>
+                    <th>Program</th>
+                    <th>Petugas</th>
+                    <th>Status Validasi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-recent-body">
+                  <tr><td colspan="4" style="text-align: center;">Belum ada aktivitas...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
         <!-- ==================== SECTION: INPUT PENDAFTARAN & EDIT ==================== -->
-        <div id="section-input" class="content-section card-panel">
+        <div id="section-input" class="content-section hidden card-panel">
           <h3 id="form-input-title">Formulir Pendaftaran Siswa Baru</h3>
           <p style="color:var(--text-muted); margin-bottom: 1.5rem;">Masukkan data calon peserta didik sesuai dokumen resmi (KK/Ijazah). Sebagian besar kolom bersifat opsional.</p>
           

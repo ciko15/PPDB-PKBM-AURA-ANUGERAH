@@ -1,7 +1,12 @@
 const SHEET_ID = '1MGmf21rJRhLw29cxMEm2vLz2ogfLI0ebxjlOj_OfE-g'; 
 
 function getDB(sheetName) {
-  return SpreadsheetApp.openById(SHEET_ID).getSheetByName(sheetName);
+  let sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(sheetName);
+  if (!sheet) {
+    setupDatabase(); // Auto-setup jika belum ada
+    sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(sheetName);
+  }
+  return sheet;
 }
 
 // =================== USER MANAGEMENT ===================
