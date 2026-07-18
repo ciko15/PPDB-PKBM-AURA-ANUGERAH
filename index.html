@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1e3a8a">
+  <title>Sistem Informasi PPDB (Kejar Paket)</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <!-- ==================== LOGIN PAGE ==================== -->
+  <div id="page-login" class="login-page">
+    <div class="login-card">
+      <div style="text-align:center; margin-bottom: 2rem;">
+        <img src="tut_wuri.svg" alt="Logo Sekolah" class="school-logo-large">
+        <h2 style="color: var(--primary-color); margin-top: 1rem;">SIS PPDB Terpadu</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Pendidikan Non-Formal</p>
+      </div>
+      <form id="form-login" onsubmit="event.preventDefault();">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="login-username" placeholder="Masukkan username" required>
+        </div>
+        <div class="form-group" style="margin-top: 1rem;">
+          <label>Password</label>
+          <input type="password" id="login-password" placeholder="Masukkan password" required>
+        </div>
+        <button id="btn-login" type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Masuk Aplikasi</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== DASHBOARD PAGE ==================== -->
+  <div id="page-dashboard" class="dashboard-page hidden">
+    <!-- Navbar -->
+    <header class="navbar">
+      <div class="brand">
+        <button id="btn-menu-mobile" class="btn-hamburger">☰</button>
+        <img src="tut_wuri.svg" alt="Logo" class="school-logo-small">
+        <span>SIS PPDB Terpadu</span>
+      </div>
+      <div class="user-profile">
+        <span id="active-user-name" class="user-name">Guru</span>
+        <button id="btn-logout" class="btn btn-danger btn-sm">Keluar</button>
+      </div>
+    </header>
+
+    <div class="layout-container">
+      <aside class="sidebar main-nav" id="sidebar-nav">
+        <ul id="main-menu" class="siswa-list">
+          <li class="active" data-target="section-input" id="menu-input">📝 Pendaftaran Baru</li>
+          <li data-target="section-validasi">✅ Antrean Validasi AI</li>
+          <li data-target="section-list">📋 Daftar Peserta Didik</li>
+          <li data-target="section-users" id="menu-users" class="hidden">⚙️ Kelola Pengguna</li>
+        </ul>
+      </aside>
+
+      <div id="sidebar-overlay" class="overlay hidden"></div>
+
+      <main class="main-content">
+        
+        <!-- ==================== SECTION: INPUT PENDAFTARAN & EDIT ==================== -->
+        <div id="section-input" class="content-section card-panel">
+          <h3 id="form-input-title">Formulir Pendaftaran Siswa Baru</h3>
+          <p style="color:var(--text-muted); margin-bottom: 1.5rem;">Masukkan data calon peserta didik sesuai dokumen resmi (KK/Ijazah). Sebagian besar kolom bersifat opsional.</p>
+          
+          <form id="form-input-siswa" onsubmit="event.preventDefault();">
+            <!-- Hidden field for Edit Mode -->
+            <input type="hidden" id="reg-id" value="">
+
+            <div class="form-group-row">
+              <div class="form-group half">
+                <label>Nama Lengkap <span style="color:red">*</span></label>
+                <input type="text" id="reg-nama" required>
+              </div>
+              <div class="form-group half">
+                <label>Jenis Kelamin</label>
+                <select id="reg-jk" class="form-control">
+                  <option value="">-- Pilih --</option>
+                  <option value="Laki-laki">Laki-laki</option>
+                  <option value="Perempuan">Perempuan</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>NIK</label>
+                <input type="text" id="reg-nik">
+              </div>
+              <div class="form-group half">
+                <label>NISN</label>
+                <input type="text" id="reg-nisn">
+              </div>
+            </div>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>Tempat Lahir</label>
+                <input type="text" id="reg-tempat-lahir">
+              </div>
+              <div class="form-group half">
+                <label>Tanggal Lahir</label>
+                <input type="date" id="reg-tgl-lahir">
+              </div>
+            </div>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>Nama Ibu Kandung</label>
+                <input type="text" id="reg-ibu">
+              </div>
+              <div class="form-group half">
+                <label>Program Pilihan <span style="color:red">*</span></label>
+                <select id="reg-program" class="form-control" required>
+                  <option value="">-- Pilih --</option>
+                  <option value="Paket A">Paket A (Setara SD)</option>
+                  <option value="Paket B">Paket B (Setara SMP)</option>
+                  <option value="Paket C">Paket C (Setara SMA)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>Nama Ayah</label>
+                <input type="text" id="reg-ayah">
+              </div>
+              <div class="form-group half">
+                <label>Nama Wali</label>
+                <input type="text" id="reg-wali">
+              </div>
+            </div>
+
+            <div class="form-group form-group-half" style="margin-top: 1rem;">
+              <label>Tahun Lulus Ijazah Sebelumnya (Khusus Paket B/C)</label>
+              <input type="number" id="reg-tahun-lulus" placeholder="Misal: 2021">
+            </div>
+
+            <hr class="divider">
+            
+            <h4>Upload Dokumen (Opsional, Format JPG/PNG)</h4>
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>File Ijazah Asal</label>
+                <input type="file" id="reg-file-ijazah" accept="image/*">
+              </div>
+              <div class="form-group half">
+                <label>File Kartu Keluarga</label>
+                <input type="file" id="reg-file-kk" accept="image/*">
+              </div>
+              <div class="form-group half">
+                <label>Bukti Pembayaran</label>
+                <input type="file" id="reg-file-bayar" accept="image/*">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+              <button id="btn-submit-reg" type="submit" class="btn btn-primary btn-submit-mobile">Daftarkan Siswa</button>
+              <button id="btn-cancel-edit" type="button" class="btn btn-danger hidden" onclick="cancelEdit()">Batal Edit</button>
+            </div>
+          </form>
+        </div>
+
+
+        <!-- ==================== SECTION: VALIDASI AI ==================== -->
+        <div id="section-validasi" class="content-section hidden nested-layout">
+          <!-- Antrean Validasi Inner Sidebar -->
+          <aside class="sidebar inner-sidebar">
+            <div class="sidebar-header">
+              <h3>Antrean Validasi</h3>
+            </div>
+            <ul id="siswa-list" class="siswa-list">
+              <li class="loading-text">Memuat data...</li>
+            </ul>
+          </aside>
+
+          <!-- Validasi Panel Inner Main -->
+          <div class="inner-main card-panel">
+            <div id="no-selection" class="empty-state">
+              <p>Pilih siswa dari antrean untuk mulai validasi.</p>
+            </div>
+
+            <div id="validation-panel" class="validation-panel hidden">
+              <div class="form-panel">
+                <h3>Data Siswa</h3>
+                
+                <div id="eligibility-box" class="eligibility-box hidden">
+                  <h4 id="elig-status-title">Status Kelayakan</h4>
+                  <p id="elig-status-text"></p>
+                </div>
+
+                <div class="form-group-row">
+                  <div class="form-group half"><label>Nama</label><input type="text" id="input-nama" readonly></div>
+                  <div class="form-group half"><label>JK</label><input type="text" id="input-jk" readonly></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group half"><label>NIK</label><input type="text" id="input-nik" readonly></div>
+                  <div class="form-group half"><label>NISN</label><input type="text" id="input-nisn" readonly></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group half"><label>Tempat Lahir</label><input type="text" id="input-tempat-lahir" readonly></div>
+                  <div class="form-group half"><label>Tanggal Lahir</label><input type="date" id="input-tgl-lahir" readonly></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group half"><label>Ibu Kandung</label><input type="text" id="input-ibu" readonly></div>
+                  <div class="form-group half"><label>Program</label><input type="text" id="input-program" readonly></div>
+                </div>
+                <div class="form-group-row">
+                  <div class="form-group half"><label>Nama Ayah</label><input type="text" id="input-ayah" readonly></div>
+                  <div class="form-group half"><label>Nama Wali</label><input type="text" id="input-wali" readonly></div>
+                </div>
+                <div class="form-group">
+                  <label>Tahun Lulus Sebelumnya</label><input type="text" id="input-tahun-lulus" readonly>
+                </div>
+                
+                <div id="ai-result-box" class="ai-result-box hidden">
+                  <h4 id="ai-status-title">🤖 Hasil AI</h4>
+                  <p id="ai-koreksi-text"></p>
+                </div>
+
+                <div class="action-buttons" style="margin-top: 1rem;">
+                  <button id="btn-cek-ai" class="btn btn-primary btn-block">Cek dengan AI (Ijazah)</button>
+                  <div class="btn-group-row">
+                    <button id="btn-setuju" class="btn btn-success">Valid / Setuju</button>
+                    <button id="btn-tolak" class="btn btn-danger">Tolak / Perbaikan</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Document Viewer -->
+              <div class="document-panel">
+                <div class="doc-tabs">
+                  <button class="tab-btn active" data-target="ijazah">Ijazah</button>
+                  <button class="tab-btn" data-target="kk">KK</button>
+                  <button class="tab-btn" data-target="bayar">Bukti Bayar</button>
+                </div>
+                <div class="doc-viewer">
+                  <div class="doc-loader" id="doc-loader">Loading image...</div>
+                  <img id="doc-image" src="" alt="Dokumen" onload="document.getElementById('doc-loader').style.display='none'">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: DAFTAR SISWA ==================== -->
+        <div id="section-list" class="content-section hidden card-panel">
+          <div class="list-header">
+            <h3>Daftar Peserta Didik</h3>
+            <button class="btn btn-primary" onclick="loadAllSiswa()">Refresh Data</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama</th>
+                  <th>Program</th>
+                  <th>Petugas (Pendaftar)</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="table-siswa-body">
+                <tr><td colspan="6" style="text-align: center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: KELOLA PENGGUNA ==================== -->
+        <div id="section-users" class="content-section hidden card-panel">
+          <h3>Kelola Pengguna (Khusus Admin)</h3>
+          <p style="color:var(--text-muted); margin-bottom: 1.5rem;">Tambahkan akun guru atau petugas pendaftaran baru di sini.</p>
+          
+          <div class="users-layout">
+            <div class="users-form-area">
+              <form id="form-add-user" onsubmit="event.preventDefault();">
+                <div class="form-group"><label>Username</label><input type="text" id="usr-username" required></div>
+                <div class="form-group" style="margin-top:1rem;"><label>Password</label><input type="password" id="usr-pass" required></div>
+                <div class="form-group" style="margin-top:1rem;"><label>Nama Lengkap</label><input type="text" id="usr-nama" required></div>
+                <div class="form-group" style="margin-top:1rem;">
+                  <label>Hak Akses (Role)</label>
+                  <select id="usr-role" class="form-control" required>
+                    <option value="Guru">Guru / Petugas</option>
+                    <option value="Admin">Admin</option>
+                  </select>
+                </div>
+                <button type="submit" id="btn-add-user" class="btn btn-success btn-submit-mobile" style="margin-top: 1.5rem;">Simpan Pengguna</button>
+              </form>
+            </div>
+            <div class="users-table-area table-container">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Username</th><th>Nama</th><th>Role</th><th>Aksi</th></tr>
+                </thead>
+                <tbody id="table-users-body">
+                  <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="global-loader" class="global-loader hidden">
+    <div class="spinner"></div>
+    <p id="loader-text">Memproses...</p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
