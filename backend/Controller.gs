@@ -22,10 +22,14 @@ function doPost(e) {
       result = getUsers();
     } else if (action === "addUser") {
       result = addUser(params.username, params.password, params.nama, params.role);
+    } else if (action === "updateUser") {
+      result = updateUser(params.username, params.nama, params.password);
     } else if (action === "deleteUser") {
       result = deleteUser(params.username);
     } else if (action === "registerSiswa") {
       result = registerSiswa(params.data);
+    } else if (action === "importSiswaBatch") {
+      result = importSiswaBatch(params.dataList);
     } else if (action === "updateSiswa") {
       result = updateSiswa(params.data);
     } else if (action === "getSiswa") {
@@ -37,6 +41,8 @@ function doPost(e) {
       result = updateStatusSiswa(params.idSiswa, params.status, params.koreksiAI);
     } else if (action === "updateStatusAktif") {
       result = updateStatusAktif(params.idSiswa, params.statusAktif);
+    } else if (action === "deleteSiswa") {
+      result = deleteSiswa(params.idSiswa);
     } else {
       result = { error: "Action not found" };
     }

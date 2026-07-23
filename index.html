@@ -13,6 +13,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -48,9 +50,12 @@
         <img src="tut_wuri.svg" alt="Logo" class="school-logo-small">
         <span>SIS PPDB Terpadu</span>
       </div>
-      <div class="user-profile">
-        <span id="active-user-name" class="user-name">Guru</span>
-        <button id="btn-logout" class="btn btn-danger btn-sm">Keluar</button>
+      <div class="user-profile" id="user-profile-btn" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 5px; border-radius: 8px; transition: background 0.3s;">
+        <div style="text-align: right; line-height: 1.2;">
+          <span id="active-user-name" class="user-name" style="display: block; font-weight: 600; font-size: 0.95rem;">Guru</span>
+          <span id="active-user-role" style="font-size: 0.75rem; color: #64748b;">Role</span>
+        </div>
+        <img id="active-user-avatar" src="tut_wuri.svg" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
       </div>
     </header>
 
@@ -62,6 +67,7 @@
           <li data-target="section-validasi">✅ Antrean Validasi AI</li>
           <li data-target="section-list">📋 Daftar Peserta Didik</li>
           <li data-target="section-users" id="menu-users" class="hidden">⚙️ Kelola Pengguna</li>
+          <li id="menu-logout" style="margin-top: 1.5rem; color: #dc2626; border-top: 1px solid #eee; padding-top: 15px;">🚪 Keluar</li>
         </ul>
       </aside>
 
@@ -135,6 +141,22 @@
 
             <div class="form-group-row">
               <div class="form-group half">
+                <label>Tanggal Daftar</label>
+                <input type="date" id="reg-tgl-daftar">
+              </div>
+              <div class="form-group half">
+                <label>Program / Jenjang <span style="color:red">*</span></label>
+                <select id="reg-program" class="form-control" required>
+                  <option value="">-- Pilih --</option>
+                  <option value="Paket A">Paket A (Setara SD)</option>
+                  <option value="Paket B">Paket B (Setara SMP)</option>
+                  <option value="Paket C">Paket C (Setara SMA)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
                 <label>Nama Lengkap <span style="color:red">*</span></label>
                 <input type="text" id="reg-nama" required>
               </div>
@@ -161,6 +183,39 @@
 
             <div class="form-group-row" style="margin-top: 1rem;">
               <div class="form-group half">
+                <label>No. Kartu Keluarga</label>
+                <input type="text" id="reg-no-kk">
+              </div>
+              <div class="form-group half">
+                <label>Urut KK</label>
+                <input type="text" id="reg-urut-kk">
+              </div>
+            </div>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>Kabupaten/Kota</label>
+                <input type="text" id="reg-kab-kota">
+              </div>
+              <div class="form-group half">
+                <label>Kecamatan</label>
+                <input type="text" id="reg-kecamatan">
+              </div>
+            </div>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>Desa/Kelurahan</label>
+                <input type="text" id="reg-desa-kelurahan">
+              </div>
+              <div class="form-group half">
+                <label>Kelas</label>
+                <input type="text" id="reg-kelas">
+              </div>
+            </div>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
                 <label>Tempat Lahir</label>
                 <input type="text" id="reg-tempat-lahir">
               </div>
@@ -170,53 +225,86 @@
               </div>
             </div>
 
+            <hr class="divider">
+            <h4>Data Orang Tua</h4>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>Nama Ayah Kandung</label>
+                <input type="text" id="reg-ayah">
+              </div>
+              <div class="form-group half">
+                <label>Tahun Lahir Ayah</label>
+                <input type="number" id="reg-tahun-lahir-ayah">
+              </div>
+            </div>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>NIK Ayah</label>
+                <input type="text" id="reg-nik-ayah">
+              </div>
+              <div class="form-group half">
+                <label>Nama Wali (Jika ada)</label>
+                <input type="text" id="reg-wali">
+              </div>
+            </div>
+
             <div class="form-group-row" style="margin-top: 1rem;">
               <div class="form-group half">
                 <label>Nama Ibu Kandung</label>
                 <input type="text" id="reg-ibu">
               </div>
               <div class="form-group half">
-                <label>Program Pilihan <span style="color:red">*</span></label>
-                <select id="reg-program" class="form-control" required>
-                  <option value="">-- Pilih --</option>
-                  <option value="Paket A">Paket A (Setara SD)</option>
-                  <option value="Paket B">Paket B (Setara SMP)</option>
-                  <option value="Paket C">Paket C (Setara SMA)</option>
-                </select>
+                <label>Tahun Lahir Ibu</label>
+                <input type="number" id="reg-tahun-lahir-ibu">
               </div>
             </div>
 
             <div class="form-group-row" style="margin-top: 1rem;">
               <div class="form-group half">
-                <label>Nama Ayah</label>
-                <input type="text" id="reg-ayah">
+                <label>NIK Ibu</label>
+                <input type="text" id="reg-nik-ibu">
               </div>
               <div class="form-group half">
-                <label>Nama Wali</label>
-                <input type="text" id="reg-wali">
+                <label>Tahun Lulus Ijazah Asal</label>
+                <input type="number" id="reg-tahun-lulus">
               </div>
-            </div>
-
-            <div class="form-group form-group-half" style="margin-top: 1rem;">
-              <label>Tahun Lulus Ijazah Sebelumnya (Khusus Paket B/C)</label>
-              <input type="number" id="reg-tahun-lulus" placeholder="Misal: 2021">
             </div>
 
             <hr class="divider">
-            
-            <h4>Upload Dokumen (Opsional, Format JPG/PNG)</h4>
+            <h4>Keterangan Tambahan & Upload (Opsional, Format JPG/PNG)</h4>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>Syarat</label>
+                <input type="text" id="reg-syarat" placeholder="Keterangan Syarat">
+              </div>
+              <div class="form-group half">
+                <label>Dok Berkas</label>
+                <input type="text" id="reg-dok-berkas" placeholder="Keterangan Dok Berkas">
+              </div>
+            </div>
+
             <div class="form-group-row" style="margin-top: 1rem;">
               <div class="form-group half">
                 <label>File Ijazah Asal</label>
-                <input type="file" id="reg-file-ijazah" accept="image/*">
+                <input type="file" id="reg-file-ijazah" accept="image/*,application/pdf">
               </div>
               <div class="form-group half">
                 <label>File Kartu Keluarga</label>
-                <input type="file" id="reg-file-kk" accept="image/*">
+                <input type="file" id="reg-file-kk" accept="image/*,application/pdf">
               </div>
+            </div>
+            
+            <div class="form-group-row" style="margin-top: 1rem;">
               <div class="form-group half">
                 <label>Bukti Pembayaran</label>
                 <input type="file" id="reg-file-bayar" accept="image/*">
+              </div>
+              <div class="form-group half">
+                <label>Foto Siswa</label>
+                <input type="file" id="reg-file-foto" accept="image/*">
               </div>
             </div>
 
@@ -301,8 +389,9 @@
                   <button class="tab-btn" data-target="bayar">Bukti Bayar</button>
                 </div>
                 <div class="doc-viewer">
-                  <div class="doc-loader" id="doc-loader">Loading image...</div>
+                  <div class="doc-loader" id="doc-loader">Loading document...</div>
                   <img id="doc-image" src="" alt="Dokumen" onload="document.getElementById('doc-loader').style.display='none'">
+                  <iframe id="doc-iframe" src="" style="width:100%; height:400px; display:none; border:none;" onload="document.getElementById('doc-loader').style.display='none'"></iframe>
                 </div>
               </div>
             </div>
@@ -311,9 +400,19 @@
 
         <!-- ==================== SECTION: DAFTAR SISWA ==================== -->
         <div id="section-list" class="content-section hidden card-panel">
-          <div class="list-header">
-            <h3>Daftar Peserta Didik</h3>
-            <button class="btn btn-primary" onclick="loadAllSiswa()">Refresh Data</button>
+          <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0;">Daftar Peserta Didik</h3>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-success" onclick="exportDataToExcel()">Export Excel/CSV</button>
+              <label class="btn btn-warning" style="cursor: pointer; margin: 0;">
+                Import Data
+                <input type="file" id="import-data-file" accept=".csv, .xlsx, .xls" style="display: none;" onchange="importDataFromFile(event)">
+              </label>
+              <button class="btn btn-primary" onclick="loadAllSiswa()">Refresh Data</button>
+            </div>
+          </div>
+          <div style="margin-bottom: 15px;">
+            <input type="text" id="search-siswa" placeholder="🔍 Cari nama, NIK, NISN, atau program..." style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 0.95rem;" oninput="filterSiswaTable()">
           </div>
           <div class="table-container">
             <table class="data-table">

@@ -23,22 +23,31 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar) {
       return { status: "ERROR", koreksi: "Gagal mengambil gambar dokumen. Cek permission URL/Link." };
     }
     const imageBlob = imageResponse.getBlob();
+    var contentType = imageBlob.getContentType() || "image/jpeg";
+    if (contentType.includes("application/pdf")) {
+      contentType = "application/pdf";
+    } else {
+      contentType = "image/jpeg";
+    }
     imageBase64 = Utilities.base64Encode(imageBlob.getBytes());
   } catch (e) {
     return { status: "ERROR", koreksi: "Error saat mengambil gambar: " + e.toString() };
   }
 
   const promptText = `Berikut adalah data pendaftaran calon siswa Kejar Paket (Sekolah Non-Formal):\n` +
-                     `Nama: ${dataSiswa.nama}\nNIK: ${dataSiswa.nik}\nNISN: ${dataSiswa.nisn}\n` +
-                     `Tempat & Tanggal Lahir: ${dataSiswa.tempatLahir}, ${dataSiswa.tglLahir}\n` +
-                     `Nama Ibu Kandung: ${dataSiswa.namaIbu}\n\n` +
-                     `Dan terlampir adalah gambar foto dokumen pendukungnya (Bisa berupa Ijazah atau Kartu Keluarga).\n` +
+                     `1. NIK: ${dataSiswa.nik}\n` +
+                     `2. Nama Lengkap: ${dataSiswa.nama}\n` +
+                     `3. Tempat Lahir: ${dataSiswa.tempatLahir}\n` +
+                     `4. Tanggal Lahir: ${dataSiswa.tglLahir}\n` +
+                     `5. Nama Ibu Kandung: ${dataSiswa.namaIbu}\n\n` +
+                     `Dan terlampir adalah gambar foto dokumen pendukungnya (KK atau Ijazah).\n` +
                      `Tugasmu:\n` +
-                     `1. Ekstrak data relevan dari dokumen.\n` +
-                     `2. Bandingkan dengan data teks di atas secara teliti.\n` +
-                     `3. Jika ada ketidaksesuaian sekecil apapun (termasuk beda ejaan Tempat Lahir atau Nama Ibu), jelaskan bagian mana yang salah dan berikan data yang benar dari gambar.\n` +
+                     `1. Ekstrak 5 data spesifik di atas (NIK, Nama Lengkap, Tempat Lahir, Tanggal Lahir, Nama Ibu Kandung) dari dokumen yang terlampir.\n` +
+                     `2. Bandingkan kelima data tersebut dengan input data teks di atas secara SANGAT TELITI dan KETAT.\n` +
+                     `3. Kelima data tersebut HARUS sama persis dengan data di dokumen pendukung.\n` +
+                     `4. Jika ada ketidaksesuaian ejaan, salah ketik, atau perbedaan angka/huruf sekecil apapun, jelaskan secara spesifik field mana yang salah dan sebutkan data yang benar berdasarkan gambar dokumen.\n` +
                      `Kembalikan respons murni dalam format JSON (tanpa markdown), dengan properti:\n` +
-                     `{"status": "COCOK" | "TIDAK_COCOK", "koreksi": "Penjelasan detail di sini (kosongkan jika cocok)"}`;
+                     `{"status": "COCOK" | "TIDAK_COCOK", "koreksi": "Penjelasan detail jika tidak cocok (kosongkan jika cocok)"}`;
 
   const payload = {
     contents: [
@@ -47,7 +56,7 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar) {
           { text: promptText },
           {
             inline_data: {
-              mime_type: "image/jpeg",
+              mime_type: contentType,
               data: imageBase64
             }
           }
