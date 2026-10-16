@@ -147,7 +147,7 @@ function setupEventListeners() {
       const targetId = item.getAttribute('data-target');
 
       if (targetId === 'section-input') {
-        document.getElementById('modal-register').classList.remove('hidden');
+        resetAndOpenRegisterForm();
         return;
       }
 
@@ -259,6 +259,15 @@ function setupEventListeners() {
       wrapperFormUser.classList.add('hidden');
     });
   }
+
+  // Drawer Detail Siswa Close Listeners
+  const btnCloseDrawer = document.getElementById('btn-close-drawer');
+  const btnDrawerClose = document.getElementById('btn-drawer-close');
+  const drawerOverlay = document.getElementById('siswa-detail-overlay');
+
+  if (btnCloseDrawer) btnCloseDrawer.addEventListener('click', closeSiswaDetailDrawer);
+  if (btnDrawerClose) btnDrawerClose.addEventListener('click', closeSiswaDetailDrawer);
+  if (drawerOverlay) drawerOverlay.addEventListener('click', closeSiswaDetailDrawer);
 
   // Mobile Menu Toggle
   const btnMenuMobile = document.getElementById('btn-menu-mobile');
@@ -669,6 +678,38 @@ async function handleRegistrationOrEdit(e) {
   }
 }
 
+// Helper untuk membuka formulir pendaftaran baru: isi tanggal hari ini dan kunci jika bukan Admin
+function resetAndOpenRegisterForm() {
+  cancelEdit();
+  const inputTglDaftar = document.getElementById('reg-tgl-daftar');
+  if (inputTglDaftar) {
+    // Set tanggal hari ini (yyyy-MM-dd)
+    const today = new Date().toISOString().split('T')[0];
+    inputTglDaftar.value = today;
+
+    // Hanya Admin / Super Admin yang bisa mengubah tanggal daftar
+    const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
+    if (isAdmin) {
+      inputTglDaftar.removeAttribute('readonly');
+      inputTglDaftar.style.backgroundColor = '';
+      inputTglDaftar.style.cursor = '';
+      inputTglDaftar.title = '';
+    } else {
+      inputTglDaftar.setAttribute('readonly', 'true');
+      inputTglDaftar.style.backgroundColor = '#f1f5f9';
+      inputTglDaftar.style.cursor = 'not-allowed';
+      inputTglDaftar.title = 'Tanggal pendaftaran otomatis hari ini (hanya Admin yang dapat mengubah)';
+    }
+  }
+
+  const modalReg = document.getElementById('modal-register');
+  if (modalReg) {
+    modalReg.classList.remove('hidden');
+    const modalContent = modalReg.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
+  }
+}
+
 function loadSiswaForEdit(id) {
   const s = siswaDataList.find(x => String(x.id) === String(id));
   if (!s) {
@@ -687,7 +728,22 @@ function loadSiswaForEdit(id) {
   // Set nilai di form dengan pengamanan format tanggal
   try {
     document.getElementById('reg-id').value = s.id;
-    document.getElementById('reg-tgl-daftar').value = formatToDateInput(s.tglDaftar);
+    const inputTglDaftar = document.getElementById('reg-tgl-daftar');
+    if (inputTglDaftar) {
+      inputTglDaftar.value = formatToDateInput(s.tglDaftar);
+      const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
+      if (isAdmin) {
+        inputTglDaftar.removeAttribute('readonly');
+        inputTglDaftar.style.backgroundColor = '';
+        inputTglDaftar.style.cursor = '';
+        inputTglDaftar.title = '';
+      } else {
+        inputTglDaftar.setAttribute('readonly', 'true');
+        inputTglDaftar.style.backgroundColor = '#f1f5f9';
+        inputTglDaftar.style.cursor = 'not-allowed';
+        inputTglDaftar.title = 'Hanya Admin yang dapat mengubah tanggal daftar';
+      }
+    }
     document.getElementById('reg-nama').value = s.nama;
     document.getElementById('reg-jk').value = s.jk;
     document.getElementById('reg-nik').value = s.nik;
@@ -972,34 +1028,97 @@ function renderSiswaTable(data) {
 }
 
 function showSiswaDetail(id) {
-  const s = siswaDataList.find(x => x.id === id);
+  const s = siswaDataList.find(x => String(x.id) === String(id));
   if (!s) return;
 
-  const htmlContent = `
-    <div style="text-align: left; font-size: 0.9rem; line-height: 1.5; margin-top: 1rem;">
-      <table style="width: 100%; border-collapse: collapse;">
-        <tr><td style="padding: 6px; font-weight: bold; width: 40%; border-bottom: 1px solid #eee;">Nama Lengkap</td><td style="padding: 6px; border-bottom: 1px solid #eee;">: ${s.nama || '-'}</td></tr>
-        <tr><td style="padding: 6px; font-weight: bold; border-bottom: 1px solid #eee;">NIK</td><td style="padding: 6px; border-bottom: 1px solid #eee;">: ${s.nik || '-'}</td></tr>
-        <tr><td style="padding: 6px; font-weight: bold; border-bottom: 1px solid #eee;">NISN</td><td style="padding: 6px; border-bottom: 1px solid #eee;">: ${s.nisn || '-'}</td></tr>
-        <tr><td style="padding: 6px; font-weight: bold; border-bottom: 1px solid #eee;">Jenis Kelamin</td><td style="padding: 6px; border-bottom: 1px solid #eee;">: ${s.jk || '-'}</td></tr>
-        <tr><td style="padding: 6px; font-weight: bold; border-bottom: 1px solid #eee;">Tempat, Tgl Lahir</td><td style="padding: 6px; border-bottom: 1px solid #eee;">: ${s.tempatLahir || '-'}, ${s.tglLahir ? String(s.tglLahir).split('T')[0] : '-'}</td></tr>
-        <tr><td style="padding: 6px; font-weight: bold; border-bottom: 1px solid #eee;">Program / Jenjang</td><td style="padding: 6px; border-bottom: 1px solid #eee;">: ${s.program || '-'}</td></tr>
-        <tr><td style="padding: 6px; font-weight: bold; border-bottom: 1px solid #eee;">Nama Ibu Kandung</td><td style="padding: 6px; border-bottom: 1px solid #eee;">: ${s.namaIbu || '-'}</td></tr>
-        <tr><td style="padding: 6px; font-weight: bold; border-bottom: 1px solid #eee;">Nama Ayah Kandung</td><td style="padding: 6px; border-bottom: 1px solid #eee;">: ${s.namaAyah || '-'}</td></tr>
-        <tr><td style="padding: 6px; font-weight: bold; border-bottom: 1px solid #eee;">Status Validasi</td><td style="padding: 6px; border-bottom: 1px solid #eee;">: <b>${s.status || 'Pending'}</b></td></tr>
-        <tr><td style="padding: 6px; font-weight: bold;">Tgl Daftar</td><td style="padding: 6px;">: ${s.tglDaftar ? String(s.tglDaftar).split('T')[0] : '-'}</td></tr>
-      </table>
+  const drawer = document.getElementById('siswa-detail-drawer');
+  const overlay = document.getElementById('siswa-detail-overlay');
+  const content = document.getElementById('drawer-detail-content');
+  const subtitle = document.getElementById('drawer-subtitle');
+
+  if (subtitle) {
+    subtitle.textContent = `ID: ${s.id || '-'} | Didaftarkan oleh: ${s.createdBy || 'Petugas'}`;
+  }
+
+  const badgeColor = s.status === 'Selesai' ? '#15803d' : (s.status === 'Perlu Perbaikan' ? '#b91c1c' : '#b45309');
+  const badgeBg = s.status === 'Selesai' ? '#dcfce7' : (s.status === 'Perlu Perbaikan' ? '#fee2e2' : '#fef3c7');
+  const statusAktifColor = s.statusAktif === 'Aktif' ? '#15803d' : '#64748b';
+  const statusAktifBg = s.statusAktif === 'Aktif' ? '#dcfce7' : '#f1f5f9';
+
+  content.innerHTML = `
+    <!-- Ringkasan Status Header -->
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; color: #0f172a;">${s.nama || '-'}</h3>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+          Status: ${s.status || 'Pending'}
+        </span>
+        <span style="background: ${statusAktifBg}; color: ${statusAktifColor}; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+          ${s.statusAktif || 'Tidak Aktif'}
+        </span>
+        <span style="background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+          ${s.program || '-'}
+        </span>
+      </div>
+    </div>
+
+    <!-- Data Identitas -->
+    <div class="drawer-detail-card">
+      <h4>Identitas Siswa</h4>
+      <div class="drawer-info-row"><span class="drawer-info-label">NIK</span><span class="drawer-info-value">${s.nik || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">NISN</span><span class="drawer-info-value">${s.nisn || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Jenis Kelamin</span><span class="drawer-info-value">${s.jk || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Tempat Lahir</span><span class="drawer-info-value">${s.tempatLahir || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Tanggal Lahir</span><span class="drawer-info-value">${formatToDateInput(s.tglLahir) || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">No. Kartu Keluarga</span><span class="drawer-info-value">${s.noKk || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Urut di KK</span><span class="drawer-info-value">${s.urutKk || '-'}</span></div>
+    </div>
+
+    <!-- Data Akademik & Program -->
+    <div class="drawer-detail-card">
+      <h4>Pendidikan & Program</h4>
+      <div class="drawer-info-row"><span class="drawer-info-label">Jenjang / Program</span><span class="drawer-info-value">${s.program || s.jenjang || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Kelas</span><span class="drawer-info-value">${s.kelas || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Tahun Lulus Asal</span><span class="drawer-info-value">${s.tahunLulus || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Tanggal Daftar</span><span class="drawer-info-value">${formatToDateInput(s.tglDaftar) || '-'}</span></div>
+    </div>
+
+    <!-- Data Orang Tua -->
+    <div class="drawer-detail-card">
+      <h4>Data Orang Tua & Wali</h4>
+      <div class="drawer-info-row"><span class="drawer-info-label">Ibu Kandung</span><span class="drawer-info-value">${s.namaIbu || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">NIK Ibu</span><span class="drawer-info-value">${s.nikIbu || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Ayah Kandung</span><span class="drawer-info-value">${s.namaAyah || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">NIK Ayah</span><span class="drawer-info-value">${s.nikAyah || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Nama Wali</span><span class="drawer-info-value">${s.namaWali || '-'}</span></div>
+    </div>
+
+    <!-- Alamat Domisili -->
+    <div class="drawer-detail-card">
+      <h4>Wilayah & Domisili</h4>
+      <div class="drawer-info-row"><span class="drawer-info-label">Kabupaten/Kota</span><span class="drawer-info-value">${s.kabKota || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Kecamatan</span><span class="drawer-info-value">${s.kecamatan || '-'}</span></div>
+      <div class="drawer-info-row"><span class="drawer-info-label">Desa / Kelurahan</span><span class="drawer-info-value">${s.desaKelurahan || '-'}</span></div>
+    </div>
+
+    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+      <button class="btn btn-primary" onclick="closeSiswaDetailDrawer(); loadSiswaForEdit('${s.id}')" style="flex: 1; padding: 10px;">
+        ✏️ Edit Data Siswa
+      </button>
     </div>
   `;
 
-  Swal.fire({
-    title: 'Detail Peserta Didik',
-    html: htmlContent,
-    icon: 'info',
-    confirmButtonText: 'Tutup',
-    confirmButtonColor: '#3085d6',
-    width: '500px'
-  });
+  if (drawer && overlay) {
+    overlay.classList.remove('hidden');
+    drawer.classList.remove('hidden');
+  }
+}
+
+function closeSiswaDetailDrawer() {
+  const drawer = document.getElementById('siswa-detail-drawer');
+  const overlay = document.getElementById('siswa-detail-overlay');
+  if (drawer) drawer.classList.add('hidden');
+  if (overlay) overlay.classList.add('hidden');
 }
 
 async function toggleStatusSiswa(id, newStatus) {
