@@ -1,5 +1,5 @@
-// Konfigurasi API Endpoint (Express Server Google Sheets API v4 atau Fallback Google Apps Script)
-const USE_LOCAL_SERVER = true;
+// Konfigurasi API Endpoint (Ubah USE_LOCAL_SERVER = true jika menjalankan server Node.js lokal 'npm start')
+const USE_LOCAL_SERVER = false;
 const LOCAL_API_URL = "http://localhost:3001/api";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8tzFBAyd8aTe1_Or-7skj5lOBQ_K_CoXCAVz_WDqCxkiZg6gTi480I468psGy4wzJ/exec";
 const API_URL = USE_LOCAL_SERVER ? LOCAL_API_URL : SCRIPT_URL;
