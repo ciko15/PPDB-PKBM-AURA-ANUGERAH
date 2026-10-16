@@ -19,119 +19,190 @@
 </head>
 <body>
   
-  <!-- ==================== LOGIN PAGE ==================== -->
-  <div id="page-login" class="login-page">
-    <div class="login-card">
-      <div style="text-align:center; margin-bottom: 2rem;">
-        <img src="tut_wuri.svg" alt="Logo Sekolah" class="school-logo-large">
-        <h2 style="color: var(--primary-color); margin-top: 1rem;">SIS PPDB Terpadu</h2>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">Pendidikan Non-Formal</p>
-      </div>
-      <form id="form-login" onsubmit="event.preventDefault();">
-        <div class="form-group">
-          <label>Username</label>
-          <input type="text" id="login-username" placeholder="Masukkan username" required>
+  <!-- ==================== LANDING PAGE ==================== -->
+  <div id="page-landing" class="landing-page">
+    <header class="landing-header">
+      <div class="landing-brand" id="landing-brand-logo" style="cursor: pointer;" title="Klik 5 kali untuk login">
+        <div class="brand-icon">A</div>
+        <div class="brand-text">
+          <h1>PKBM Aura Anugerah</h1>
+          <p>Pendidikan Kesetaraan Paket A · B · C</p>
         </div>
-        <div class="form-group" style="margin-top: 1rem;">
-          <label>Password</label>
-          <input type="password" id="login-password" placeholder="Masukkan password" required>
-        </div>
-        <button id="btn-login" type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Masuk Aplikasi</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ==================== DASHBOARD PAGE ==================== -->
-  <div id="page-dashboard" class="dashboard-page hidden">
-    <!-- Navbar -->
-    <header class="navbar">
-      <div class="brand">
-        <button id="btn-menu-mobile" class="btn-hamburger">☰</button>
-        <img src="tut_wuri.svg" alt="Logo" class="school-logo-small">
-        <span>SIS PPDB Terpadu</span>
       </div>
-      <div class="user-profile" id="user-profile-btn" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 5px; border-radius: 8px; transition: background 0.3s;">
-        <div style="text-align: right; line-height: 1.2;">
-          <span id="active-user-name" class="user-name" style="display: block; font-weight: 600; font-size: 0.95rem;">Guru</span>
-          <span id="active-user-role" style="font-size: 0.75rem; color: #64748b;">Role</span>
-        </div>
-        <img id="active-user-avatar" src="tut_wuri.svg" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
-      </div>
+      <nav class="landing-nav">
+        <a href="#" onclick="document.getElementById('program').scrollIntoView({behavior: 'smooth'}); return false;">Program</a>
+        <a href="#" onclick="document.getElementById('cara-pendaftaran').scrollIntoView({behavior: 'smooth'}); return false;">Cara Pendaftaran</a>
+        <a href="#" onclick="document.getElementById('modal-register').classList.remove('hidden'); return false;">Formulir</a>
+        <a href="#" onclick="document.getElementById('kontak').scrollIntoView({behavior: 'smooth'}); return false;">Kontak</a>
+      </nav>
+      <button class="btn btn-landing-primary" onclick="document.getElementById('modal-register').classList.remove('hidden')">Daftar Sekarang</button>
     </header>
 
-    <div class="layout-container">
-      <aside class="sidebar main-nav" id="sidebar-nav">
-        <ul id="main-menu" class="siswa-list">
-          <li class="active" data-target="section-dashboard" id="menu-dashboard">🏠 Beranda Dashboard</li>
-          <li data-target="section-input" id="menu-input">📝 Pendaftaran Baru</li>
-          <li data-target="section-validasi">✅ Antrean Validasi AI</li>
-          <li data-target="section-list">📋 Daftar Peserta Didik</li>
-          <li data-target="section-users" id="menu-users" class="hidden">⚙️ Kelola Pengguna</li>
-          <li id="menu-logout" style="margin-top: 1.5rem; color: #dc2626; border-top: 1px solid #eee; padding-top: 15px;">🚪 Keluar</li>
-        </ul>
-      </aside>
-
-      <div id="sidebar-overlay" class="overlay hidden"></div>
-
-      <main class="main-content">
-        
-        <!-- ==================== SECTION: DASHBOARD (HOME) ==================== -->
-        <div id="section-dashboard" class="content-section">
-          <h2 style="margin-bottom: 1.5rem;">Dashboard Ringkasan</h2>
-          
-          <div class="stat-cards">
-            <div class="stat-card">
-              <div class="stat-icon" style="background:#e0f2fe; color:#0284c7;">👨‍🎓</div>
-              <div class="stat-info">
-                <h3>Total Pendaftar</h3>
-                <p id="stat-total">0</p>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon" style="background:#fef3c7; color:#d97706;">⏳</div>
-              <div class="stat-info">
-                <h3>Menunggu Validasi</h3>
-                <p id="stat-pending">0</p>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon" style="background:#dcfce7; color:#16a34a;">✅</div>
-              <div class="stat-info">
-                <h3>Siswa Aktif</h3>
-                <p id="stat-aktif">0</p>
-              </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon" style="background:#fee2e2; color:#dc2626;">❌</div>
-              <div class="stat-info">
-                <h3>Validasi Ditolak</h3>
-                <p id="stat-ditolak">0</p>
-              </div>
+    <main class="landing-main">
+      <section class="hero-section">
+        <div class="hero-content">
+          <p class="hero-subtitle">Pendidikan kesetaraan untuk semua usia</p>
+          <h2 class="hero-title">Melanjutkan sekolah, kapan pun Anda siap.</h2>
+          <p class="hero-desc">PKBM Aura Anugerah menyelenggarakan Program Kesetaraan Paket A, B, dan C bagi siapa saja yang ingin menyelesaikan atau melanjutkan pendidikan — tanpa batasan usia, dan tanpa harus meninggalkan pekerjaan atau kesibukan sehari-hari.</p>
+          <div class="hero-actions">
+            <button class="btn btn-landing-primary btn-lg" onclick="document.getElementById('formulir').scrollIntoView({behavior: 'smooth'})">Isi Formulir Pendaftaran</button>
+            <button class="btn btn-outline btn-lg" onclick="document.getElementById('cara-pendaftaran').scrollIntoView({behavior: 'smooth'})">Lihat Cara Pendaftaran</button>
+          </div>
+        </div>
+        <div class="hero-cards">
+          <div class="feature-card">
+            <div class="feature-icon">🎓</div>
+            <div class="feature-text">
+              <h3>Tiga jenjang setara</h3>
+              <p>Paket A setara SD/MI, Paket B setara SMP/MTs, Paket C setara SMA/MA.</p>
             </div>
           </div>
-
-          <div class="card-panel" style="margin-top: 2rem;">
-            <h3>Aktivitas Pendaftaran Terbaru</h3>
-            <div class="table-container" style="margin-top: 1rem;">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Nama Lengkap</th>
-                    <th>Program</th>
-                    <th>Petugas</th>
-                    <th>Status Validasi</th>
-                  </tr>
-                </thead>
-                <tbody id="table-recent-body">
-                  <tr><td colspan="4" style="text-align: center;">Belum ada aktivitas...</td></tr>
-                </tbody>
-              </table>
+          <div class="feature-card">
+            <div class="feature-icon">✅</div>
+            <div class="feature-text">
+              <h3>Ijazah resmi negara</h3>
+              <p>Diterbitkan dan diakui setara dengan ijazah pendidikan formal.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🕒</div>
+            <div class="feature-text">
+              <h3>Jadwal fleksibel</h3>
+              <p>Waktu belajar disesuaikan bersama pengelola PKBM.</p>
+            </div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">💻</div>
+            <div class="feature-text">
+              <h3>Pendaftaran langsung online</h3>
+              <p>Tidak perlu datang atau login — isi formulir di halaman ini.</p>
             </div>
           </div>
         </div>
+      </section>
+
+      <section id="program" class="program-section">
+        <h2>Pilih program yang sesuai</h2>
+        <p class="section-desc">Setiap program dirancang setara dengan jenjang pendidikan formal, dengan cara belajar yang lebih menyesuaikan kebutuhan warga belajar.</p>
+        <div class="program-table-container">
+          <table class="program-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Paket A</th>
+                <th>Paket B</th>
+                <th>Paket C</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Setara jenjang</td>
+                <td>SD / MI <span class="badge badge-brown">Kelas 1-6</span></td>
+                <td>SMP / MTs <span class="badge badge-brown">Kelas 7-9</span></td>
+                <td>SMA / MA <span class="badge badge-brown">Kelas 10-12</span></td>
+              </tr>
+              <tr>
+                <td>Untuk siapa</td>
+                <td>Belum menyelesaikan pendidikan SD/MI.</td>
+                <td>Lulus/setara Paket A atau SD, belum menyelesaikan SMP.</td>
+                <td>Lulus/setara Paket B atau SMP, belum menyelesaikan SMA.</td>
+              </tr>
+              <tr>
+                <td>Ijazah</td>
+                <td>Setara SD, diakui secara nasional.</td>
+                <td>Setara SMP, diakui secara nasional.</td>
+                <td>Setara SMA, diakui secara nasional.</td>
+              </tr>
+              <tr>
+                <td>Lama belajar</td>
+                <td>Menyesuaikan kemampuan warga belajar.</td>
+                <td>Menyesuaikan kemampuan warga belajar.</td>
+                <td>Menyesuaikan kemampuan warga belajar.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="cara-pendaftaran" class="steps-section">
+        <div class="steps-container">
+          <h2>Cara pendaftaran</h2>
+          <p class="section-desc">Pendaftaran dilakukan langsung dari halaman ini, tanpa perlu membuat akun atau masuk sebagai pengguna terdaftar.</p>
+          <div class="step-item">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h3>Pilih program</h3>
+              <p>Tentukan Paket A, B, atau C sesuai jenjang pendidikan terakhir Anda.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h3>Siapkan dokumen</h3>
+              <p>Siapkan dokumen persyaratan di bawah ini untuk dibawa saat verifikasi berkas.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h3>Isi formulir online</h3>
+              <p>Lengkapi formulir pendaftaran pada bagian bawah halaman ini.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <h3>Kirim pendaftaran</h3>
+              <p>Data yang Anda isi akan langsung diteruskan ke admin PKBM melalui WhatsApp.</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-number">5</div>
+            <div class="step-content">
+              <h3>Tunggu konfirmasi</h3>
+              <p>Admin akan menghubungi Anda untuk verifikasi berkas dan jadwal orientasi belajar.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="docs-section">
+        <div class="docs-card">
+          <h3>Dokumen yang perlu disiapkan</h3>
+          <ul>
+            <li>Fotokopi Kartu Keluarga (KK)</li>
+            <li>Fotokopi KTP / Akta Kelahiran</li>
+            <li>Fotokopi ijazah atau rapor jenjang sebelumnya (atau surat keterangan bagi yang belum memilikinya)</li>
+            <li>Pas foto terbaru ukuran 3x4 (2 lembar)</li>
+          </ul>
+          <p class="docs-note">Dokumen dibawa langsung saat verifikasi berkas — tidak perlu diunggah pada formulir ini.</p>
+        </div>
+      </section>
+
+      <section id="kontak" class="form-section">
+        <h2>Kontak Kami</h2>
+        <p class="section-desc">Hubungi kami melalui saluran berikut untuk informasi lebih lanjut.</p>
+        <div class="landing-form-card" style="padding: 2rem;">
+          <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px;">📍 Alamat PKBM</h3>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Jl. Pendidikan No. 123, Kota Anda, Provinsi Anda</p>
+          
+          <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px;">📱 WhatsApp Admin</h3>
+          <p style="color: var(--text-muted); margin-bottom: 0;">+62 812-3456-7890 (Jam Kerja: 08.00 - 16.00)</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  
+  <!-- ==================== REGISTER MODAL ==================== -->
+  <div id="modal-register" class="login-modal hidden">
+    <div class="login-modal-overlay" id="register-modal-overlay"></div>
+    <div class="login-card modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto; text-align: left;">
+      <button id="btn-close-register" class="btn-close-modal">&times;</button>
+
         
         <!-- ==================== SECTION: INPUT PENDAFTARAN & EDIT ==================== -->
-        <div id="section-input" class="content-section hidden card-panel">
+        <div id="section-input" style="padding: 0;">
           <h3 id="form-input-title">Formulir Pendaftaran Siswa Baru</h3>
           <p style="color:var(--text-muted); margin-bottom: 1.5rem;">Masukkan data calon peserta didik sesuai dokumen resmi (KK/Ijazah). Sebagian besar kolom bersifat opsional.</p>
           
@@ -313,6 +384,120 @@
               <button id="btn-cancel-edit" type="button" class="btn btn-danger hidden" onclick="cancelEdit()">Batal Edit</button>
             </div>
           </form>
+        </div>
+    </div>
+  </div>
+<!-- ==================== LOGIN MODAL ==================== -->
+  <div id="modal-login" class="login-modal hidden">
+    <div class="login-modal-overlay" id="login-modal-overlay"></div>
+    <div class="login-card modal-content">
+      <button id="btn-close-login" class="btn-close-modal">&times;</button>
+      <div style="text-align:center; margin-bottom: 2rem;">
+        <img src="tut_wuri.svg" alt="Logo Sekolah" class="school-logo-large">
+        <h2 style="color: var(--primary-color); margin-top: 1rem;">SIS PPDB Terpadu</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Pendidikan Non-Formal</p>
+      </div>
+      <form id="form-login" onsubmit="event.preventDefault();">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="login-username" placeholder="Masukkan username" required>
+        </div>
+        <div class="form-group" style="margin-top: 1rem;">
+          <label>Password</label>
+          <input type="password" id="login-password" placeholder="Masukkan password" required>
+        </div>
+        <button id="btn-login" type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Masuk Aplikasi</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== DASHBOARD PAGE ==================== -->
+  <div id="page-dashboard" class="dashboard-page hidden">
+    <!-- Navbar -->
+    <header class="navbar">
+      <div class="brand">
+        <button id="btn-menu-mobile" class="btn-hamburger">☰</button>
+        <img src="tut_wuri.svg" alt="Logo" class="school-logo-small">
+        <span>SIS PPDB Terpadu</span>
+      </div>
+      <div class="user-profile" id="user-profile-btn" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 5px; border-radius: 8px; transition: background 0.3s;">
+        <div style="text-align: right; line-height: 1.2;">
+          <span id="active-user-name" class="user-name" style="display: block; font-weight: 600; font-size: 0.95rem;">Guru</span>
+          <span id="active-user-role" style="font-size: 0.75rem; color: #64748b;">Role</span>
+        </div>
+        <img id="active-user-avatar" src="tut_wuri.svg" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
+      </div>
+    </header>
+
+    <div class="layout-container">
+      <aside class="sidebar main-nav" id="sidebar-nav">
+        <ul id="main-menu" class="siswa-list">
+          <li class="active" data-target="section-dashboard" id="menu-dashboard">🏠 Beranda Dashboard</li>
+          <li data-target="section-input" id="menu-input">📝 Pendaftaran Baru</li>
+          <li data-target="section-validasi">✅ Antrean Validasi AI</li>
+          <li data-target="section-list">📋 Daftar Peserta Didik</li>
+          <li data-target="section-users" id="menu-users" class="hidden">⚙️ Kelola Pengguna</li>
+          <li id="menu-logout" style="margin-top: 1.5rem; color: #dc2626; border-top: 1px solid #eee; padding-top: 15px;">🚪 Keluar</li>
+        </ul>
+      </aside>
+
+      <div id="sidebar-overlay" class="overlay hidden"></div>
+
+      <main class="main-content">
+        
+        <!-- ==================== SECTION: DASHBOARD (HOME) ==================== -->
+        <div id="section-dashboard" class="content-section">
+          <h2 style="margin-bottom: 1.5rem;">Dashboard Ringkasan</h2>
+          
+          <div class="stat-cards">
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#e0f2fe; color:#0284c7;">👨‍🎓</div>
+              <div class="stat-info">
+                <h3>Total Pendaftar</h3>
+                <p id="stat-total">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#fef3c7; color:#d97706;">⏳</div>
+              <div class="stat-info">
+                <h3>Menunggu Validasi</h3>
+                <p id="stat-pending">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#dcfce7; color:#16a34a;">✅</div>
+              <div class="stat-info">
+                <h3>Siswa Aktif</h3>
+                <p id="stat-aktif">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#fee2e2; color:#dc2626;">❌</div>
+              <div class="stat-info">
+                <h3>Validasi Ditolak</h3>
+                <p id="stat-ditolak">0</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-panel" style="margin-top: 2rem;">
+            <h3>Aktivitas Pendaftaran Terbaru</h3>
+            <div class="table-container" style="margin-top: 1rem;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Nama Lengkap</th>
+                    <th>Program</th>
+                    <th>Petugas</th>
+                    <th>Status Validasi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-recent-body">
+                  <tr><td colspan="4" style="text-align: center;">Belum ada aktivitas...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
 

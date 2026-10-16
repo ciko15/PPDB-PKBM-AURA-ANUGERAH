@@ -7,13 +7,20 @@ let usersDataList = [];
 let currentSiswa = null;
 
 // ======================= DOM ELEMENTS =======================
-const pageLogin = document.getElementById('page-login');
+const pageLanding = document.getElementById('page-landing');
 const pageDashboard = document.getElementById('page-dashboard');
+const modalLogin = document.getElementById('modal-login');
+const btnCloseLogin = document.getElementById('btn-close-login');
+const landingBrandLogo = document.getElementById('landing-brand-logo');
+const loginModalOverlay = document.getElementById('login-modal-overlay');
+let loginClickCount = 0;
+let loginClickTimer = null;
 const globalLoader = document.getElementById('global-loader');
 const loaderText = document.getElementById('loader-text');
 
 // Form Login
 const formLogin = document.getElementById('form-login');
+const inputLoginUser = document.getElementById('login-username');
 const inputLoginPass = document.getElementById('login-password');
 const activeUserName = document.getElementById('active-user-name');
 const activeUserRole = document.getElementById('active-user-role');
@@ -87,8 +94,14 @@ function setupEventListeners() {
       item.classList.add('active');
       const targetId = item.getAttribute('data-target');
 
+      if (targetId === 'section-input') {
+        document.getElementById('modal-register').classList.remove('hidden');
+        return;
+      }
+
       contentSections.forEach(sec => sec.classList.add('hidden'));
-      document.getElementById(targetId).classList.remove('hidden');
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) targetEl.classList.remove('hidden');
 
       if (targetId === 'section-dashboard') loadDashboardData();
       if (targetId === 'section-validasi') fetchSiswaData(true);
@@ -217,8 +230,9 @@ function checkLocalSession() {
     currentUser = JSON.parse(session);
     showDashboard();
   } else {
-    pageLogin.classList.remove('hidden');
+    pageLanding.classList.remove('hidden');
     pageDashboard.classList.add('hidden');
+    if(modalLogin) modalLogin.classList.add('hidden');
   }
 }
 
@@ -257,14 +271,16 @@ function handleLogout() {
       if (syncInterval) clearInterval(syncInterval);
       localStorage.removeItem('ppdb_session');
       currentUser = null;
-      pageLogin.classList.remove('hidden');
+      pageLanding.classList.remove('hidden');
       pageDashboard.classList.add('hidden');
+      if(modalLogin) modalLogin.classList.add('hidden');
     }
   });
 }
 
 function showDashboard() {
-  pageLogin.classList.add('hidden');
+  pageLanding.classList.add('hidden');
+  if(modalLogin) modalLogin.classList.add('hidden');
   pageDashboard.classList.remove('hidden');
   activeUserName.textContent = currentUser.nama;
   if (activeUserRole) activeUserRole.textContent = currentUser.role;
@@ -400,7 +416,7 @@ async function handleRegistrationOrEdit(e) {
         kkFile: b64Kk,
         bayarFile: b64Bayar,
         fotoFile: b64Foto,
-        createdBy: currentUser.username
+        createdBy: currentUser ? currentUser.username : 'Public'
       }
     };
 
@@ -1082,4 +1098,48 @@ function importDataFromFile(event) {
   reader.readAsArrayBuffer(file);
 }
 
+// ======================= HIDDEN LOGIN MECHANISM =======================
+if (landingBrandLogo) {
+  landingBrandLogo.addEventListener('click', () => {
+    loginClickCount++;
+    if (loginClickTimer) clearTimeout(loginClickTimer);
+    
+    if (loginClickCount >= 5) {
+      modalLogin.classList.remove('hidden');
+      loginClickCount = 0;
+    } else {
+      loginClickTimer = setTimeout(() => {
+        loginClickCount = 0;
+      }, 1000); // Reset count after 1 second of inactivity
+    }
+  });
+}
 
+if (btnCloseLogin) {
+  btnCloseLogin.addEventListener('click', () => {
+    modalLogin.classList.add('hidden');
+  });
+}
+
+if (loginModalOverlay) {
+  loginModalOverlay.addEventListener('click', () => {
+    modalLogin.classList.add('hidden');
+  });
+}
+
+// ======================= REGISTER MODAL LOGIC =======================
+const btnCloseRegister = document.getElementById('btn-close-register');
+const registerModalOverlay = document.getElementById('register-modal-overlay');
+const modalRegister = document.getElementById('modal-register');
+
+if (btnCloseRegister && modalRegister) {
+  btnCloseRegister.addEventListener('click', () => {
+    modalRegister.classList.add('hidden');
+  });
+}
+
+if (registerModalOverlay && modalRegister) {
+  registerModalOverlay.addEventListener('click', () => {
+    modalRegister.classList.add('hidden');
+  });
+}
