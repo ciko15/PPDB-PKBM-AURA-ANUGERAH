@@ -310,6 +310,8 @@ function handleLogout() {
     if (result.isConfirmed) {
       if (syncInterval) clearInterval(syncInterval);
       localStorage.removeItem('ppdb_session');
+      localStorage.removeItem('ppdb_siswa_cache');
+      siswaDataList = [];
       currentUser = null;
       pageLanding.classList.remove('hidden');
       pageDashboard.classList.add('hidden');
@@ -331,6 +333,9 @@ function showDashboard() {
   } else {
     menuUsers.classList.add('hidden');
   }
+
+  // Muat data dari cache lokal secara instan (0 detik)
+  loadCachedSiswaData();
 
   document.querySelector('#main-menu li[data-target="section-dashboard"]').click();
 
@@ -358,53 +363,92 @@ async function backgroundSync() {
   }
 }
 
+// Helper untuk menampilkan data ke tampilan Dashboard
+function renderDashboardUI(data) {
+  if (!data) return;
+  const total = data.length;
+  const pending = data.filter(s => s.status === 'Pending' || s.status === '').length;
+  const aktif = data.filter(s => s.statusAktif === 'Aktif').length;
+  const ditolak = data.filter(s => s.status === 'Perlu Perbaikan').length;
+
+  const elTotal = document.getElementById('stat-total');
+  const elPending = document.getElementById('stat-pending');
+  const elAktif = document.getElementById('stat-aktif');
+  const elDitolak = document.getElementById('stat-ditolak');
+
+  if (elTotal) elTotal.textContent = total;
+  if (elPending) elPending.textContent = pending;
+  if (elAktif) elAktif.textContent = aktif;
+  if (elDitolak) elDitolak.textContent = ditolak;
+
+  // Render Aktivitas Terbaru (Max 5)
+  const recentTable = document.getElementById('table-recent-body');
+  if (!recentTable) return;
+  recentTable.innerHTML = '';
+
+  if (total === 0) {
+    recentTable.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada aktivitas...</td></tr>';
+  } else {
+    const recentData = data.slice().reverse().slice(0, 5); // Ambil 5 data paling baru
+    recentData.forEach(s => {
+      let badgeColor = s.status === 'Selesai' ? 'green' : (s.status === 'Perlu Perbaikan' ? 'red' : 'orange');
+      let statusBadge = `<span style="background:${badgeColor}; color:white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${s.status || 'Pending'}</span>`;
+
+      const tr = document.createElement('tr');
+      tr.style.cursor = 'pointer';
+      tr.title = 'Klik untuk melihat detail peserta didik';
+      tr.onclick = () => showSiswaDetail(s.id);
+      tr.innerHTML = `
+        <td><strong>${s.nama || '-'}</strong></td>
+        <td>${s.program || '-'}</td>
+        <td>${s.createdBy || 'N/A'}</td>
+        <td>${statusBadge}</td>
+      `;
+      recentTable.appendChild(tr);
+    });
+  }
+}
+
+// Muat cache lokal agar saat reload/refresh data langsung muncul seketika (0 detik)
+function loadCachedSiswaData() {
+  try {
+    const cached = localStorage.getItem('ppdb_siswa_cache');
+    if (cached) {
+      siswaDataList = JSON.parse(cached);
+      renderDashboardUI(siswaDataList);
+    }
+  } catch (e) {
+    console.warn("Gagal membaca cache:", e);
+  }
+}
+
 // ======================= DASHBOARD DATA =======================
 async function loadDashboardData(silent = false) {
-  if (!silent) showLoader("Memuat Dashboard...");
+  // Jika sudah ada data dari cache / memori, jangan block UI dengan loader layar penuh
+  const hasExistingData = siswaDataList && siswaDataList.length > 0;
+  
+  const syncIndicator = document.getElementById('sync-indicator');
+  if (syncIndicator) syncIndicator.style.display = 'flex';
+
+  if (!silent && !hasExistingData) {
+    showLoader("Memuat data...");
+  }
+
   try {
     const data = await callAPI({ action: "getSiswa", pendingOnly: false });
     siswaDataList = data;
+    // Simpan ke cache lokal untuk reload instan berikutnya
+    try {
+      localStorage.setItem('ppdb_siswa_cache', JSON.stringify(data));
+    } catch (e) {}
 
-    // Hitung Stat
-    const total = data.length;
-    const pending = data.filter(s => s.status === 'Pending' || s.status === '').length;
-    const aktif = data.filter(s => s.statusAktif === 'Aktif').length;
-    const ditolak = data.filter(s => s.status === 'Perlu Perbaikan').length;
-
-    document.getElementById('stat-total').textContent = total;
-    document.getElementById('stat-pending').textContent = pending;
-    document.getElementById('stat-aktif').textContent = aktif;
-    document.getElementById('stat-ditolak').textContent = ditolak;
-
-    // Render Aktivitas Terbaru (Max 5)
-    const recentTable = document.getElementById('table-recent-body');
-    recentTable.innerHTML = '';
-
-    if (total === 0) {
-      recentTable.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada aktivitas...</td></tr>';
-    } else {
-      const recentData = data.slice().reverse().slice(0, 5); // Ambil 5 data paling baru
-      recentData.forEach(s => {
-        let badgeColor = s.status === 'Selesai' ? 'green' : (s.status === 'Perlu Perbaikan' ? 'red' : 'orange');
-        let statusBadge = `<span style="background:${badgeColor}; color:white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${s.status || 'Pending'}</span>`;
-
-        const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer';
-        tr.title = 'Klik untuk melihat detail peserta didik';
-        tr.onclick = () => showSiswaDetail(s.id);
-        tr.innerHTML = `
-          <td><strong>${s.nama || '-'}</strong></td>
-          <td>${s.program || '-'}</td>
-          <td>${s.createdBy || 'N/A'}</td>
-          <td>${statusBadge}</td>
-        `;
-        recentTable.appendChild(tr);
-      });
-    }
+    renderDashboardUI(siswaDataList);
   } catch (err) {
-    console.error(err);
+    console.error("Load dashboard error:", err);
+  } finally {
+    if (syncIndicator) syncIndicator.style.display = 'none';
+    if (!silent && !hasExistingData) hideLoader();
   }
-  if (!silent) hideLoader();
 }
 
 
@@ -548,13 +592,21 @@ const toBase64 = file => new Promise((resolve, reject) => {
 
 // ======================= ANTREAN VALIDASI =======================
 async function fetchSiswaData(onlyPending, silent = false) {
-  if (!silent) siswaListEl.innerHTML = '<li class="loading-text">Memuat data...</li>';
+  if (siswaDataList && siswaDataList.length > 0) {
+    renderSiswaListValidasi();
+  } else if (!silent) {
+    siswaListEl.innerHTML = '<li class="loading-text">Memuat data...</li>';
+  }
+
   try {
     const data = await callAPI({ action: "getSiswa", pendingOnly: onlyPending });
     siswaDataList = data;
+    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(data)); } catch (e) {}
     renderSiswaListValidasi();
   } catch (err) {
-    siswaListEl.innerHTML = '<li>Error loading data.</li>';
+    if (!siswaDataList || siswaDataList.length === 0) {
+      siswaListEl.innerHTML = '<li>Error loading data.</li>';
+    }
   }
 }
 
@@ -699,15 +751,23 @@ async function submitValidation(status) {
 
 // ======================= DAFTAR SISWA =======================
 async function loadAllSiswa(silent = false) {
-  if (!silent) tableSiswaBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Memuat data...</td></tr>';
+  if (siswaDataList && siswaDataList.length > 0) {
+    renderSiswaTable(siswaDataList);
+  } else if (!silent) {
+    tableSiswaBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Memuat data...</td></tr>';
+  }
+
   try {
     const data = await callAPI({ action: "getSiswa", pendingOnly: false });
     siswaDataList = data; // Simpan untuk Edit Mode
+    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(data)); } catch (e) {}
     const searchInput = document.getElementById('search-siswa');
     if (searchInput) searchInput.value = '';
     renderSiswaTable(siswaDataList);
   } catch (err) {
-    tableSiswaBody.innerHTML = `<tr><td colspan="7">${err.message}</td></tr>`;
+    if (!siswaDataList || siswaDataList.length === 0) {
+      tableSiswaBody.innerHTML = `<tr><td colspan="7">${err.message}</td></tr>`;
+    }
   }
 }
 

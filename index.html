@@ -447,7 +447,13 @@
         
         <!-- ==================== SECTION: DASHBOARD (HOME) ==================== -->
         <div id="section-dashboard" class="content-section">
-          <h2 style="margin-bottom: 1.5rem;">Dashboard Ringkasan</h2>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h2 style="margin: 0;">Dashboard Ringkasan</h2>
+            <div id="sync-indicator" style="display: none; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 9999px;">
+              <span class="sync-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#0284c7; animation: pulse 1.2s infinite;"></span>
+              <span>Menyinkronkan data...</span>
+            </div>
+          </div>
           
           <div class="stat-cards">
             <div class="stat-card">
