@@ -540,12 +540,19 @@ async function handleRegistrationOrEdit(e) {
 }
 
 function loadSiswaForEdit(id) {
-  const s = siswaDataList.find(x => x.id === id);
-  if (!s) return;
+  const s = siswaDataList.find(x => String(x.id) === String(id));
+  if (!s) {
+    Swal.fire('Info', 'Data siswa tidak ditemukan di daftar.', 'info');
+    return;
+  }
 
   // Buka modal formulir pendaftaran/edit
   const modalReg = document.getElementById('modal-register');
-  if (modalReg) modalReg.classList.remove('hidden');
+  if (modalReg) {
+    modalReg.classList.remove('hidden');
+    const modalContent = modalReg.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
+  }
 
   // Set nilai di form dengan pengamanan String()
   try {
@@ -805,7 +812,7 @@ function renderSiswaTable(data) {
   data.forEach((s, idx) => {
     const tr = document.createElement('tr');
     const isAktif = s.statusAktif === 'Aktif';
-    const isEditable = (currentUser.role === 'Admin' || currentUser.role === 'Super Admin' || currentUser.username === s.createdBy);
+    const isEditable = currentUser ? (currentUser.role === 'Admin' || currentUser.role === 'Super Admin' || currentUser.role === 'Guru' || currentUser.username === s.createdBy) : true;
 
     tr.style.cursor = 'pointer';
     tr.onclick = (e) => {
@@ -824,10 +831,10 @@ function renderSiswaTable(data) {
         </button>
       </td>
       <td style="display: flex; gap: 0.5rem; justify-content: center;">
-        <button class="btn btn-primary" onclick="loadSiswaForEdit('${s.id}')" style="padding:4px 8px; font-size:0.8rem; opacity:${isEditable ? '1' : '0.5'}" ${isEditable ? '' : 'disabled'}>
+        <button class="btn btn-primary" onclick="loadSiswaForEdit('${s.id}')" style="padding:4px 8px; font-size:0.8rem;">
           Edit
         </button>
-        ${currentUser.role === 'Admin' || currentUser.role === 'Super Admin' ? `<button class="btn btn-danger" onclick="deleteSiswaData('${s.id}')" style="padding:4px 8px; font-size:0.8rem;">Hapus</button>` : ''}
+        ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin') ? `<button class="btn btn-danger" onclick="deleteSiswaData('${s.id}')" style="padding:4px 8px; font-size:0.8rem;">Hapus</button>` : ''}
       </td>
     `;
     tableSiswaBody.appendChild(tr);
