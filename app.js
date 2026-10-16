@@ -526,9 +526,13 @@ async function handleRegistrationOrEdit(e) {
 
     if (siswaId) {
       cancelEdit();
+      const modalReg = document.getElementById('modal-register');
+      if (modalReg) modalReg.classList.add('hidden');
       document.querySelector('li[data-target="section-list"]').click();
     } else {
       formInputSiswa.reset();
+      const modalReg = document.getElementById('modal-register');
+      if (modalReg) modalReg.classList.add('hidden');
     }
   } catch (err) {
     Swal.fire('Gagal', err.message, 'error');
@@ -539,8 +543,9 @@ function loadSiswaForEdit(id) {
   const s = siswaDataList.find(x => x.id === id);
   if (!s) return;
 
-  // Ubah ke menu Pendaftaran Baru
-  menuInput.click();
+  // Buka modal formulir pendaftaran/edit
+  const modalReg = document.getElementById('modal-register');
+  if (modalReg) modalReg.classList.remove('hidden');
 
   // Set nilai di form dengan pengamanan String()
   try {
@@ -585,6 +590,8 @@ function cancelEdit() {
   formInputTitle.textContent = "Formulir Pendaftaran Siswa Baru";
   btnSubmitReg.textContent = "Daftarkan Siswa";
   btnCancelEdit.classList.add('hidden');
+  const modalReg = document.getElementById('modal-register');
+  if (modalReg) modalReg.classList.add('hidden');
 }
 
 const toBase64 = file => new Promise((resolve, reject) => {
@@ -1252,12 +1259,12 @@ const modalRegister = document.getElementById('modal-register');
 
 if (btnCloseRegister && modalRegister) {
   btnCloseRegister.addEventListener('click', () => {
-    modalRegister.classList.add('hidden');
+    cancelEdit();
   });
 }
 
 if (registerModalOverlay && modalRegister) {
   registerModalOverlay.addEventListener('click', () => {
-    modalRegister.classList.add('hidden');
+    cancelEdit();
   });
 }
