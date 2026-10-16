@@ -9,6 +9,55 @@ let siswaDataList = [];
 let usersDataList = [];
 let currentSiswa = null;
 
+// Helper konversi format tanggal (mendukung Excel Serial Number misal 45091, ISO string, atau Date object) ke 'yyyy-MM-dd'
+function formatToDateInput(val) {
+  if (!val && val !== 0) return '';
+  
+  // Jika nilai adalah angka (Excel Serial Date, misal 45091 atau 38710)
+  if (typeof val === 'number' || (!isNaN(val) && !String(val).includes('-') && !String(val).includes('/'))) {
+    const num = Number(val);
+    if (num > 1000) {
+      // Excel epoch dimulai dari 30 Dec 1899
+      const utcDays = Math.floor(num - 25569);
+      const utcValue = utcDays * 86400;
+      const dateInfo = new Date(utcValue * 1000);
+      const y = dateInfo.getUTCFullYear();
+      const m = String(dateInfo.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(dateInfo.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+
+  const str = String(val).trim();
+  if (!str) return '';
+
+  // Jika format sudah yyyy-MM-dd atau yyyy-MM-ddTHH:mm:ss
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    return str.substring(0, 10);
+  }
+
+  // Jika format dd/MM/yyyy atau dd-MM-yyyy
+  const parts = str.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) { // yyyy/mm/dd
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    } else if (parts[2].length === 4) { // dd/mm/yyyy
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+
+  // Coba parse standar Date
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return '';
+}
+
 // ======================= DOM ELEMENTS =======================
 const pageLanding = document.getElementById('page-landing');
 const pageDashboard = document.getElementById('page-dashboard');
@@ -105,6 +154,9 @@ function setupEventListeners() {
       contentSections.forEach(sec => sec.classList.add('hidden'));
       const targetEl = document.getElementById(targetId);
       if (targetEl) targetEl.classList.remove('hidden');
+
+      // Simpan view terakhir agar saat refresh/reload tetap di tab/menu ini
+      try { localStorage.setItem('ppdb_last_section', targetId); } catch (e) {}
 
       if (targetId === 'section-dashboard') loadDashboardData();
       if (targetId === 'section-validasi') fetchSiswaData(true);
@@ -316,6 +368,7 @@ function handleLogout() {
       if (syncInterval) clearInterval(syncInterval);
       localStorage.removeItem('ppdb_session');
       localStorage.removeItem('ppdb_siswa_cache');
+      localStorage.removeItem('ppdb_last_section');
       siswaDataList = [];
       currentUser = null;
       pageLanding.classList.remove('hidden');
@@ -342,7 +395,14 @@ function showDashboard() {
   // Muat data dari cache lokal secara instan (0 detik)
   loadCachedSiswaData();
 
-  document.querySelector('#main-menu li[data-target="section-dashboard"]').click();
+  // Buka view terakhir yang dibuka sebelum refresh/reload
+  const lastSection = localStorage.getItem('ppdb_last_section') || 'section-dashboard';
+  const targetMenuItem = document.querySelector(`#main-menu li[data-target="${lastSection}"]`) || document.querySelector('#main-menu li[data-target="section-dashboard"]');
+  if (targetMenuItem) {
+    targetMenuItem.click();
+  } else {
+    document.querySelector('#main-menu li[data-target="section-dashboard"]').click();
+  }
 
   if (syncInterval) clearInterval(syncInterval);
   syncInterval = setInterval(backgroundSync, 10000);
@@ -554,10 +614,10 @@ function loadSiswaForEdit(id) {
     if (modalContent) modalContent.scrollTop = 0;
   }
 
-  // Set nilai di form dengan pengamanan String()
+  // Set nilai di form dengan pengamanan format tanggal
   try {
     document.getElementById('reg-id').value = s.id;
-    document.getElementById('reg-tgl-daftar').value = s.tglDaftar ? String(s.tglDaftar).split('T')[0] : '';
+    document.getElementById('reg-tgl-daftar').value = formatToDateInput(s.tglDaftar);
     document.getElementById('reg-nama').value = s.nama;
     document.getElementById('reg-jk').value = s.jk;
     document.getElementById('reg-nik').value = s.nik;
@@ -569,7 +629,7 @@ function loadSiswaForEdit(id) {
     document.getElementById('reg-desa-kelurahan').value = s.desaKelurahan || '';
     document.getElementById('reg-kelas').value = s.kelas || '';
     document.getElementById('reg-tempat-lahir').value = s.tempatLahir;
-    document.getElementById('reg-tgl-lahir').value = s.tglLahir ? String(s.tglLahir).split('T')[0] : '';
+    document.getElementById('reg-tgl-lahir').value = formatToDateInput(s.tglLahir);
     document.getElementById('reg-ibu').value = s.namaIbu;
     document.getElementById('reg-tahun-lahir-ibu').value = s.tahunLahirIbu || '';
     document.getElementById('reg-nik-ibu').value = s.nikIbu || '';
@@ -657,7 +717,7 @@ function selectSiswa(id, listItemElement) {
     valNik.value = currentSiswa.nik || "";
     valNisn.value = currentSiswa.nisn || "";
     valTempatLahir.value = currentSiswa.tempatLahir || "";
-    valTglLahir.value = currentSiswa.tglLahir ? String(currentSiswa.tglLahir).split('T')[0] : "";
+    valTglLahir.value = formatToDateInput(currentSiswa.tglLahir);
     valIbu.value = currentSiswa.namaIbu || "";
     valAyah.value = currentSiswa.namaAyah || "";
     valWali.value = currentSiswa.namaWali || "";
