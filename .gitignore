@@ -1,2 +1,6 @@
 Project.md
 issue.md
+node_modules/
+credentials.json
+.env
+

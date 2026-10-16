@@ -1,5 +1,8 @@
-// Konfigurasi URL Apps Script Web App
+// Konfigurasi API Endpoint (Express Server Google Sheets API v4 atau Fallback Google Apps Script)
+const USE_LOCAL_SERVER = true;
+const LOCAL_API_URL = "http://localhost:3001/api";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8tzFBAyd8aTe1_Or-7skj5lOBQ_K_CoXCAVz_WDqCxkiZg6gTi480I468psGy4wzJ/exec";
+const API_URL = USE_LOCAL_SERVER ? LOCAL_API_URL : SCRIPT_URL;
 
 let currentUser = null;
 let siswaDataList = [];
@@ -184,6 +187,27 @@ function setupEventListeners() {
 
   formAddUser.addEventListener('submit', handleAddUser);
 
+  const btnToggleAddUser = document.getElementById('btn-toggle-add-user');
+  const btnCancelAddUser = document.getElementById('btn-cancel-add-user');
+  const wrapperFormUser = document.getElementById('wrapper-form-user');
+
+  if (btnToggleAddUser && wrapperFormUser) {
+    btnToggleAddUser.addEventListener('click', () => {
+      wrapperFormUser.classList.toggle('hidden');
+      if (!wrapperFormUser.classList.contains('hidden')) {
+        document.getElementById('usr-username').focus();
+        wrapperFormUser.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  if (btnCancelAddUser && wrapperFormUser) {
+    btnCancelAddUser.addEventListener('click', () => {
+      formAddUser.reset();
+      wrapperFormUser.classList.add('hidden');
+    });
+  }
+
   // Mobile Menu Toggle
   const btnMenuMobile = document.getElementById('btn-menu-mobile');
   const sidebarNav = document.getElementById('sidebar-nav');
@@ -213,14 +237,30 @@ function setupEventListeners() {
 
 // ======================= API CALLER =======================
 async function callAPI(payload) {
-  const response = await fetch(SCRIPT_URL, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-  const result = await response.json();
-  if (!result.success) throw new Error(result.error || "Gagal memanggil API");
-  return result.data;
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error || "Gagal memanggil API");
+    return result.data;
+  } catch (err) {
+    // Jika server lokal tidak aktif dan fallback tersedia, coba ke SCRIPT_URL
+    if (API_URL !== SCRIPT_URL) {
+      console.warn("Koneksi server lokal gagal, beralih ke Apps Script URL...", err);
+      const fbResponse = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      const fbResult = await fbResponse.json();
+      if (!fbResult.success) throw new Error(fbResult.error || "Gagal memanggil API");
+      return fbResult.data;
+    }
+    throw err;
+  }
 }
 
 // ======================= SESSION & LOGIN =======================
@@ -348,14 +388,17 @@ async function loadDashboardData(silent = false) {
         let badgeColor = s.status === 'Selesai' ? 'green' : (s.status === 'Perlu Perbaikan' ? 'red' : 'orange');
         let statusBadge = `<span style="background:${badgeColor}; color:white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${s.status || 'Pending'}</span>`;
 
-        recentTable.innerHTML += `
-          <tr>
-            <td>${s.nama}</td>
-            <td>${s.program}</td>
-            <td>${s.createdBy || 'N/A'}</td>
-            <td>${statusBadge}</td>
-          </tr>
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.title = 'Klik untuk melihat detail peserta didik';
+        tr.onclick = () => showSiswaDetail(s.id);
+        tr.innerHTML = `
+          <td><strong>${s.nama || '-'}</strong></td>
+          <td>${s.program || '-'}</td>
+          <td>${s.createdBy || 'N/A'}</td>
+          <td>${statusBadge}</td>
         `;
+        recentTable.appendChild(tr);
       });
     }
   } catch (err) {
@@ -543,7 +586,7 @@ function selectSiswa(id, listItemElement) {
     valNik.value = currentSiswa.nik || "";
     valNisn.value = currentSiswa.nisn || "";
     valTempatLahir.value = currentSiswa.tempatLahir || "";
-    valTglLahir.value = currentSiswa.tglLahir ? currentSiswa.tglLahir.split('T')[0] : "";
+    valTglLahir.value = currentSiswa.tglLahir ? String(currentSiswa.tglLahir).split('T')[0] : "";
     valIbu.value = currentSiswa.namaIbu || "";
     valAyah.value = currentSiswa.namaAyah || "";
     valWali.value = currentSiswa.namaWali || "";
@@ -914,6 +957,16 @@ async function handleAddUser() {
     await callAPI({ action: "addUser", username: u, password: p, nama: n, role: r });
     hideLoader();
     document.getElementById('form-add-user').reset();
+    const wrapper = document.getElementById('wrapper-form-user');
+    if (wrapper) wrapper.classList.add('hidden');
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Pengguna berhasil ditambahkan',
+      showConfirmButton: false,
+      timer: 3000
+    });
     loadAllUsers();
   } catch (err) {
     hideLoader(); Swal.fire('Error', err.message, 'error');
