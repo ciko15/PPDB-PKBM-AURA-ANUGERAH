@@ -238,17 +238,22 @@ function setupEventListeners() {
 // ======================= API CALLER =======================
 async function callAPI(payload) {
   try {
-    const response = await fetch(API_URL, {
+    const fetchOptions = {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
-    });
+    };
+    
+    // Jangan kirim header application/json ke Apps Script agar tidak memicu CORS Preflight (OPTIONS)
+    if (API_URL === LOCAL_API_URL) {
+      fetchOptions.headers = { "Content-Type": "application/json" };
+    }
 
+    const response = await fetch(API_URL, fetchOptions);
     const result = await response.json();
     if (!result.success) throw new Error(result.error || "Gagal memanggil API");
     return result.data;
   } catch (err) {
-    // Jika server lokal tidak aktif dan fallback tersedia, coba ke SCRIPT_URL
+    // Jika server lokal gagal dan fallback tersedia, coba ke SCRIPT_URL
     if (API_URL !== SCRIPT_URL) {
       console.warn("Koneksi server lokal gagal, beralih ke Apps Script URL...", err);
       const fbResponse = await fetch(SCRIPT_URL, {
