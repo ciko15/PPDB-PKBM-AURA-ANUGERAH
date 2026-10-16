@@ -572,28 +572,98 @@ async function handleRegistrationOrEdit(e) {
       }
     };
 
-    const res = await callAPI(payload);
+    // Siapkan object siswa baru/edit untuk optimistic update ke memori & cache lokal
+    const currentTgl = document.getElementById('reg-tgl-daftar').value || new Date().toISOString().split('T')[0];
+    const newOrUpdatedSiswa = {
+      id: siswaId || ('S' + Date.now()),
+      tglDaftar: currentTgl,
+      nama: document.getElementById('reg-nama').value,
+      jk: document.getElementById('reg-jk').value,
+      nik: document.getElementById('reg-nik').value,
+      nisn: document.getElementById('reg-nisn').value,
+      noKk: document.getElementById('reg-no-kk').value,
+      urutKk: document.getElementById('reg-urut-kk').value,
+      kabKota: document.getElementById('reg-kab-kota').value,
+      kecamatan: document.getElementById('reg-kecamatan').value,
+      desaKelurahan: document.getElementById('reg-desa-kelurahan').value,
+      kelas: document.getElementById('reg-kelas').value,
+      tempatLahir: document.getElementById('reg-tempat-lahir').value,
+      tglLahir: document.getElementById('reg-tgl-lahir').value,
+      namaIbu: document.getElementById('reg-ibu').value,
+      tahunLahirIbu: document.getElementById('reg-tahun-lahir-ibu').value,
+      nikIbu: document.getElementById('reg-nik-ibu').value,
+      namaAyah: document.getElementById('reg-ayah').value,
+      tahunLahirAyah: document.getElementById('reg-tahun-lahir-ayah').value,
+      nikAyah: document.getElementById('reg-nik-ayah').value,
+      namaWali: document.getElementById('reg-wali').value,
+      program: document.getElementById('reg-program').value,
+      jenjang: document.getElementById('reg-program').value,
+      tahunLulus: document.getElementById('reg-tahun-lulus').value,
+      syarat: document.getElementById('reg-syarat').value,
+      dokBerkas: document.getElementById('reg-dok-berkas').value,
+      urlFoto: b64Foto ? "Data Terlampir (Base64)" : "",
+      status: "Pending",
+      koreksiAI: "",
+      urlIjazah: b64Ijazah ? "Data Terlampir (Base64)" : "",
+      urlKK: b64Kk ? "Data Terlampir (Base64)" : "",
+      urlBayar: b64Bayar ? "Data Terlampir (Base64)" : "",
+      statusAktif: "Tidak Aktif",
+      createdBy: currentUser ? currentUser.username : 'Petugas'
+    };
 
-    // Tampilkan notifikasi kecil agar layar tidak terkunci (toast)
+    // Update langsung ke data lokal & render seketika tanpa menunggu sinkronisasi
+    if (siswaId) {
+      const idx = siswaDataList.findIndex(x => String(x.id) === String(siswaId));
+      if (idx !== -1) {
+        siswaDataList[idx] = { ...siswaDataList[idx], ...newOrUpdatedSiswa };
+      }
+    } else {
+      siswaDataList.push(newOrUpdatedSiswa);
+    }
+
+    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+
+    // Update tampilan seketika
+    renderDashboardUI(siswaDataList);
+    if (typeof renderSiswaTable === 'function') renderSiswaTable(siswaDataList);
+
+    // Reset & Tutup modal seketika
+    const modalReg = document.getElementById('modal-register');
+    if (modalReg) modalReg.classList.add('hidden');
+    if (siswaId) {
+      cancelEdit();
+      document.querySelector('li[data-target="section-list"]').click();
+    } else {
+      formInputSiswa.reset();
+    }
+
+    // Tampilkan notifikasi instan
     Swal.fire({
       toast: true,
       position: 'top-end',
       icon: 'success',
-      title: res.message || "Data Berhasil Disimpan!",
+      title: siswaId ? "Perubahan berhasil disimpan!" : "Siswa berhasil didaftarkan!",
       showConfirmButton: false,
-      timer: 3000
+      timer: 2500
     });
 
-    if (siswaId) {
-      cancelEdit();
-      const modalReg = document.getElementById('modal-register');
-      if (modalReg) modalReg.classList.add('hidden');
-      document.querySelector('li[data-target="section-list"]').click();
-    } else {
-      formInputSiswa.reset();
-      const modalReg = document.getElementById('modal-register');
-      if (modalReg) modalReg.classList.add('hidden');
-    }
+    // Kirim sinkronisasi ke server Google Sheets di latar belakang
+    callAPI(payload).then(res => {
+      // Refresh data di background untuk memastikan sinkronisasi id dan sheet
+      loadDashboardData(true);
+      loadAllSiswa(true);
+    }).catch(err => {
+      console.error("Gagal sinkronisasi data ke server:", err);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'warning',
+        title: 'Data lokal tersimpan, gagal sync: ' + err.message,
+        showConfirmButton: false,
+        timer: 4000
+      });
+    });
+
   } catch (err) {
     Swal.fire('Gagal', err.message, 'error');
   }
@@ -1091,25 +1161,39 @@ async function handleAddUser() {
   const p = document.getElementById('usr-pass').value;
   const n = document.getElementById('usr-nama').value;
   const r = document.getElementById('usr-role').value;
-  showLoader("Menyimpan user...");
-  try {
-    await callAPI({ action: "addUser", username: u, password: p, nama: n, role: r });
-    hideLoader();
-    document.getElementById('form-add-user').reset();
-    const wrapper = document.getElementById('wrapper-form-user');
-    if (wrapper) wrapper.classList.add('hidden');
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'Pengguna berhasil ditambahkan',
-      showConfirmButton: false,
-      timer: 3000
+
+  // Langsung tampilkan user baru ke tabel seketika (Optimistic UI)
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${u}</td><td>${n}</td><td>${r}</td>
+    <td><button class="btn btn-danger" onclick="deleteUser('${u}')" style="padding:4px 8px; font-size:0.8rem;">Hapus</button></td>
+  `;
+  tableUsersBody.appendChild(tr);
+
+  // Reset & sembunyikan form seketika
+  document.getElementById('form-add-user').reset();
+  const wrapper = document.getElementById('wrapper-form-user');
+  if (wrapper) wrapper.classList.add('hidden');
+
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'success',
+    title: 'Pengguna berhasil ditambahkan',
+    showConfirmButton: false,
+    timer: 2500
+  });
+
+  // Kirim data ke Google Sheets di background tanpa memblokir layar
+  callAPI({ action: "addUser", username: u, password: p, nama: n, role: r })
+    .then(() => {
+      loadAllUsers(true);
+    })
+    .catch(err => {
+      console.error(err);
+      Swal.fire('Error Sync', err.message, 'error');
+      loadAllUsers(true);
     });
-    loadAllUsers();
-  } catch (err) {
-    hideLoader(); Swal.fire('Error', err.message, 'error');
-  }
 }
 
 async function deleteUser(username) {
