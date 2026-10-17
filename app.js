@@ -194,13 +194,30 @@ function setupEventListeners() {
 
       const docImage = document.getElementById('doc-image');
       const docIframe = document.getElementById('doc-iframe');
+      const docPlaceholder = document.getElementById('doc-placeholder');
+      const docPlaceholderText = document.getElementById('doc-placeholder-text');
 
-      if (!urlToShow) {
+      const isDataTerlampir = typeof urlToShow === 'string' && urlToShow.trim().toLowerCase().includes('data terlampir');
+      const isValidUri = typeof urlToShow === 'string' && (urlToShow.startsWith('http://') || urlToShow.startsWith('https://') || urlToShow.startsWith('data:'));
+
+      if (!urlToShow || isDataTerlampir || !isValidUri) {
         docImage.style.display = 'none';
+        docImage.removeAttribute('src');
         docIframe.style.display = 'none';
+        docIframe.removeAttribute('src');
         docLoader.style.display = 'none';
+        if (docPlaceholder) {
+          docPlaceholder.style.display = 'block';
+          if (docPlaceholderText) {
+            docPlaceholderText.textContent = isDataTerlampir
+              ? "Dokumen terlampir di sistem (arsip fisik/server)"
+              : "Tidak ada pratinjau dokumen untuk data ini";
+          }
+        }
         return;
       }
+
+      if (docPlaceholder) docPlaceholder.style.display = 'none';
 
       // Attempt to convert Google Drive URL to preview URL for iframe
       let isDriveUrl = urlToShow.includes('drive.google.com');
@@ -216,16 +233,19 @@ function setupEventListeners() {
         }
 
         docImage.style.display = 'none';
+        docImage.removeAttribute('src');
         docIframe.style.display = 'block';
         docIframe.src = previewUrl;
       } else {
         // If it's not a drive url or is base64, try using img first, iframe as fallback
         if (urlToShow.toLowerCase().includes('.pdf') || urlToShow.includes('application/pdf')) {
           docImage.style.display = 'none';
+          docImage.removeAttribute('src');
           docIframe.style.display = 'block';
           docIframe.src = urlToShow;
         } else {
           docIframe.style.display = 'none';
+          docIframe.removeAttribute('src');
           docImage.style.display = 'block';
           docImage.src = urlToShow;
         }
@@ -298,6 +318,21 @@ function setupEventListeners() {
 
 // ======================= API CALLER =======================
 async function callAPI(payload) {
+  async function parseFetchResponse(response) {
+    const rawText = await response.text();
+    let result;
+    try {
+      result = JSON.parse(rawText);
+    } catch (parseErr) {
+      if (rawText.includes('<!DOCTYPE') || rawText.includes('<html')) {
+        throw new Error("Layanan Google Apps Script sedang sibuk atau memulai ulang (Cold Start). Silakan coba lagi.");
+      }
+      throw new Error("Respon server bukan format JSON yang valid");
+    }
+    if (!result.success) throw new Error(result.error || "Gagal memanggil API");
+    return result.data;
+  }
+
   try {
     const fetchOptions = {
       method: "POST",
@@ -310,9 +345,7 @@ async function callAPI(payload) {
     }
 
     const response = await fetch(API_URL, fetchOptions);
-    const result = await response.json();
-    if (!result.success) throw new Error(result.error || "Gagal memanggil API");
-    return result.data;
+    return await parseFetchResponse(response);
   } catch (err) {
     // Jika server lokal gagal dan fallback tersedia, coba ke SCRIPT_URL
     if (API_URL !== SCRIPT_URL) {
@@ -321,9 +354,7 @@ async function callAPI(payload) {
         method: "POST",
         body: JSON.stringify(payload)
       });
-      const fbResult = await fbResponse.json();
-      if (!fbResult.success) throw new Error(fbResult.error || "Gagal memanggil API");
-      return fbResult.data;
+      return await parseFetchResponse(fbResponse);
     }
     throw err;
   }
@@ -361,6 +392,7 @@ async function handleLogin(e) {
 }
 
 let syncInterval = null;
+let isSyncing = false;
 
 function handleLogout() {
   Swal.fire({
@@ -414,26 +446,35 @@ function showDashboard() {
   }
 
   if (syncInterval) clearInterval(syncInterval);
-  syncInterval = setInterval(backgroundSync, 10000);
+  // Interval sync 30 detik agar Google Apps Script tidak terkena rate limit / concurrency throttle
+  syncInterval = setInterval(backgroundSync, 30000);
 }
 
 async function backgroundSync() {
   if (!currentUser || pageDashboard.classList.contains('hidden')) return;
+  if (isSyncing) return; // Cegah overlap request sync jika request sebelumnya masih berjalan
+  isSyncing = true;
   try {
     const data = await callAPI({ action: "getSiswa", pendingOnly: false });
     // Cek perbedaan sederhana untuk trigger update
     if (JSON.stringify(data) !== JSON.stringify(siswaDataList)) {
       siswaDataList = data;
+      try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(data)); } catch (e) {}
       const activeMenu = document.querySelector('#main-menu li.active');
       if (activeMenu) {
         const target = activeMenu.dataset.target;
-        if (target === 'section-dashboard') loadDashboardData(true);
-        else if (target === 'section-list') loadAllSiswa(true);
+        if (target === 'section-dashboard') renderDashboardUI(siswaDataList);
+        else if (target === 'section-list') {
+          if (typeof renderSiswaTable === 'function') renderSiswaTable(siswaDataList);
+        }
         else if (target === 'section-validasi') fetchSiswaData(false, true); // Update sidebar list silently
       }
     }
   } catch (e) {
-    console.error("Auto sync failed:", e);
+    // Abaikan error background sync secara hening (agar console tidak dipenuhi pesan error)
+    console.debug("Background auto-sync skip:", e.message);
+  } finally {
+    isSyncing = false;
   }
 }
 
