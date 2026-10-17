@@ -72,6 +72,57 @@ function updateUser(username, newNama, newPassword) {
   throw new Error("User tidak ditemukan.");
 }
 
+// Helper untuk membuat folder dan mengunggah base64 ke Google Drive
+function getOrCreateUploadFolder() {
+  const folderName = "PPDB_Dokumen_Siswa";
+  const folders = DriveApp.getFoldersByName(folderName);
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  const folder = DriveApp.createFolder(folderName);
+  folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return folder;
+}
+
+function uploadFileToDrive(base64Data, fileNamePrefix, defaultMime = "image/jpeg") {
+  if (!base64Data || typeof base64Data !== 'string') return "";
+  // Jika sudah merupakan link URL, kembalikan langsung
+  if (base64Data.startsWith("http://") || base64Data.startsWith("https://")) return base64Data;
+  if (base64Data.trim() === "Data Terlampir (Base64)") return "";
+
+  try {
+    let cleanBase64 = base64Data;
+    let mimeType = defaultMime;
+
+    if (base64Data.includes(";base64,")) {
+      const parts = base64Data.split(";base64,");
+      const match = parts[0].match(/data:(.*)/);
+      if (match && match[1]) mimeType = match[1];
+      cleanBase64 = parts[1];
+    }
+
+    const decodedBytes = Utilities.base64Decode(cleanBase64);
+    let ext = "jpg";
+    if (mimeType.includes("png")) ext = "png";
+    else if (mimeType.includes("pdf")) ext = "pdf";
+    else if (mimeType.includes("webp")) ext = "webp";
+
+    const fileName = `${fileNamePrefix}_${new Date().getTime()}.${ext}`;
+    const blob = Utilities.newBlob(decodedBytes, mimeType, fileName);
+
+    const folder = getOrCreateUploadFolder();
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // Ambil direct preview URL Google Drive
+    const fileId = file.getId();
+    return `https://drive.google.com/uc?id=${fileId}`;
+  } catch (err) {
+    Logger.log("Gagal upload file ke Drive: " + err.toString());
+    return "";
+  }
+}
+
 // =================== SISWA MANAGEMENT ===================
 function registerSiswa(dataObj) {
   const sheet = getDB('Data_Siswa');
@@ -95,10 +146,11 @@ function registerSiswa(dataObj) {
   const id = "S" + new Date().getTime(); 
   const tglDaftar = dataObj.tglDaftar || Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd");
   
-  const urlIjazah = dataObj.ijazahFile ? "Data Terlampir (Base64)" : "";
-  const urlKK = dataObj.kkFile ? "Data Terlampir (Base64)" : "";
-  const urlBayar = dataObj.bayarFile ? "Data Terlampir (Base64)" : "";
-  const urlFoto = dataObj.fotoFile ? "Data Terlampir (Base64)" : "";
+  const safeNik = String(dataObj.nik || id).replace(/[^0-9a-zA-Z]/g, '');
+  const urlIjazah = dataObj.ijazahFile ? uploadFileToDrive(dataObj.ijazahFile, `Ijazah_${safeNik}`) : "";
+  const urlKK = dataObj.kkFile ? uploadFileToDrive(dataObj.kkFile, `KK_${safeNik}`) : "";
+  const urlBayar = dataObj.bayarFile ? uploadFileToDrive(dataObj.bayarFile, `Bayar_${safeNik}`) : "";
+  const urlFoto = dataObj.fotoFile ? uploadFileToDrive(dataObj.fotoFile, `Foto_${safeNik}`) : "";
 
   sheet.appendRow([
     id,
@@ -136,7 +188,7 @@ function registerSiswa(dataObj) {
     dataObj.namaWali || ""
   ]);
 
-  return { message: "Pendaftaran Siswa Berhasil Disimpan!" };
+  return { message: "Pendaftaran Siswa Berhasil Disimpan!", id: id, urlIjazah: urlIjazah, urlKK: urlKK, urlBayar: urlBayar, urlFoto: urlFoto };
 }
 
 function importSiswaBatch(dataList) {
@@ -307,12 +359,39 @@ function updateSiswa(dataObj) {
       if(dataObj.tahunLulus !== undefined) sheet.getRange(row, 32).setValue(dataObj.tahunLulus);
       if(dataObj.namaWali !== undefined) sheet.getRange(row, 33).setValue(dataObj.namaWali);
       
-      if (dataObj.fotoFile) sheet.getRange(row, 23).setValue("Data Terlampir (Base64)");
-      if (dataObj.ijazahFile) sheet.getRange(row, 26).setValue("Data Terlampir (Base64)");
-      if (dataObj.kkFile) sheet.getRange(row, 27).setValue("Data Terlampir (Base64)");
-      if (dataObj.bayarFile) sheet.getRange(row, 28).setValue("Data Terlampir (Base64)");
+      const safeNik = String(dataObj.nik || dataObj.id).replace(/[^0-9a-zA-Z]/g, '');
+      let updatedUrls = {};
 
-      return { message: "Data Siswa Berhasil Diperbarui!" };
+      if (dataObj.fotoFile) {
+        const urlFoto = uploadFileToDrive(dataObj.fotoFile, `Foto_${safeNik}`);
+        if (urlFoto) {
+          sheet.getRange(row, 23).setValue(urlFoto);
+          updatedUrls.urlFoto = urlFoto;
+        }
+      }
+      if (dataObj.ijazahFile) {
+        const urlIjazah = uploadFileToDrive(dataObj.ijazahFile, `Ijazah_${safeNik}`);
+        if (urlIjazah) {
+          sheet.getRange(row, 26).setValue(urlIjazah);
+          updatedUrls.urlIjazah = urlIjazah;
+        }
+      }
+      if (dataObj.kkFile) {
+        const urlKK = uploadFileToDrive(dataObj.kkFile, `KK_${safeNik}`);
+        if (urlKK) {
+          sheet.getRange(row, 27).setValue(urlKK);
+          updatedUrls.urlKK = urlKK;
+        }
+      }
+      if (dataObj.bayarFile) {
+        const urlBayar = uploadFileToDrive(dataObj.bayarFile, `Bayar_${safeNik}`);
+        if (urlBayar) {
+          sheet.getRange(row, 28).setValue(urlBayar);
+          updatedUrls.urlBayar = urlBayar;
+        }
+      }
+
+      return { message: "Data Siswa Berhasil Diperbarui!", updatedUrls: updatedUrls };
     }
   }
   throw new Error("Data siswa tidak ditemukan.");

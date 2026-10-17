@@ -622,6 +622,9 @@ async function handleRegistrationOrEdit(e) {
       }
     };
 
+    // Ambil data siswa yang sudah ada jika dalam mode edit
+    const existingSiswa = siswaId ? siswaDataList.find(x => String(x.id) === String(siswaId)) : null;
+
     // Siapkan object siswa baru/edit untuk optimistic update ke memori & cache lokal
     const currentTgl = document.getElementById('reg-tgl-daftar').value || new Date().toISOString().split('T')[0];
     const newOrUpdatedSiswa = {
@@ -651,14 +654,14 @@ async function handleRegistrationOrEdit(e) {
       tahunLulus: document.getElementById('reg-tahun-lulus').value,
       syarat: document.getElementById('reg-syarat').value,
       dokBerkas: document.getElementById('reg-dok-berkas').value,
-      urlFoto: b64Foto ? "Data Terlampir (Base64)" : "",
-      status: "Pending",
-      koreksiAI: "",
-      urlIjazah: b64Ijazah ? "Data Terlampir (Base64)" : "",
-      urlKK: b64Kk ? "Data Terlampir (Base64)" : "",
-      urlBayar: b64Bayar ? "Data Terlampir (Base64)" : "",
-      statusAktif: "Tidak Aktif",
-      createdBy: currentUser ? currentUser.username : 'Petugas'
+      urlFoto: b64Foto ? b64Foto : (existingSiswa ? existingSiswa.urlFoto : ""),
+      status: existingSiswa ? (existingSiswa.status || "Pending") : "Pending",
+      koreksiAI: existingSiswa ? (existingSiswa.koreksiAI || "") : "",
+      urlIjazah: b64Ijazah ? b64Ijazah : (existingSiswa ? existingSiswa.urlIjazah : ""),
+      urlKK: b64Kk ? b64Kk : (existingSiswa ? existingSiswa.urlKK : ""),
+      urlBayar: b64Bayar ? b64Bayar : (existingSiswa ? existingSiswa.urlBayar : ""),
+      statusAktif: existingSiswa ? (existingSiswa.statusAktif || "Tidak Aktif") : "Tidak Aktif",
+      createdBy: existingSiswa ? (existingSiswa.createdBy || (currentUser ? currentUser.username : 'Petugas')) : (currentUser ? currentUser.username : 'Petugas')
     };
 
     // Update langsung ke data lokal & render seketika tanpa menunggu sinkronisasi
@@ -699,7 +702,27 @@ async function handleRegistrationOrEdit(e) {
 
     // Kirim sinkronisasi ke server Google Sheets di latar belakang
     callAPI(payload).then(res => {
-      // Refresh data di background untuk memastikan sinkronisasi id dan sheet
+      // Jika server mengembalikan link Drive yang telah disimpan, perbarui cache lokal
+      if (res) {
+        const targetId = siswaId || res.id;
+        if (targetId) {
+          const idx = siswaDataList.findIndex(x => String(x.id) === String(targetId));
+          if (idx !== -1) {
+            if (res.urlIjazah) siswaDataList[idx].urlIjazah = res.urlIjazah;
+            if (res.urlKK) siswaDataList[idx].urlKK = res.urlKK;
+            if (res.urlBayar) siswaDataList[idx].urlBayar = res.urlBayar;
+            if (res.urlFoto) siswaDataList[idx].urlFoto = res.urlFoto;
+            if (res.updatedUrls) {
+              if (res.updatedUrls.urlIjazah) siswaDataList[idx].urlIjazah = res.updatedUrls.urlIjazah;
+              if (res.updatedUrls.urlKK) siswaDataList[idx].urlKK = res.updatedUrls.urlKK;
+              if (res.updatedUrls.urlBayar) siswaDataList[idx].urlBayar = res.updatedUrls.urlBayar;
+              if (res.updatedUrls.urlFoto) siswaDataList[idx].urlFoto = res.updatedUrls.urlFoto;
+            }
+            try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+          }
+        }
+      }
+      // Refresh data di background untuk sinkronisasi penuh
       loadDashboardData(true);
       loadAllSiswa(true);
     }).catch(err => {
@@ -831,7 +854,7 @@ function cancelEdit() {
 const toBase64 = file => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.readAsDataURL(file);
-  reader.onload = () => resolve(reader.result.split(',')[1]);
+  reader.onload = () => resolve(reader.result);
   reader.onerror = error => reject(error);
 });
 
