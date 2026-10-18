@@ -180,14 +180,21 @@ function setupEventListeners() {
 
       if (target === 'ijazah') {
         urlToShow = currentSiswa.urlIjazah;
+        btnAi.style.display = 'inline-block';
         btnAi.textContent = "Cek dengan AI (Ijazah)";
         btnAi.dataset.target = "ijazah";
       } else if (target === 'kk') {
         urlToShow = currentSiswa.urlKK;
+        btnAi.style.display = 'inline-block';
         btnAi.textContent = "Cek dengan AI (KK)";
         btnAi.dataset.target = "kk";
+      } else if (target === 'foto') {
+        urlToShow = currentSiswa.urlFoto;
+        btnAi.style.display = 'none';
+        btnAi.dataset.target = "foto";
       } else {
         urlToShow = currentSiswa.urlBayar;
+        btnAi.style.display = 'inline-block';
         btnAi.textContent = "Cek Bukti Bayar";
         btnAi.dataset.target = "bayar";
       }
@@ -1110,19 +1117,30 @@ function showSiswaDetail(id) {
   const statusAktifBg = s.statusAktif === 'Aktif' ? '#dcfce7' : '#f1f5f9';
 
   content.innerHTML = `
-    <!-- Ringkasan Status Header -->
-    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-      <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; color: #0f172a;">${s.nama || '-'}</h3>
-      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-        <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
-          Status: ${s.status || 'Pending'}
-        </span>
-        <span style="background: ${statusAktifBg}; color: ${statusAktifColor}; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
-          ${s.statusAktif || 'Tidak Aktif'}
-        </span>
-        <span style="background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
-          ${s.program || '-'}
-        </span>
+    <!-- Ringkasan Status Header & Foto Profil -->
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; gap: 1rem; align-items: center;">
+      <div style="position: relative; flex-shrink: 0;">
+        ${s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:')) ? 
+          `<img src="${s.urlFoto}" alt="Foto ${s.nama}" style="width: 72px; height: 72px; border-radius: 12px; object-fit: cover; border: 2px solid #0284c7; box-shadow: 0 2px 6px rgba(0,0,0,0.1); cursor: pointer;" onclick="window.open('${s.urlFoto}', '_blank')" title="Klik untuk perbesar">` :
+          `<div style="width: 72px; height: 72px; border-radius: 12px; background: #f1f5f9; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.75rem; text-align: center; padding: 4px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:2px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span>Tanpa Foto</span>
+          </div>`
+        }
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; color: #0f172a; word-break: break-word;">${s.nama || '-'}</h3>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+            Status: ${s.status || 'Pending'}
+          </span>
+          <span style="background: ${statusAktifBg}; color: ${statusAktifColor}; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+            ${s.statusAktif || 'Tidak Aktif'}
+          </span>
+          <span style="background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
+            ${s.program || '-'}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -1163,6 +1181,45 @@ function showSiswaDetail(id) {
       <div class="drawer-info-row"><span class="drawer-info-label">Kabupaten/Kota</span><span class="drawer-info-value">${s.kabKota || '-'}</span></div>
       <div class="drawer-info-row"><span class="drawer-info-label">Kecamatan</span><span class="drawer-info-value">${s.kecamatan || '-'}</span></div>
       <div class="drawer-info-row"><span class="drawer-info-label">Desa / Kelurahan</span><span class="drawer-info-value">${s.desaKelurahan || '-'}</span></div>
+    </div>
+
+    <!-- Berkas & Dokumen Terlampir -->
+    <div class="drawer-detail-card">
+      <h4>Berkas & Dokumen</h4>
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 0.5rem;">
+        <!-- Foto -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
+          <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Foto Siswa</span>
+          ${s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:')) ?
+            `<a href="${s.urlFoto}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+            `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
+          }
+        </div>
+        <!-- Ijazah -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
+          <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Ijazah</span>
+          ${s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:')) ?
+            `<a href="${s.urlIjazah}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+            `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
+          }
+        </div>
+        <!-- KK -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
+          <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Kartu Keluarga</span>
+          ${s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:')) ?
+            `<a href="${s.urlKK}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+            `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
+          }
+        </div>
+        <!-- Bukti Bayar -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
+          <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Bukti Bayar</span>
+          ${s.urlBayar && (s.urlBayar.startsWith('http') || s.urlBayar.startsWith('data:')) ?
+            `<a href="${s.urlBayar}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+            `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
+          }
+        </div>
+      </div>
     </div>
 
     <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
