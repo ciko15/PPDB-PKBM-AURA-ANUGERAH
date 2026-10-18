@@ -58,6 +58,96 @@ function formatToDateInput(val) {
   return '';
 }
 
+// ======================= LOCAL FILE STORAGE HELPERS =======================
+// Menyimpan berkas (foto, ijazah, kk, bayar) secara aman di IndexedDB/localStorage
+function saveFileLocal(siswaId, type, dataUrl) {
+  if (!siswaId || !dataUrl) return;
+  try {
+    localStorage.setItem(`ppdb_doc_${type}_${siswaId}`, dataUrl);
+  } catch (e) {
+    console.warn(`Gagal menyimpan ${type} ke storage lokal:`, e);
+  }
+}
+
+function getFileLocal(siswaId, type) {
+  if (!siswaId) return null;
+  try {
+    return localStorage.getItem(`ppdb_doc_${type}_${siswaId}`);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Helper untuk menggabungkan data dari server tanpa menimpa berkas lokal yang sudah ada
+function mergeSiswaItem(existing, incoming) {
+  if (!existing) {
+    const localFoto = getFileLocal(incoming.id, 'foto');
+    const localIjazah = getFileLocal(incoming.id, 'ijazah');
+    const localKk = getFileLocal(incoming.id, 'kk');
+    const localBayar = getFileLocal(incoming.id, 'bayar');
+    return {
+      ...incoming,
+      urlFoto: (incoming.urlFoto && incoming.urlFoto.startsWith('http')) ? incoming.urlFoto : (localFoto || incoming.urlFoto || ''),
+      urlIjazah: (incoming.urlIjazah && incoming.urlIjazah.startsWith('http')) ? incoming.urlIjazah : (localIjazah || incoming.urlIjazah || ''),
+      urlKK: (incoming.urlKK && incoming.urlKK.startsWith('http')) ? incoming.urlKK : (localKk || incoming.urlKK || ''),
+      urlBayar: (incoming.urlBayar && incoming.urlBayar.startsWith('http')) ? incoming.urlBayar : (localBayar || incoming.urlBayar || '')
+    };
+  }
+
+  // Jika incoming kosong atau "Data Terlampir", pertahankan existing berkas
+  const merged = { ...incoming };
+  
+  const isValidUrlOrData = (val) => typeof val === 'string' && (val.startsWith('http') || val.startsWith('data:'));
+  
+  const localFoto = getFileLocal(incoming.id, 'foto');
+  const localIjazah = getFileLocal(incoming.id, 'ijazah');
+  const localKk = getFileLocal(incoming.id, 'kk');
+  const localBayar = getFileLocal(incoming.id, 'bayar');
+
+  if (isValidUrlOrData(incoming.urlFoto)) {
+    merged.urlFoto = incoming.urlFoto;
+  } else if (isValidUrlOrData(existing.urlFoto)) {
+    merged.urlFoto = existing.urlFoto;
+  } else {
+    merged.urlFoto = localFoto || '';
+  }
+
+  if (isValidUrlOrData(incoming.urlIjazah)) {
+    merged.urlIjazah = incoming.urlIjazah;
+  } else if (isValidUrlOrData(existing.urlIjazah)) {
+    merged.urlIjazah = existing.urlIjazah;
+  } else {
+    merged.urlIjazah = localIjazah || '';
+  }
+
+  if (isValidUrlOrData(incoming.urlKK)) {
+    merged.urlKK = incoming.urlKK;
+  } else if (isValidUrlOrData(existing.urlKK)) {
+    merged.urlKK = existing.urlKK;
+  } else {
+    merged.urlKK = localKk || '';
+  }
+
+  if (isValidUrlOrData(incoming.urlBayar)) {
+    merged.urlBayar = incoming.urlBayar;
+  } else if (isValidUrlOrData(existing.urlBayar)) {
+    merged.urlBayar = existing.urlBayar;
+  } else {
+    merged.urlBayar = localBayar || '';
+  }
+
+  return merged;
+}
+
+function mergeSiswaList(currentList, incomingList) {
+  if (!Array.isArray(incomingList)) return currentList || [];
+  const currentMap = new Map((currentList || []).map(item => [String(item.id), item]));
+  return incomingList.map(inc => {
+    const ex = currentMap.get(String(inc.id));
+    return mergeSiswaItem(ex, inc);
+  });
+}
+
 // ======================= DOM ELEMENTS =======================
 const pageLanding = document.getElementById('page-landing');
 const pageDashboard = document.getElementById('page-dashboard');
@@ -321,6 +411,38 @@ function setupEventListeners() {
       });
     });
   }
+
+  // Live preview thumbnail saat pengguna memilih berkas di formulir
+  const setupFileInputPreview = (inputId, previewId) => {
+    const input = document.getElementById(inputId);
+    const container = document.getElementById(previewId);
+    if (!input || !container) return;
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          container.innerHTML = `
+            <img src="${e.target.result}" style="width:44px; height:44px; object-fit:cover; border-radius:6px; border:1px solid #0284c7;">
+            <span style="font-size:0.75rem; color:#0284c7; font-weight:600;">✓ Berkas dipilih (${file.name.substring(0, 20)}...)</span>
+          `;
+          container.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        container.innerHTML = `
+          <div style="padding:4px 8px; background:#e0f2fe; color:#0369a1; border-radius:4px; font-size:0.75rem; font-weight:600;">📄 ${file.name}</div>
+        `;
+        container.style.display = 'flex';
+      }
+    });
+  };
+
+  setupFileInputPreview('reg-file-ijazah', 'preview-reg-ijazah');
+  setupFileInputPreview('reg-file-kk', 'preview-reg-kk');
+  setupFileInputPreview('reg-file-bayar', 'preview-reg-bayar');
+  setupFileInputPreview('reg-file-foto', 'preview-reg-foto');
 }
 
 // ======================= API CALLER =======================
@@ -462,11 +584,12 @@ async function backgroundSync() {
   if (isSyncing) return; // Cegah overlap request sync jika request sebelumnya masih berjalan
   isSyncing = true;
   try {
-    const data = await callAPI({ action: "getSiswa", pendingOnly: false });
+    const rawData = await callAPI({ action: "getSiswa", pendingOnly: false });
+    const mergedData = mergeSiswaList(siswaDataList, rawData);
     // Cek perbedaan sederhana untuk trigger update
-    if (JSON.stringify(data) !== JSON.stringify(siswaDataList)) {
-      siswaDataList = data;
-      try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(data)); } catch (e) {}
+    if (JSON.stringify(mergedData) !== JSON.stringify(siswaDataList)) {
+      siswaDataList = mergedData;
+      try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
       const activeMenu = document.querySelector('#main-menu li.active');
       if (activeMenu) {
         const target = activeMenu.dataset.target;
@@ -557,11 +680,11 @@ async function loadDashboardData(silent = false) {
   }
 
   try {
-    const data = await callAPI({ action: "getSiswa", pendingOnly: false });
-    siswaDataList = data;
+    const rawData = await callAPI({ action: "getSiswa", pendingOnly: false });
+    siswaDataList = mergeSiswaList(siswaDataList, rawData);
     // Simpan ke cache lokal untuk reload instan berikutnya
     try {
-      localStorage.setItem('ppdb_siswa_cache', JSON.stringify(data));
+      localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList));
     } catch (e) {}
 
     renderDashboardUI(siswaDataList);
@@ -634,8 +757,14 @@ async function handleRegistrationOrEdit(e) {
 
     // Siapkan object siswa baru/edit untuk optimistic update ke memori & cache lokal
     const currentTgl = document.getElementById('reg-tgl-daftar').value || new Date().toISOString().split('T')[0];
+    const finalSiswaId = siswaId || ('S' + Date.now());
+    if (b64Foto) saveFileLocal(finalSiswaId, 'foto', b64Foto);
+    if (b64Ijazah) saveFileLocal(finalSiswaId, 'ijazah', b64Ijazah);
+    if (b64Kk) saveFileLocal(finalSiswaId, 'kk', b64Kk);
+    if (b64Bayar) saveFileLocal(finalSiswaId, 'bayar', b64Bayar);
+
     const newOrUpdatedSiswa = {
-      id: siswaId || ('S' + Date.now()),
+      id: finalSiswaId,
       tglDaftar: currentTgl,
       nama: document.getElementById('reg-nama').value,
       jk: document.getElementById('reg-jk').value,
@@ -661,12 +790,12 @@ async function handleRegistrationOrEdit(e) {
       tahunLulus: document.getElementById('reg-tahun-lulus').value,
       syarat: document.getElementById('reg-syarat').value,
       dokBerkas: document.getElementById('reg-dok-berkas').value,
-      urlFoto: b64Foto ? b64Foto : (existingSiswa ? existingSiswa.urlFoto : ""),
+      urlFoto: b64Foto ? b64Foto : (existingSiswa ? (existingSiswa.urlFoto || getFileLocal(finalSiswaId, 'foto')) : (getFileLocal(finalSiswaId, 'foto') || "")),
       status: existingSiswa ? (existingSiswa.status || "Pending") : "Pending",
       koreksiAI: existingSiswa ? (existingSiswa.koreksiAI || "") : "",
-      urlIjazah: b64Ijazah ? b64Ijazah : (existingSiswa ? existingSiswa.urlIjazah : ""),
-      urlKK: b64Kk ? b64Kk : (existingSiswa ? existingSiswa.urlKK : ""),
-      urlBayar: b64Bayar ? b64Bayar : (existingSiswa ? existingSiswa.urlBayar : ""),
+      urlIjazah: b64Ijazah ? b64Ijazah : (existingSiswa ? (existingSiswa.urlIjazah || getFileLocal(finalSiswaId, 'ijazah')) : (getFileLocal(finalSiswaId, 'ijazah') || "")),
+      urlKK: b64Kk ? b64Kk : (existingSiswa ? (existingSiswa.urlKK || getFileLocal(finalSiswaId, 'kk')) : (getFileLocal(finalSiswaId, 'kk') || "")),
+      urlBayar: b64Bayar ? b64Bayar : (existingSiswa ? (existingSiswa.urlBayar || getFileLocal(finalSiswaId, 'bayar')) : (getFileLocal(finalSiswaId, 'bayar') || "")),
       statusAktif: existingSiswa ? (existingSiswa.statusAktif || "Tidak Aktif") : "Tidak Aktif",
       createdBy: existingSiswa ? (existingSiswa.createdBy || (currentUser ? currentUser.username : 'Petugas')) : (currentUser ? currentUser.username : 'Petugas')
     };
@@ -838,6 +967,55 @@ function loadSiswaForEdit(id) {
     document.getElementById('reg-tahun-lulus').value = s.tahunLulus || '';
     document.getElementById('reg-syarat').value = s.syarat || '';
     document.getElementById('reg-dok-berkas').value = s.dokBerkas || '';
+
+    // Tampilkan preview berkas jika sudah ada tersimpan sebelumnya
+    const fotoSrc = s.urlFoto || getFileLocal(s.id, 'foto');
+    const pFoto = document.getElementById('preview-reg-foto');
+    if (pFoto) {
+      if (fotoSrc && (fotoSrc.startsWith('http') || fotoSrc.startsWith('data:'))) {
+        pFoto.innerHTML = `<img src="${fotoSrc}" style="width:44px; height:44px; object-fit:cover; border-radius:6px; border:1px solid #16a34a;"><span style="font-size:0.75rem; color:#16a34a; font-weight:600;">✓ Foto tersimpan (Pilih file baru jika ingin ganti)</span>`;
+        pFoto.style.display = 'flex';
+      } else {
+        pFoto.innerHTML = '';
+        pFoto.style.display = 'none';
+      }
+    }
+
+    const ijazahSrc = s.urlIjazah || getFileLocal(s.id, 'ijazah');
+    const pIjazah = document.getElementById('preview-reg-ijazah');
+    if (pIjazah) {
+      if (ijazahSrc && (ijazahSrc.startsWith('http') || ijazahSrc.startsWith('data:'))) {
+        pIjazah.innerHTML = `<span style="font-size:0.75rem; color:#16a34a; font-weight:600;">✓ Berkas Ijazah tersimpan (Pilih file baru jika ingin ganti)</span>`;
+        pIjazah.style.display = 'flex';
+      } else {
+        pIjazah.innerHTML = '';
+        pIjazah.style.display = 'none';
+      }
+    }
+
+    const kkSrc = s.urlKK || getFileLocal(s.id, 'kk');
+    const pKK = document.getElementById('preview-reg-kk');
+    if (pKK) {
+      if (kkSrc && (kkSrc.startsWith('http') || kkSrc.startsWith('data:'))) {
+        pKK.innerHTML = `<span style="font-size:0.75rem; color:#16a34a; font-weight:600;">✓ Berkas KK tersimpan (Pilih file baru jika ingin ganti)</span>`;
+        pKK.style.display = 'flex';
+      } else {
+        pKK.innerHTML = '';
+        pKK.style.display = 'none';
+      }
+    }
+
+    const bayarSrc = s.urlBayar || getFileLocal(s.id, 'bayar');
+    const pBayar = document.getElementById('preview-reg-bayar');
+    if (pBayar) {
+      if (bayarSrc && (bayarSrc.startsWith('http') || bayarSrc.startsWith('data:'))) {
+        pBayar.innerHTML = `<span style="font-size:0.75rem; color:#16a34a; font-weight:600;">✓ Bukti Bayar tersimpan (Pilih file baru jika ingin ganti)</span>`;
+        pBayar.style.display = 'flex';
+      } else {
+        pBayar.innerHTML = '';
+        pBayar.style.display = 'none';
+      }
+    }
   } catch (e) {
     console.error("Error setting form values: ", e);
   }
@@ -856,6 +1034,12 @@ function cancelEdit() {
   btnCancelEdit.classList.add('hidden');
   const modalReg = document.getElementById('modal-register');
   if (modalReg) modalReg.classList.add('hidden');
+
+  // Bersihkan preview file
+  ['preview-reg-ijazah', 'preview-reg-kk', 'preview-reg-bayar', 'preview-reg-foto'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.innerHTML = ''; el.style.display = 'none'; }
+  });
 }
 
 const toBase64 = file => new Promise((resolve, reject) => {
@@ -875,9 +1059,9 @@ async function fetchSiswaData(onlyPending, silent = false) {
   }
 
   try {
-    const data = await callAPI({ action: "getSiswa", pendingOnly: onlyPending });
-    siswaDataList = data;
-    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(data)); } catch (e) {}
+    const rawData = await callAPI({ action: "getSiswa", pendingOnly: onlyPending });
+    siswaDataList = mergeSiswaList(siswaDataList, rawData);
+    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
     renderSiswaListValidasi();
   } catch (err) {
     if (!siswaDataList || siswaDataList.length === 0) {
@@ -1034,12 +1218,15 @@ async function loadAllSiswa(silent = false) {
   }
 
   try {
-    const data = await callAPI({ action: "getSiswa", pendingOnly: false });
-    siswaDataList = data; // Simpan untuk Edit Mode
-    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(data)); } catch (e) {}
+    const rawData = await callAPI({ action: "getSiswa", pendingOnly: false });
+    siswaDataList = mergeSiswaList(siswaDataList, rawData);
+    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
     const searchInput = document.getElementById('search-siswa');
-    if (searchInput) searchInput.value = '';
-    renderSiswaTable(siswaDataList);
+    if (searchInput && searchInput.value) {
+      filterSiswaTable();
+    } else {
+      renderSiswaTable(siswaDataList);
+    }
   } catch (err) {
     if (!siswaDataList || siswaDataList.length === 0) {
       tableSiswaBody.innerHTML = `<tr><td colspan="7">${err.message}</td></tr>`;
@@ -1116,12 +1303,17 @@ function showSiswaDetail(id) {
   const statusAktifColor = s.statusAktif === 'Aktif' ? '#15803d' : '#64748b';
   const statusAktifBg = s.statusAktif === 'Aktif' ? '#dcfce7' : '#f1f5f9';
 
+  const finalFoto = (s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:'))) ? s.urlFoto : getFileLocal(s.id, 'foto');
+  const finalIjazah = (s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:'))) ? s.urlIjazah : getFileLocal(s.id, 'ijazah');
+  const finalKK = (s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:'))) ? s.urlKK : getFileLocal(s.id, 'kk');
+  const finalBayar = (s.urlBayar && (s.urlBayar.startsWith('http') || s.urlBayar.startsWith('data:'))) ? s.urlBayar : getFileLocal(s.id, 'bayar');
+
   content.innerHTML = `
     <!-- Ringkasan Status Header & Foto Profil -->
     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; gap: 1rem; align-items: center;">
       <div style="position: relative; flex-shrink: 0;">
-        ${s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:')) ? 
-          `<img src="${s.urlFoto}" alt="Foto ${s.nama}" style="width: 72px; height: 72px; border-radius: 12px; object-fit: cover; border: 2px solid #0284c7; box-shadow: 0 2px 6px rgba(0,0,0,0.1); cursor: pointer;" onclick="window.open('${s.urlFoto}', '_blank')" title="Klik untuk perbesar">` :
+        ${finalFoto ? 
+          `<img src="${finalFoto}" alt="Foto ${s.nama}" style="width: 72px; height: 72px; border-radius: 12px; object-fit: cover; border: 2px solid #0284c7; box-shadow: 0 2px 6px rgba(0,0,0,0.1); cursor: pointer;" onclick="window.open('${finalFoto}', '_blank')" title="Klik untuk perbesar">` :
           `<div style="width: 72px; height: 72px; border-radius: 12px; background: #f1f5f9; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.75rem; text-align: center; padding: 4px;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:2px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             <span>Tanpa Foto</span>
@@ -1190,32 +1382,32 @@ function showSiswaDetail(id) {
         <!-- Foto -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
           <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Foto Siswa</span>
-          ${s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:')) ?
-            `<a href="${s.urlFoto}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+          ${finalFoto ?
+            `<a href="${finalFoto}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
             `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
           }
         </div>
         <!-- Ijazah -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
           <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Ijazah</span>
-          ${s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:')) ?
-            `<a href="${s.urlIjazah}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+          ${finalIjazah ?
+            `<a href="${finalIjazah}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
             `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
           }
         </div>
         <!-- KK -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
           <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Kartu Keluarga</span>
-          ${s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:')) ?
-            `<a href="${s.urlKK}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+          ${finalKK ?
+            `<a href="${finalKK}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
             `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
           }
         </div>
         <!-- Bukti Bayar -->
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
           <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Bukti Bayar</span>
-          ${s.urlBayar && (s.urlBayar.startsWith('http') || s.urlBayar.startsWith('data:')) ?
-            `<a href="${s.urlBayar}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+          ${finalBayar ?
+            `<a href="${finalBayar}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
             `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
           }
         </div>
