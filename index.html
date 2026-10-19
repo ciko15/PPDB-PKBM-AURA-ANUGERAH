@@ -877,39 +877,76 @@
           <h1>Daftar Peserta Didik</h1>
           <p class="sub">Data calon dan peserta didik aktif PKBM Aura Anugerah</p>
 
-          <div class="bar">
-            <!-- Search bar persis Rostering Teknik -->
-            <div style="position: relative; width: 260px;">
-              <i data-lucide="search" style="position: absolute; left: 10px; top: 10px; width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;"></i>
-              <input type="text" id="search-siswa" placeholder="Cari peserta didik / NIK..." style="width: 100%; padding-left: 32px;" oninput="filterSiswaTable()">
+          <!-- Dev-Smart Style Filter & Search Toolbar (Harmonis Tema Hijau-Biru PKBM) -->
+          <div class="filter-toolbar">
+            <div class="filter-toolbar-top">
+              <!-- Search Input with icon -->
+              <div class="filter-search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-siswa" placeholder="Cari nama, NIK, NISN, atau program..." oninput="filterSiswaTable()">
+              </div>
+
+              <!-- Filter Controls Group -->
+              <div class="filter-controls-group">
+                <!-- Limit Select -->
+                <select id="filter-siswa-limit" class="filter-select" onchange="changeSiswaPageSize(this.value)" title="Jumlah Baris per Halaman">
+                  <option value="10">10 Baris</option>
+                  <option value="25">25 Baris</option>
+                  <option value="50">50 Baris</option>
+                  <option value="100">100 Baris</option>
+                  <option value="all">Semua Baris</option>
+                </select>
+
+                <!-- Filter Program -->
+                <select id="filter-program-siswa" class="filter-select" onchange="filterSiswaTable()">
+                  <option value="">Semua Program</option>
+                  <option value="Paket A">Paket A (Setara SD)</option>
+                  <option value="Paket B">Paket B (Setara SMP)</option>
+                  <option value="Paket C">Paket C (Setara SMA)</option>
+                </select>
+
+                <!-- Filter Status Aktif -->
+                <select id="filter-status-siswa" class="filter-select" onchange="filterSiswaTable()">
+                  <option value="">Semua Status Siswa</option>
+                  <option value="Aktif">Status: Aktif</option>
+                  <option value="Tidak Aktif">Status: Tidak Aktif</option>
+                </select>
+
+                <!-- Filter Status Validasi AI -->
+                <select id="filter-ai-siswa" class="filter-select" onchange="filterSiswaTable()">
+                  <option value="">Semua Status AI</option>
+                  <option value="sesuai">AI: Sesuai / Cocok</option>
+                  <option value="tidak sesuai">AI: Perlu Perhatian</option>
+                  <option value="pending">AI: Menunggu / Pending</option>
+                  <option value="belum">AI: Belum Dicek</option>
+                </select>
+              </div>
             </div>
 
-            <!-- Filter Program -->
-            <select id="filter-program-siswa" class="btn" onchange="filterSiswaTable()" style="max-width: 180px;">
-              <option value="">Semua Program</option>
-              <option value="Paket A">Paket A (SD)</option>
-              <option value="Paket B">Paket B (SMP)</option>
-              <option value="Paket C">Paket C (SMA)</option>
-            </select>
+            <!-- Action Buttons Row -->
+            <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 10px;">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-icon" onclick="loadAllSiswa()" title="Muat Ulang Data">
+                  <i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i>
+                </button>
+                <button id="btn-batch-ai" class="btn" onclick="runBatchAICheck()" title="Periksa AI pada siswa terpilih">
+                  <i data-lucide="wand-2" style="width: 15px; height: 15px; color: var(--accent);"></i>Periksa AI
+                </button>
+                <button class="btn" onclick="exportDataToExcel()" title="Export Excel">
+                  <i data-lucide="file-spreadsheet" style="width: 15px; height: 15px;"></i>Excel
+                </button>
+                <button class="btn" onclick="exportDataToPDF()" title="Export PDF">
+                  <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>PDF
+                </button>
+                <label class="btn" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                  <i data-lucide="upload" style="width: 15px; height: 15px;"></i>Upload Data
+                  <input type="file" id="import-data-file" accept=".csv, .xlsx, .xls" style="display: none;" onchange="importDataFromFile(event)">
+                </label>
+              </div>
 
-            <select id="filter-status-siswa" class="btn" onchange="filterSiswaTable()" style="max-width: 180px;">
-              <option value="">Semua Status</option>
-              <option value="Aktif">Aktif</option>
-              <option value="Tidak Aktif">Tidak Aktif</option>
-            </select>
-
-            <span class="sp"></span>
-
-            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <button class="btn btn-icon" onclick="loadAllSiswa()" title="Refresh Data"><i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i></button>
-              <button id="btn-batch-ai" class="btn" onclick="runBatchAICheck()" title="Periksa AI pada siswa yang dicentang"><i data-lucide="wand-2" style="width: 16px; height: 16px; color: var(--accent);"></i>Periksa AI</button>
-              <button class="btn" onclick="exportDataToExcel()" title="Export Data ke Excel"><i data-lucide="file-spreadsheet" style="width: 16px; height: 16px;"></i>Excel</button>
-              <button class="btn" onclick="exportDataToPDF()" title="Export Data ke PDF"><i data-lucide="file-text" style="width: 16px; height: 16px;"></i>PDF</button>
-              <label class="btn" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                <i data-lucide="upload" style="width: 16px; height: 16px;"></i>Upload Data
-                <input type="file" id="import-data-file" accept=".csv, .xlsx, .xls" style="display: none;" onchange="importDataFromFile(event)">
-              </label>
-              <button class="btn p" onclick="resetAndOpenRegisterForm()"><i data-lucide="plus" style="width: 16px; height: 16px;"></i>Tambah Siswa Baru</button>
+              <button class="btn p" onclick="resetAndOpenRegisterForm()">
+                <i data-lucide="plus" style="width: 16px; height: 16px;"></i>Tambah Siswa Baru
+              </button>
             </div>
           </div>
 
@@ -936,9 +973,23 @@
             </table>
           </div>
 
-          <!-- Pagination Bar persis Rostering Teknik -->
-          <div class="pagination-bar" id="siswa-pagination-bar" style="display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 16px;">
+          <!-- Pagination Bar ala Dev-Smart -->
+          <div class="pagination-container" id="siswa-pagination-container">
             <span style="font-size: 13px; color: var(--text-muted);" id="pagination-info">Menampilkan data</span>
+            <div class="pagination-controls" id="siswa-pagination-controls">
+              <!-- Rendered dinamis via JavaScript -->
+            </div>
+            <div class="pagination-page-size">
+              <span>Tampilkan</span>
+              <select id="select-pagination-size" onchange="changeSiswaPageSize(this.value)">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="all">Semua</option>
+              </select>
+              <span>baris per halaman</span>
+            </div>
           </div>
         </div>
 

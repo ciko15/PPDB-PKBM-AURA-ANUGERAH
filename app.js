@@ -1682,33 +1682,136 @@ async function loadAllSiswa(silent = false) {
   }
 }
 
+// State Pagination & Filter Siswa ala Dev-Smart
+let currentSiswaPage = 1;
+let siswaPageSize = 10;
+let currentFilteredSiswaList = [];
+
+function changeSiswaPageSize(size) {
+  siswaPageSize = size === 'all' ? 'all' : parseInt(size, 10);
+  currentSiswaPage = 1;
+  const filterLimit = document.getElementById('filter-siswa-limit');
+  const selectPagSize = document.getElementById('select-pagination-size');
+  if (filterLimit) filterLimit.value = String(size);
+  if (selectPagSize) selectPagSize.value = String(size);
+  filterSiswaTable();
+}
+
+function goToSiswaPage(pageNum) {
+  currentSiswaPage = pageNum;
+  renderSiswaPage();
+}
+
 function filterSiswaTable() {
-  const query = (document.getElementById('search-siswa')?.value || '').toLowerCase();
+  const query = (document.getElementById('search-siswa')?.value || '').toLowerCase().trim();
   const programFilter = document.getElementById('filter-program-siswa')?.value || '';
   const statusFilter = document.getElementById('filter-status-siswa')?.value || '';
+  const aiFilter = document.getElementById('filter-ai-siswa')?.value || '';
 
-  const filteredData = siswaDataList.filter(s => {
+  currentFilteredSiswaList = siswaDataList.filter(s => {
     const matchQuery = !query ||
       (s.nama && String(s.nama).toLowerCase().includes(query)) ||
       (s.nik && String(s.nik).toLowerCase().includes(query)) ||
       (s.nisn && String(s.nisn).toLowerCase().includes(query)) ||
-      (s.program && String(s.program).toLowerCase().includes(query));
+      (s.program && String(s.program).toLowerCase().includes(query)) ||
+      (s.createdBy && String(s.createdBy).toLowerCase().includes(query));
 
     const matchProgram = !programFilter || (s.program && s.program.includes(programFilter));
     const matchStatus = !statusFilter || (statusFilter === 'Aktif' ? s.statusAktif === 'Aktif' : s.statusAktif !== 'Aktif');
 
-    return matchQuery && matchProgram && matchStatus;
+    let matchAi = true;
+    if (aiFilter) {
+      const rawAiStatus = String(s.status || '').toLowerCase();
+      const hasCorrection = s.koreksiAI && s.koreksiAI.trim() !== '';
+      if (aiFilter === 'sesuai') {
+        matchAi = rawAiStatus === 'sesuai' || rawAiStatus === 'cocok' || (rawAiStatus === 'selesai' && !hasCorrection);
+      } else if (aiFilter === 'tidak sesuai') {
+        matchAi = rawAiStatus === 'tidak sesuai' || rawAiStatus === 'tidak_cocok' || rawAiStatus === 'perlu perbaikan' || (hasCorrection && !s.koreksiAI.includes('cocok'));
+      } else if (aiFilter === 'pending') {
+        matchAi = rawAiStatus === 'pending';
+      } else if (aiFilter === 'belum') {
+        matchAi = !rawAiStatus || rawAiStatus === 'belum dicek' || rawAiStatus === '';
+      }
+    }
+
+    return matchQuery && matchProgram && matchStatus && matchAi;
   });
 
-  const pageInfo = document.getElementById('pagination-info');
-  if (pageInfo) {
-    pageInfo.textContent = `Menampilkan ${filteredData.length} dari ${siswaDataList.length} peserta didik`;
+  currentSiswaPage = 1;
+  renderSiswaPage();
+}
+
+function renderSiswaPage() {
+  const total = currentFilteredSiswaList.length;
+  let pageData = currentFilteredSiswaList;
+  let totalPages = 1;
+
+  if (siswaPageSize !== 'all') {
+    totalPages = Math.max(1, Math.ceil(total / siswaPageSize));
+    if (currentSiswaPage > totalPages) currentSiswaPage = totalPages;
+    const startIdx = (currentSiswaPage - 1) * siswaPageSize;
+    const endIdx = startIdx + siswaPageSize;
+    pageData = currentFilteredSiswaList.slice(startIdx, endIdx);
+
+    const startShow = total === 0 ? 0 : startIdx + 1;
+    const endShow = Math.min(endIdx, total);
+    const pageInfo = document.getElementById('pagination-info');
+    if (pageInfo) {
+      pageInfo.textContent = `Menampilkan ${startShow} - ${endShow} dari ${total} peserta didik`;
+    }
+  } else {
+    const pageInfo = document.getElementById('pagination-info');
+    if (pageInfo) {
+      pageInfo.textContent = `Menampilkan semua (${total}) peserta didik`;
+    }
   }
 
-  renderSiswaTable(filteredData);
+  renderSiswaTableRows(pageData, siswaPageSize === 'all' ? 0 : (currentSiswaPage - 1) * siswaPageSize);
+  renderSiswaPaginationControls(totalPages);
+}
+
+function renderSiswaPaginationControls(totalPages) {
+  const controls = document.getElementById('siswa-pagination-controls');
+  if (!controls) return;
+
+  if (siswaPageSize === 'all' || totalPages <= 1) {
+    controls.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  // Prev button
+  html += `<button type="button" ${currentSiswaPage === 1 ? 'disabled' : ''} onclick="goToSiswaPage(${currentSiswaPage - 1})" title="Halaman Sebelumnya">
+    <i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i>
+  </button>`;
+
+  // Page Numbers
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentSiswaPage - 2 && i <= currentSiswaPage + 2)) {
+      html += `<button type="button" class="${i === currentSiswaPage ? 'active' : ''}" onclick="goToSiswaPage(${i})">${i}</button>`;
+    } else if (i === currentSiswaPage - 3 || i === currentSiswaPage + 3) {
+      html += `<span class="dots">...</span>`;
+    }
+  }
+
+  // Next button
+  html += `<button type="button" ${currentSiswaPage === totalPages ? 'disabled' : ''} onclick="goToSiswaPage(${currentSiswaPage + 1})" title="Halaman Selanjutnya">
+    <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i>
+  </button>`;
+
+  controls.innerHTML = html;
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
 }
 
 function renderSiswaTable(data) {
+  currentFilteredSiswaList = data || siswaDataList;
+  currentSiswaPage = 1;
+  renderSiswaPage();
+}
+
+function renderSiswaTableRows(data, offset = 0) {
   tableSiswaBody.innerHTML = '';
 
   if (data.length === 0) {
@@ -1750,7 +1853,7 @@ function renderSiswaTable(data) {
       <td style="text-align: center;" onclick="event.stopPropagation();">
         <input type="checkbox" class="siswa-select-cb" value="${s.id}" onchange="updateSelectedSiswaCount()">
       </td>
-      <td>${idx + 1}</td>
+      <td>${offset + idx + 1}</td>
       <td><b>${s.nama}</b></td>
       <td>${s.program || '-'}</td>
       <td>${aiStatusBadge}</td>
