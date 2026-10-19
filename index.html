@@ -795,8 +795,13 @@
         <!-- ==================== SECTION: DAFTAR SISWA ==================== -->
         <div id="section-list" class="content-section hidden card-panel">
           <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <h3 style="margin: 0;">Daftar Peserta Didik</h3>
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <h3 style="margin: 0;">Daftar Peserta Didik</h3>
+              <button id="btn-batch-ai" class="btn btn-primary" onclick="runBatchAICheck()" style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                🤖 Periksa AI (Batch Terpilih)
+              </button>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
               <button class="btn btn-success" onclick="exportDataToExcel()">Export Excel/CSV</button>
               <label class="btn btn-warning" style="cursor: pointer; margin: 0;">
                 Import Data
@@ -812,17 +817,20 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>No</th>
-                  <th>Nama</th>
+                  <th style="width: 40px; text-align: center;">
+                    <input type="checkbox" id="check-all-siswa" onchange="toggleSelectAllSiswa(this.checked)" title="Pilih Semua">
+                  </th>
+                  <th style="width: 40px;">No</th>
+                  <th>Nama Lengkap</th>
                   <th>Program</th>
                   <th>Pemeriksaan AI</th>
                   <th>Petugas</th>
                   <th>Status</th>
-                  <th>Aksi</th>
+                  <th style="text-align: center;">Aksi</th>
                 </tr>
               </thead>
               <tbody id="table-siswa-body">
-                <tr><td colspan="7" style="text-align: center;">Memuat data...</td></tr>
+                <tr><td colspan="8" style="text-align: center;">Memuat data...</td></tr>
               </tbody>
             </table>
           </div>

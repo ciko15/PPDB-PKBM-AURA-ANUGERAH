@@ -1361,11 +1361,14 @@ function renderSiswaTable(data) {
 
     tr.style.cursor = 'pointer';
     tr.onclick = (e) => {
-      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.type === 'checkbox') return;
       showSiswaDetail(s.id);
     };
 
     tr.innerHTML = `
+      <td style="text-align: center;" onclick="event.stopPropagation();">
+        <input type="checkbox" class="siswa-select-cb" value="${s.id}" onchange="updateSelectedSiswaCount()">
+      </td>
       <td>${idx + 1}</td>
       <td><strong>${s.nama}</strong></td>
       <td>${s.program || '-'}</td>
@@ -1376,14 +1379,211 @@ function renderSiswaTable(data) {
           ${isAktif ? 'Aktif' : 'Tidak Aktif'}
         </button>
       </td>
-      <td style="display: flex; gap: 0.5rem; justify-content: center;">
-        <button class="btn btn-primary" onclick="loadSiswaForEdit('${s.id}')" style="padding:4px 8px; font-size:0.8rem;">
+      <td style="display: flex; gap: 0.4rem; justify-content: center; align-items: center; flex-wrap: wrap;">
+        <button class="btn btn-primary" onclick="runSingleRowAICheck('${s.id}')" title="Jalankan pemeriksaan AI untuk siswa ini" style="padding:4px 8px; font-size:0.8rem; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);">
+          🤖 Cek AI
+        </button>
+        <button class="btn btn-outline" onclick="loadSiswaForEdit('${s.id}')" style="padding:4px 8px; font-size:0.8rem;">
           Edit
         </button>
         ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin') ? `<button class="btn btn-danger" onclick="deleteSiswaData('${s.id}')" style="padding:4px 8px; font-size:0.8rem;">Hapus</button>` : ''}
       </td>
     `;
     tableSiswaBody.appendChild(tr);
+  });
+  updateSelectedSiswaCount();
+}
+
+// ======================= BATCH & SINGLE ROW AI VERIFICATION =======================
+function toggleSelectAllSiswa(checked) {
+  document.querySelectorAll('.siswa-select-cb').forEach(cb => {
+    cb.checked = checked;
+  });
+  updateSelectedSiswaCount();
+}
+
+function updateSelectedSiswaCount() {
+  const selected = document.querySelectorAll('.siswa-select-cb:checked');
+  const btnBatch = document.getElementById('btn-batch-ai');
+  const checkAll = document.getElementById('check-all-siswa');
+  const allCbs = document.querySelectorAll('.siswa-select-cb');
+
+  if (checkAll && allCbs.length > 0) {
+    checkAll.checked = selected.length === allCbs.length;
+  }
+
+  if (btnBatch) {
+    if (selected.length > 0) {
+      btnBatch.innerHTML = `🤖 Periksa AI (${selected.length} Siswa Terpilih)`;
+      btnBatch.style.display = 'inline-flex';
+    } else {
+      btnBatch.innerHTML = `🤖 Periksa AI (Batch Terpilih)`;
+    }
+  }
+}
+
+async function runSingleRowAICheck(siswaId) {
+  const s = siswaDataList.find(x => String(x.id) === String(siswaId));
+  if (!s) return;
+
+  const urlIjazah = (s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:'))) ? s.urlIjazah : (getFileLocal(s.id, 'ijazah') || "");
+  const urlKK = (s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:'))) ? s.urlKK : (getFileLocal(s.id, 'kk') || "");
+
+  if (!urlKK && !urlIjazah) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Berkas Tidak Ditemukan',
+      text: `Siswa "${s.nama}" belum memiliki unggahan berkas KK atau Ijazah untuk diperiksa oleh AI.`
+    });
+    return;
+  }
+
+  const targetDoc = urlKK ? 'kk' : 'ijazah';
+  showLoader(`Gemini AI sedang memeriksa berkas ${targetDoc.toUpperCase()} untuk ${s.nama}...`);
+
+  try {
+    const userApiKey = localStorage.getItem('gemini_api_key') || 'AQ.Ab8RN6IsOK3hu-S-7x1mSMT91X37w4Fur-AbgFaF0WqCdaTnPA';
+    const enrichedDataSiswa = {
+      ...s,
+      urlIjazah: urlIjazah,
+      urlKK: urlKK,
+      urlFoto: (s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:'))) ? s.urlFoto : (getFileLocal(s.id, 'foto') || "")
+    };
+
+    const result = await callAPI({
+      action: "runAICheck",
+      dataSiswa: enrichedDataSiswa,
+      jenisDokumen: targetDoc,
+      apiKey: userApiKey
+    });
+
+    hideLoader();
+
+    const normStatus = String(result.status || '').toUpperCase();
+    const finalStatus = (normStatus === 'COCOK' || normStatus === 'SESUAI') ? 'Sesuai' : 'Tidak Sesuai';
+    const finalKoreksi = result.koreksi || (finalStatus === 'Sesuai' ? 'Semua data sesuai dokumen.' : 'Ada ketidaksesuaian data.');
+
+    // Simpan ke state lokal
+    s.status = finalStatus;
+    s.koreksiAI = finalKoreksi;
+    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+
+    // Simpan ke backend
+    callAPI({
+      action: "updateStatus",
+      idSiswa: s.id,
+      status: finalStatus,
+      koreksiAI: finalKoreksi
+    }).catch(err => console.warn("Sync updateStatus:", err));
+
+    renderSiswaTable(siswaDataList);
+
+    Swal.fire({
+      icon: finalStatus === 'Sesuai' ? 'success' : 'warning',
+      title: finalStatus === 'Sesuai' ? '✅ Data Sesuai' : '⚠️ Ditemukan Ketidaksesuaian',
+      html: `<div style="text-align: left; font-size: 0.9rem; line-height: 1.5; white-space: pre-line; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-top: 8px;"><b>Nama:</b> ${s.nama}<br><br>${finalKoreksi}</div>`,
+      confirmButtonText: 'Tutup'
+    });
+
+  } catch (err) {
+    hideLoader();
+    Swal.fire('Error', 'Pemeriksaan AI gagal: ' + err.message, 'error');
+  }
+}
+
+async function runBatchAICheck() {
+  const selectedCbs = Array.from(document.querySelectorAll('.siswa-select-cb:checked'));
+  
+  if (selectedCbs.length === 0) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Pilih Siswa Terlebih Dahulu',
+      text: 'Silakan centang satu atau beberapa siswa pada tabel untuk melakukan pemeriksaan AI secara bersamaan.'
+    });
+    return;
+  }
+
+  const resultConfirm = await Swal.fire({
+    title: 'Periksa AI Bersamaan?',
+    text: `Anda akan menjalankan pemeriksaan dokumen dengan AI untuk ${selectedCbs.length} siswa terpilih secara berurutan.`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Jalankan Pemeriksaan',
+    cancelButtonText: 'Batal'
+  });
+
+  if (!resultConfirm.isConfirmed) return;
+
+  const total = selectedCbs.length;
+  let suksesCount = 0;
+  let gagalCount = 0;
+  const userApiKey = localStorage.getItem('gemini_api_key') || 'AQ.Ab8RN6IsOK3hu-S-7x1mSMT91X37w4Fur-AbgFaF0WqCdaTnPA';
+
+  for (let i = 0; i < total; i++) {
+    const siswaId = selectedCbs[i].value;
+    const s = siswaDataList.find(x => String(x.id) === String(siswaId));
+    if (!s) continue;
+
+    showLoader(`Memeriksa [${i + 1}/${total}]: ${s.nama}...`);
+
+    const urlIjazah = (s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:'))) ? s.urlIjazah : (getFileLocal(s.id, 'ijazah') || "");
+    const urlKK = (s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:'))) ? s.urlKK : (getFileLocal(s.id, 'kk') || "");
+
+    if (!urlKK && !urlIjazah) {
+      s.status = 'Tidak Sesuai';
+      s.koreksiAI = '1. Berkas belum diunggah: Siswa belum memiliki dokumen KK atau Ijazah.';
+      gagalCount++;
+      continue;
+    }
+
+    const targetDoc = urlKK ? 'kk' : 'ijazah';
+    const enrichedDataSiswa = {
+      ...s,
+      urlIjazah: urlIjazah,
+      urlKK: urlKK,
+      urlFoto: (s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:'))) ? s.urlFoto : (getFileLocal(s.id, 'foto') || "")
+    };
+
+    try {
+      const result = await callAPI({
+        action: "runAICheck",
+        dataSiswa: enrichedDataSiswa,
+        jenisDokumen: targetDoc,
+        apiKey: userApiKey
+      });
+
+      const normStatus = String(result.status || '').toUpperCase();
+      const finalStatus = (normStatus === 'COCOK' || normStatus === 'SESUAI') ? 'Sesuai' : 'Tidak Sesuai';
+      const finalKoreksi = result.koreksi || (finalStatus === 'Sesuai' ? 'Semua data sesuai dokumen.' : 'Ada ketidaksesuaian data.');
+
+      s.status = finalStatus;
+      s.koreksiAI = finalKoreksi;
+
+      // Update backend
+      callAPI({
+        action: "updateStatus",
+        idSiswa: s.id,
+        status: finalStatus,
+        koreksiAI: finalKoreksi
+      }).catch(e => {});
+
+      suksesCount++;
+    } catch (e) {
+      console.warn("Batch item error:", e);
+      gagalCount++;
+    }
+
+    // Update UI progres
+    renderSiswaTable(siswaDataList);
+  }
+
+  hideLoader();
+  try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Pemeriksaan AI Selesai!',
+    text: `Berhasil memeriksa ${suksesCount} siswa (${gagalCount > 0 ? gagalCount + ' terkendala/tanpa berkas' : 'semua selesai'}). Status dan catatan permasalahan telah otomatis tersimpan di database.`
   });
 }
 
