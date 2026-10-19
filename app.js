@@ -4956,35 +4956,12 @@ function mulaiBelajarBuku(bukuId) {
   });
 }
 
-function launchReaderSession(book, studentName) {
-  // Update view count
-  book.dibaca = (book.dibaca || 0) + 1;
-  saveBukuListToStorage();
-  renderBukuPopuler();
-  renderBukuGrid();
-
-  // Inisialisasi Sesi Belajar
-  activeBelajarSession = {
-    sessionId: 'SES-' + Date.now(),
-    bukuId: book.id,
-    bukuJudul: book.nama,
-    namaSiswa: studentName,
-    tanggal: new Date().toLocaleDateString('id-ID'),
-    jamMulai: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-    halamanAwal: 1,
-    halamanSekarang: 1,
-    totalHalaman: book.totalHal || 30,
-    detikMulai: Date.now(),
-    durasiDetik: 0,
-    status: 'Aktif Belajar'
-  };
-
-  // Variable Global PDF Reader
-  let currentPdfDoc = null;
-  let currentPdfPage = 1;
-  let currentPdfScale = 1.0;
-  let isPdfRendering = false;
-  let pendingPdfPage = null;
+// Variable Global PDF Reader
+let currentPdfDoc = null;
+let currentPdfPage = 1;
+let currentPdfScale = 1.0;
+let isPdfRendering = false;
+let pendingPdfPage = null;
 
   function launchReaderSession(book, studentName) {
     // Update view count
@@ -5756,10 +5733,8 @@ function launchReaderSession(book, studentName) {
         <div style="font-size: 11px; color: #64748b; margin-top: 12px;">Divalidasi oleh: ${u.penguji} · Tanggal: ${u.tanggal}</div>
       </div>
     `,
-      showCloseButton: true,
-      confirmButtonText: 'Tutup',
-      confirmButtonColor: 'var(--primary-color)'
-    });
-  }
-
+    showCloseButton: true,
+    confirmButtonText: 'Tutup',
+    confirmButtonColor: 'var(--primary-color)'
+  });
 }
