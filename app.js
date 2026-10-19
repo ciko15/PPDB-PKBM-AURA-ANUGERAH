@@ -485,11 +485,16 @@ function setupEventListeners() {
     });
   });
 
-  document.getElementById('btn-cek-ai').addEventListener('click', handleAICheck);
-  document.getElementById('btn-setuju').addEventListener('click', () => submitValidation('Selesai'));
-  document.getElementById('btn-tolak').addEventListener('click', () => submitValidation('Perlu Perbaikan'));
+  const btnCekAi = document.getElementById('btn-cek-ai');
+  if (btnCekAi) btnCekAi.addEventListener('click', handleAICheck);
 
-  formAddUser.addEventListener('submit', handleAddUser);
+  const btnSetuju = document.getElementById('btn-setuju');
+  if (btnSetuju) btnSetuju.addEventListener('click', () => submitValidation('Selesai'));
+
+  const btnTolak = document.getElementById('btn-tolak');
+  if (btnTolak) btnTolak.addEventListener('click', () => submitValidation('Perlu Perbaikan'));
+
+  if (formAddUser) formAddUser.addEventListener('submit', handleAddUser);
 
   const btnToggleAddUser = document.getElementById('btn-toggle-add-user');
   const btnCancelAddUser = document.getElementById('btn-cancel-add-user');
