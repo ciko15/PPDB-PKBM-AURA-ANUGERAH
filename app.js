@@ -2461,42 +2461,175 @@ function hideLoader() {
 }
 
 // ======================= EXPORT / IMPORT EXCEL & CSV =======================
+// ======================= EXPORT / IMPORT EXCEL & CSV & PDF =======================
 function exportDataToExcel() {
   if (!siswaDataList || siswaDataList.length === 0) {
     Swal.fire('Info', 'Tidak ada data untuk diekspor', 'info');
     return;
   }
 
-  const dataToExport = siswaDataList.map((s) => ({
-    'No.': s.id || '',
+  const dataToExport = siswaDataList.map((s, idx) => ({
+    'No.': idx + 1,
+    'ID Siswa': s.id || '',
     'Tanggal Daftar': s.tglDaftar ? String(s.tglDaftar).split('T')[0] : '',
     'NISN': s.nisn || '',
     'NIK': s.nik || '',
     'No. Kartu Keluarga': s.noKk || '',
     'Urut KK': s.urutKk || '',
-    'Kabupaten/Kota': s.kabKota || '',
-    'Kecamatan': s.kecamatan || '',
-    'Desa Kelurahan': s.desaKelurahan || '',
     'Nama Lengkap': s.nama || '',
     'Tempat Lahir': s.tempatLahir || '',
     'Tanggal Lahir': s.tglLahir ? String(s.tglLahir).split('T')[0] : '',
-    'Nama Ayah Kandung': s.namaAyah || '',
-    'Tahun Lahir Ayah': s.tahunLahirAyah || '',
-    'NIK Ayah': s.nikAyah || '',
+    'Jenjang/Program': s.program || s.jenjang || '',
+    'Status Siswa': s.statusAktif || 'Aktif',
+    'Status Validasi AI': s.status || 'Belum Dicek',
+    'Catatan AI': s.koreksiAI || '',
     'Nama Ibu Kandung': s.namaIbu || '',
-    'Tahun Lahir Ibu': s.tahunLahirIbu || '',
     'NIK Ibu': s.nikIbu || '',
-    'Jenjang': s.program || s.jenjang || '',
+    'Nama Ayah Kandung': s.namaAyah || '',
+    'NIK Ayah': s.nikAyah || '',
+    'Kabupaten/Kota': s.kabKota || '',
+    'Kecamatan': s.kecamatan || '',
+    'Desa Kelurahan': s.desaKelurahan || '',
     'Syarat': s.syarat || '',
     'Dok Berkas': s.dokBerkas || '',
-    'Kelas': s.kelas || '',
-    'Foto': ''
+    'Didaftarkan Oleh': s.createdBy || ''
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(dataToExport);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Data_Peserta_Didik");
-  XLSX.writeFile(workbook, "Data_Peserta_Didik.xlsx");
+  XLSX.writeFile(workbook, `Data_Peserta_Didik_PKBM_Aura_Anugerah_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+function exportDataToPDF() {
+  if (!siswaDataList || siswaDataList.length === 0) {
+    Swal.fire('Info', 'Tidak ada data untuk diekspor ke PDF', 'info');
+    return;
+  }
+
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    Swal.fire('Error', 'Library jsPDF belum selesai dimuat, silakan muat ulang halaman.', 'error');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  // Header / Kop Dokumen
+  doc.setFillColor(30, 58, 138); // Deep Navy
+  doc.rect(0, 0, 297, 24, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.text('PKBM AURA ANUGERAH - REKAPITULASI PESERTA DIDIK', 14, 11);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Pendidikan Kesetaraan Paket A · Paket B · Paket C | Terakreditasi & Terverifikasi', 14, 18);
+
+  const tglCetak = new Date().toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+  doc.text(`Dicetak pada: ${tglCetak}`, 283, 18, { align: 'right' });
+
+  // Siapkan data tabel
+  const tableRows = siswaDataList.map((s, idx) => {
+    let tglLahirFormatted = '-';
+    if (s.tglLahir) {
+      const d = String(s.tglLahir).split('T')[0];
+      const p = d.split('-');
+      if (p.length === 3) tglLahirFormatted = `${p[2]}/${p[1]}/${p[0]}`;
+      else tglLahirFormatted = d;
+    }
+    const ttl = (s.tempatLahir ? s.tempatLahir + ', ' : '') + tglLahirFormatted;
+
+    // Bersihkan status AI
+    let aiStatusClean = 'Belum Dicek';
+    const rawSt = String(s.status || '').toLowerCase();
+    if (rawSt === 'sesuai' || rawSt === 'cocok' || (rawSt === 'selesai' && (!s.koreksiAI || !s.koreksiAI.includes('tidak')))) {
+      aiStatusClean = 'Sesuai';
+    } else if (rawSt.includes('tidak') || rawSt.includes('perlu') || (s.koreksiAI && s.koreksiAI.includes('Terdapat ketidaksesuaian'))) {
+      aiStatusClean = 'Perlu Cek';
+    } else if (rawSt === 'pending') {
+      aiStatusClean = 'Pending';
+    }
+
+    return [
+      idx + 1,
+      s.nik || '-',
+      s.nisn || '-',
+      s.nama || '-',
+      s.program || s.jenjang || '-',
+      ttl,
+      s.namaIbu || '-',
+      s.statusAktif || 'Aktif',
+      aiStatusClean
+    ];
+  });
+
+  // Buat Tabel dengan AutoTable
+  doc.autoTable({
+    head: [['No', 'NIK', 'NISN', 'Nama Peserta Didik', 'Program', 'Tempat, Tanggal Lahir', 'Nama Ibu Kandung', 'Status', 'Validasi AI']],
+    body: tableRows,
+    startY: 29,
+    theme: 'striped',
+    headStyles: {
+      fillColor: [37, 99, 235], // Blue 600
+      textColor: [255, 255, 255],
+      fontSize: 8.5,
+      fontStyle: 'bold',
+      halign: 'center',
+      valign: 'middle'
+    },
+    bodyStyles: {
+      fontSize: 8,
+      textColor: [30, 41, 59],
+      valign: 'middle'
+    },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 10 },
+      1: { halign: 'center', cellWidth: 32 },
+      2: { halign: 'center', cellWidth: 24 },
+      3: { cellWidth: 46 },
+      4: { halign: 'center', cellWidth: 25 },
+      5: { cellWidth: 45 },
+      6: { cellWidth: 40 },
+      7: { halign: 'center', cellWidth: 22 },
+      8: { halign: 'center', cellWidth: 25 }
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252]
+    },
+    margin: { top: 28, left: 14, right: 14, bottom: 16 },
+    didDrawPage: function(data) {
+      // Footer Nomor Halaman
+      const pageCount = doc.internal.getNumberOfPages();
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        `PKBM Aura Anugerah - Halaman ${data.pageNumber} dari ${pageCount}`,
+        14,
+        doc.internal.pageSize.height - 8
+      );
+      doc.text(
+        `Total Data: ${siswaDataList.length} Peserta Didik`,
+        doc.internal.pageSize.width - 14,
+        doc.internal.pageSize.height - 8,
+        { align: 'right' }
+      );
+    }
+  });
+
+  const fileName = `Data_Peserta_Didik_PKBM_Aura_Anugerah_${new Date().toISOString().slice(0, 10)}.pdf`;
+  doc.save(fileName);
 }
 
 function importDataFromFile(event) {
