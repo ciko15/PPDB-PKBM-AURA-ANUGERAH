@@ -4,10 +4,15 @@
 function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
   let apiKey = clientApiKey || PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   
+  // Fallback ke API key default jika belum terisi di Script Properties
   if (!apiKey || apiKey === 'TARUH_API_KEY_DISINI' || apiKey.trim() === '') {
+    apiKey = 'AQ.Ab8RN6IsOK3hu-S-7x1mSMT91X37w4Fur-AbgFaF0WqCdaTnPA';
+  }
+
+  if (!apiKey || apiKey.trim() === '') {
     return {
       status: "ERROR",
-      koreksi: "GEMINI_API_KEY belum dikonfigurasi di Script Properties Google Apps Script. Silakan buka Project Settings > Script Properties dan tambahkan GEMINI_API_KEY dengan API key Google AI Studio Anda."
+      koreksi: "GEMINI_API_KEY belum dikonfigurasi. Silakan tambahkan GEMINI_API_KEY di Project Settings > Script Properties."
     };
   }
 
@@ -71,8 +76,8 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
     return { status: "ERROR", koreksi: "Gagal memproses file dokumen untuk AI: " + e.message };
   }
 
-  // Gunakan Gemini 1.5 Flash
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // Daftar model yang didukung (diurutkan dari yang paling stabil & hemat kuota)
+  const candidateModels = ["gemini-3.5-flash-lite", "gemini-3.5-flash"];
 
   const promptText = `Berikut adalah data pendaftaran calon siswa Kejar Paket (Sekolah Non-Formal):\n` +
                      `1. NIK: ${dataSiswa.nik || '-'}\n` +
@@ -115,35 +120,38 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
     muteHttpExceptions: true
   };
 
-  try {
-    const response = UrlFetchApp.fetch(url, options);
-    const statusCode = response.getResponseCode();
-    const responseText = response.getContentText();
-    
-    if (statusCode !== 200) {
-      return { 
-        status: "ERROR", 
-        koreksi: `Google Gemini API mengembalikan kode ${statusCode}: ${responseText.substring(0, 200)}` 
-      };
-    }
+  let lastError = "";
 
-    const resultJson = JSON.parse(responseText);
-    
-    if (resultJson.candidates && resultJson.candidates.length > 0) {
-      const aiContent = resultJson.candidates[0].content.parts[0].text;
-      try {
-        return JSON.parse(aiContent);
-      } catch (pe) {
-        // Jika response dibungkus markdown ```json
-        const cleaned = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(cleaned);
+  for (let i = 0; i < candidateModels.length; i++) {
+    const modelName = candidateModels[i];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+    try {
+      const response = UrlFetchApp.fetch(url, options);
+      const statusCode = response.getResponseCode();
+      const responseText = response.getContentText();
+
+      if (statusCode === 200) {
+        const resultJson = JSON.parse(responseText);
+        if (resultJson.candidates && resultJson.candidates.length > 0) {
+          const aiContent = resultJson.candidates[0].content.parts[0].text;
+          const cleaned = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
+          return JSON.parse(cleaned);
+        }
+      } else if (statusCode === 503 || statusCode === 429) {
+        // Jika server Google sedang sibuk/overload di model ini, jeda sejenak lalu coba model berikutnya
+        lastError = `Google Gemini (${modelName}) sedang sibuk (HTTP ${statusCode}).`;
+        Utilities.sleep(1000);
+        continue;
+      } else {
+        lastError = `Google Gemini (${modelName}) mengembalikan error HTTP ${statusCode}: ${responseText.substring(0, 150)}`;
       }
-    } else {
-      return { status: "ERROR", koreksi: "Gemini AI tidak mengembalikan analisis yang valid." };
+    } catch (e) {
+      lastError = e.toString();
     }
-  } catch (e) {
-    return { status: "ERROR", koreksi: "Terjadi kesalahan saat memanggil API Gemini: " + e.toString() };
   }
+
+  return { status: "ERROR", koreksi: lastError || "Gagal menghubungi layanan AI." };
 }
 
 /**
@@ -151,7 +159,12 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
  */
 function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
   let apiKey = clientApiKey || PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  
   if (!apiKey || apiKey === 'TARUH_API_KEY_DISINI' || apiKey.trim() === '') {
+    apiKey = 'AQ.Ab8RN6IsOK3hu-S-7x1mSMT91X37w4Fur-AbgFaF0WqCdaTnPA';
+  }
+
+  if (!apiKey || apiKey.trim() === '') {
     return {
       status: "ERROR",
       message: "GEMINI_API_KEY belum dikonfigurasi."
@@ -248,7 +261,8 @@ function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
     }
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const candidateModels = ["gemini-3.5-flash-lite", "gemini-3.5-flash"];
+
   const options = {
     method: "post",
     contentType: "application/json",
@@ -256,25 +270,36 @@ function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
     muteHttpExceptions: true
   };
 
-  try {
-    const response = UrlFetchApp.fetch(url, options);
-    const statusCode = response.getResponseCode();
-    const responseText = response.getContentText();
+  let lastError = "";
 
-    if (statusCode !== 200) {
-      return { status: "ERROR", message: `Google Gemini API Error (${statusCode}): ${responseText.substring(0, 200)}` };
-    }
+  for (let i = 0; i < candidateModels.length; i++) {
+    const modelName = candidateModels[i];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-    const resultJson = JSON.parse(responseText);
-    if (resultJson.candidates && resultJson.candidates.length > 0) {
-      const aiContent = resultJson.candidates[0].content.parts[0].text;
-      const cleaned = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(cleaned);
-    } else {
-      return { status: "ERROR", message: "Gemini AI tidak dapat membaca dokumen tersebut." };
+    try {
+      const response = UrlFetchApp.fetch(url, options);
+      const statusCode = response.getResponseCode();
+      const responseText = response.getContentText();
+
+      if (statusCode === 200) {
+        const resultJson = JSON.parse(responseText);
+        if (resultJson.candidates && resultJson.candidates.length > 0) {
+          const aiContent = resultJson.candidates[0].content.parts[0].text;
+          const cleaned = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
+          return JSON.parse(cleaned);
+        }
+      } else if (statusCode === 503 || statusCode === 429) {
+        lastError = `Google Gemini (${modelName}) sedang sibuk (HTTP ${statusCode}).`;
+        Utilities.sleep(1000);
+        continue;
+      } else {
+        lastError = `Google Gemini (${modelName}) Error (${statusCode}): ${responseText.substring(0, 150)}`;
+      }
+    } catch (err) {
+      lastError = err.toString();
     }
-  } catch (err) {
-    return { status: "ERROR", message: "Gagal memproses AI: " + err.toString() };
   }
+
+  return { status: "ERROR", message: lastError || "Gagal memproses AI." };
 }
 
