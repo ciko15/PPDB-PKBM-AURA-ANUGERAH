@@ -12,12 +12,14 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
   
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <!-- Lucide Icons (Identik dengan Rostering Teknik) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -467,23 +469,59 @@
       <aside class="sidebar">
         <ul id="main-menu" class="siswa-list">
           <!-- Menu Petugas / Admin / Guru -->
-          <li class="active" data-target="section-dashboard" id="menu-dashboard">🏠 Beranda Dashboard</li>
-          <li data-target="section-input" id="menu-input">📝 Pendaftaran Baru</li>
-          <li data-target="section-ai-reg" id="menu-ai-reg" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); color: #047857; font-weight: 600; border-left: 3px solid #059669;">🤖 Pendaftaran Cepat AI</li>
-          <li data-target="section-validasi" id="menu-validasi">✅ Antrean Validasi AI</li>
-          <li data-target="section-list" id="menu-list">📋 Daftar Peserta Didik</li>
+          <li class="active" data-target="section-dashboard" id="menu-dashboard">
+            <i data-lucide="layout-dashboard" class="menu-icon"></i>
+            <span>Dashboard</span>
+          </li>
+          <li data-target="section-input" id="menu-input">
+            <i data-lucide="user-plus" class="menu-icon"></i>
+            <span>Pendaftaran Baru</span>
+          </li>
+          <li data-target="section-ai-reg" id="menu-ai-reg" class="menu-ai-item">
+            <i data-lucide="wand-2" class="menu-icon"></i>
+            <span>Pendaftaran Cepat AI</span>
+          </li>
+          <li data-target="section-validasi" id="menu-validasi">
+            <i data-lucide="check-circle-2" class="menu-icon"></i>
+            <span>Antrean Validasi AI</span>
+          </li>
+          <li data-target="section-list" id="menu-list">
+            <i data-lucide="clipboard-list" class="menu-icon"></i>
+            <span>Daftar Peserta Didik</span>
+          </li>
 
           <!-- Menu Akademik Terpadu (ala MyAura) -->
-          <li data-target="section-absensi" id="menu-absensi">📅 Absensi & Kehadiran</li>
-          <li data-target="section-bayar" id="menu-bayar">💰 SPP & Tabungan</li>
+          <li data-target="section-absensi" id="menu-absensi">
+            <i data-lucide="calendar-days" class="menu-icon"></i>
+            <span>Absensi & Kehadiran</span>
+          </li>
+          <li data-target="section-bayar" id="menu-bayar">
+            <i data-lucide="wallet" class="menu-icon"></i>
+            <span>SPP & Tabungan</span>
+          </li>
 
           <!-- Menu Khusus Siswa (Tampil jika login sebagai Siswa) -->
-          <li data-target="section-portal-siswa" id="menu-portal-siswa" class="hidden" style="background: #ecfdf5; color: #047857; font-weight: 600;">🎓 Profil & Status Saya</li>
-          <li data-target="section-pengumuman-siswa" id="menu-pengumuman-siswa" class="hidden">📢 Pengumuman & Jadwal</li>
+          <li data-target="section-portal-siswa" id="menu-portal-siswa" class="hidden menu-siswa-item">
+            <i data-lucide="graduation-cap" class="menu-icon"></i>
+            <span>Profil & Status Saya</span>
+          </li>
+          <li data-target="section-pengumuman-siswa" id="menu-pengumuman-siswa" class="hidden">
+            <i data-lucide="bell" class="menu-icon"></i>
+            <span>Pengumuman & Jadwal</span>
+          </li>
 
-          <li data-target="section-users" id="menu-users" class="hidden">⚙️ Kelola Pengguna</li>
-          <li data-target="section-api-keys" id="menu-api-keys" class="hidden" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; font-weight: 700; border-left: 3px solid #d97706;">🔑 Kelola API Gemini (Super)</li>
-          <li id="menu-logout" style="margin-top: 1.5rem; color: #dc2626; border-top: 1px solid #eee; padding-top: 15px;">🚪 Keluar</li>
+          <li data-target="section-users" id="menu-users" class="hidden">
+            <i data-lucide="settings" class="menu-icon"></i>
+            <span>Kelola Pengguna</span>
+          </li>
+          <li data-target="section-api-keys" id="menu-api-keys" class="hidden menu-api-item">
+            <i data-lucide="key" class="menu-icon"></i>
+            <span>Kelola API Gemini</span>
+          </li>
+          <li id="menu-logout" class="menu-logout-item">
+            <i data-lucide="log-out" class="menu-icon"></i>
+            <span>Keluar</span>
+          </li>
         </ul>
       </aside>
 
@@ -887,21 +925,27 @@
               </button>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="btn btn-success" onclick="exportDataToExcel()" style="display: inline-flex; align-items: center; gap: 6px;">
-                📊 Export Excel
+              <button class="btn" onclick="exportDataToExcel()" style="display: inline-flex; align-items: center; gap: 6px; background: #ffffff; border: 1px solid var(--border-color); color: #0f172a; font-weight: 500;">
+                <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px; color: #059669;"></i>
+                <span>Excel</span>
               </button>
-              <button class="btn btn-danger" onclick="exportDataToPDF()" style="display: inline-flex; align-items: center; gap: 6px; background: #e11d48; border-color: #be123c;">
-                📄 Export PDF
+              <button class="btn btn-primary" onclick="exportDataToPDF()" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 500;">
+                <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
+                <span>PDF</span>
               </button>
-              <label class="btn btn-warning" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 6px;">
-                📥 Import Data
+              <label class="btn" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 6px; background: #ffffff; border: 1px solid var(--border-color); color: #0f172a; font-weight: 500;">
+                <i data-lucide="upload" style="width: 16px; height: 16px; color: #0284c7;"></i>
+                <span>Import</span>
                 <input type="file" id="import-data-file" accept=".csv, .xlsx, .xls" style="display: none;" onchange="importDataFromFile(event)">
               </label>
-              <button class="btn btn-primary" onclick="loadAllSiswa()">🔄 Refresh</button>
+              <button class="btn btn-icon" onclick="loadAllSiswa()" title="Refresh Data" style="background: #ffffff; border: 1px solid var(--border-color); color: #0f172a;">
+                <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+              </button>
             </div>
           </div>
-          <div style="margin-bottom: 15px;">
-            <input type="text" id="search-siswa" placeholder="🔍 Cari nama, NIK, NISN, atau program..." style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; font-size: 0.95rem;" oninput="filterSiswaTable()">
+          <div style="margin-bottom: 15px; position: relative;">
+            <i data-lucide="search" style="position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; color: #94a3b8;"></i>
+            <input type="text" id="search-siswa" placeholder="Cari nama, NIK, NISN, atau program..." style="width: 100%; padding: 10px 10px 10px 38px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-size: 0.92rem; background: #ffffff;" oninput="filterSiswaTable()">
           </div>
           <div class="table-container">
             <table class="data-table">

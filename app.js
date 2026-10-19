@@ -236,6 +236,9 @@ const tableUsersBody = document.getElementById('table-users-body');
 document.addEventListener("DOMContentLoaded", () => {
   setupEventListeners();
   checkLocalSession();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
 });
 
 function setupEventListeners() {
@@ -266,6 +269,10 @@ function setupEventListeners() {
       if (targetId === 'section-list') loadAllSiswa();
       if (targetId === 'section-users') loadAllUsers();
       if (targetId === 'section-api-keys') loadApiKeys();
+
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        setTimeout(window.lucide.createIcons, 50);
+      }
     });
   });
 
@@ -1576,20 +1583,26 @@ function renderSiswaTable(data) {
         </button>
       </td>
       <td style="text-align: center; white-space: nowrap; width: 1%;" onclick="event.stopPropagation();">
-        <div style="display: inline-flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
-          <button class="btn btn-primary" onclick="runSingleRowAICheck('${s.id}')" title="Periksa kesesuaian berkas dengan AI" style="padding: 4px 8px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);">
-            🤖 Cek AI
+        <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap;">
+          <button class="btn btn-icon" onclick="runSingleRowAICheck('${s.id}')" title="Periksa AI" style="width: 32px; height: 32px; padding: 0; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px;">
+            <i data-lucide="wand-2" style="width: 15px; height: 15px;"></i>
           </button>
-          <button class="btn btn-outline" onclick="loadSiswaForEdit('${s.id}')" title="Edit data" style="padding: 4px 8px; font-size: 0.78rem; font-weight: 600; white-space: nowrap;">
-            Edit
+          <button class="btn btn-icon" onclick="loadSiswaForEdit('${s.id}')" title="Edit Data" style="width: 32px; height: 32px; padding: 0; background: #ffffff; border: 1px solid var(--border-color); color: #0f172a; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px;">
+            <i data-lucide="pencil" style="width: 15px; height: 15px;"></i>
           </button>
-          ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin') ? `<button class="btn btn-danger" onclick="deleteSiswaData('${s.id}')" title="Hapus siswa" style="padding: 4px 8px; font-size: 0.78rem; font-weight: 600; white-space: nowrap;">Hapus</button>` : ''}
+          ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin') ? `
+          <button class="btn btn-icon" onclick="deleteSiswaData('${s.id}')" title="Hapus Siswa" style="width: 32px; height: 32px; padding: 0; background: #ffffff; border: 1px solid #fecaca; color: #dc2626; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px;">
+            <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+          </button>` : ''}
         </div>
       </td>
     `;
     tableSiswaBody.appendChild(tr);
   });
   updateSelectedSiswaCount();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
 }
 
 // ======================= BATCH & SINGLE ROW AI VERIFICATION =======================
