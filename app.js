@@ -1448,8 +1448,37 @@ function showAICheckPopup(siswaId) {
     .replace(/([0-9]+\.\s)/g, '<br><strong style="color: #0f172a;">$1</strong>')
     .replace(/^<br>/, '');
 
+  // Ekstrak penyesuaian otomatis dari teks koreksiAI jika s.suggestedFix belum ada di memory
+  if (!s.suggestedFix && rawKoreksi) {
+    const extractedFix = {};
+    // Cek perbedaan Tanggal Lahir (contoh: "...sedangkan pada dokumen... tertulis 22-09-2003 (2003-09-22)..." atau "tertulis 2 Juli 1999")
+    const tglMatch = rawKoreksi.match(/(?:dokumen|tertulis|fisik)[^.]*?(\d{4}-\d{2}-\d{2})/i) || rawKoreksi.match(/tertulis\s+(\d{1,2}[-\s][A-Za-z]+[-\s]\d{4}|\d{1,2}-\d{2}-\d{4})/i);
+    if (tglMatch && tglMatch[1]) {
+      extractedFix.tglLahir = tglMatch[1];
+    }
+    // Cek Nama jika ada "...tertulis 'NAMA' pada dokumen..."
+    const namaMatch = rawKoreksi.match(/Nama(?:\s+Lengkap)?(?:\s+tidak\s+cocok|\s+berbeda)[^.]*?(?:tertulis|tertera)\s+['"]([^'"]+)['"]/i);
+    if (namaMatch && namaMatch[1]) {
+      extractedFix.nama = namaMatch[1];
+    }
+    // Cek Nama Ibu
+    const ibuMatch = rawKoreksi.match(/Nama\s+Ibu(?:\s+Kandung)?(?:\s+tidak\s+cocok|\s+berbeda)[^.]*?(?:tertulis|tertera)\s+['"]([^'"]+)['"]/i);
+    if (ibuMatch && ibuMatch[1]) {
+      extractedFix.namaIbu = ibuMatch[1];
+    }
+    // Cek Tempat Lahir
+    const tempatMatch = rawKoreksi.match(/Tempat\s+Lahir(?:\s+tidak\s+cocok|\s+berbeda)[^.]*?(?:tertulis|tertera)\s+['"]([^'"]+)['"]/i);
+    if (tempatMatch && tempatMatch[1]) {
+      extractedFix.tempatLahir = tempatMatch[1];
+    }
+
+    if (Object.keys(extractedFix).length > 0) {
+      s.suggestedFix = extractedFix;
+    }
+  }
+
   const hasFix = !isCocok && s.suggestedFix && Object.values(s.suggestedFix).some(v => v !== null && v !== undefined && String(v).trim() !== '');
-  const hasRekomendasi = !isCocok && (s.rekomendasiResmi || (s.tipeMasalah === 'REKOMENDASI_RESMI'));
+  const hasRekomendasi = !isCocok && (s.rekomendasiResmi || (s.tipeMasalah === 'REKOMENDASI_RESMI') || /beda nama|instansi terkait|surat keterangan/i.test(rawKoreksi));
 
   let fixPreviewHtml = '';
   if (hasFix) {

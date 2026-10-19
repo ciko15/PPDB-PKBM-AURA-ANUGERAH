@@ -43,11 +43,18 @@ function getUsers() {
 
 // =================== API KEYS MANAGEMENT (SUPER ADMIN) ===================
 function getApiKeysSheet() {
-  let sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('API_Keys');
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName('API_Keys');
   if (!sheet) {
-    sheet = SpreadsheetApp.openById(SHEET_ID).insertSheet('API_Keys');
+    sheet = ss.insertSheet('API_Keys');
+  }
+
+  // Jika sheet masih baru atau kosong (belum ada data)
+  if (sheet.getLastRow() < 2) {
+    sheet.clear();
     sheet.appendRow(['ID', 'Email Google / Pemilik', 'API Key', 'Tgl Ditambahkan', 'Total Digunakan', 'Limit Harian', 'Status']);
   }
+
   return sheet;
 }
 
