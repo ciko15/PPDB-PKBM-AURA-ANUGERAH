@@ -443,6 +443,17 @@ function setupEventListeners() {
   setupFileInputPreview('reg-file-kk', 'preview-reg-kk');
   setupFileInputPreview('reg-file-bayar', 'preview-reg-bayar');
   setupFileInputPreview('reg-file-foto', 'preview-reg-foto');
+
+  // Preview untuk berkas Pendaftaran Cepat AI
+  setupFileInputPreview('ai-reg-file-kk', 'ai-preview-kk');
+  setupFileInputPreview('ai-reg-file-ijazah', 'ai-preview-ijazah');
+  setupFileInputPreview('ai-reg-file-foto', 'ai-preview-foto');
+
+  // Event listener tombol Pendaftaran Cepat AI
+  const btnProsesAIReg = document.getElementById('btn-proses-ai-reg');
+  if (btnProsesAIReg) {
+    btnProsesAIReg.addEventListener('click', handleEkstrakDataAI);
+  }
 }
 
 // ======================= API CALLER =======================
@@ -1177,7 +1188,14 @@ async function handleAICheck(e) {
       urlFoto: (currentSiswa.urlFoto && (currentSiswa.urlFoto.startsWith('http') || currentSiswa.urlFoto.startsWith('data:'))) ? currentSiswa.urlFoto : (getFileLocal(currentSiswa.id, 'foto') || "")
     };
 
-    const result = await callAPI({ action: "runAICheck", dataSiswa: enrichedDataSiswa, jenisDokumen: targetDoc });
+    const userApiKey = localStorage.getItem('gemini_api_key') || 'AQ.Ab8RN6IsOK3hu-S-7x1mSMT91X37w4Fur-AbgFaF0WqCdaTnPA';
+
+    const result = await callAPI({ 
+      action: "runAICheck", 
+      dataSiswa: enrichedDataSiswa, 
+      jenisDokumen: targetDoc,
+      apiKey: userApiKey
+    });
     hideLoader();
 
     aiResultBox.classList.remove('hidden');
@@ -1932,19 +1950,284 @@ if (loginModalOverlay) {
   });
 }
 
-// ======================= REGISTER MODAL LOGIC =======================
-const btnCloseRegister = document.getElementById('btn-close-register');
-const registerModalOverlay = document.getElementById('register-modal-overlay');
-const modalRegister = document.getElementById('modal-register');
-
-if (btnCloseRegister && modalRegister) {
-  btnCloseRegister.addEventListener('click', () => {
-    cancelEdit();
-  });
-}
-
 if (registerModalOverlay && modalRegister) {
   registerModalOverlay.addEventListener('click', () => {
     cancelEdit();
   });
 }
+
+// ======================= PENDAFTARAN CEPAT AI (GEMINI) =======================
+// Penyimpanan sementara berkas yang diunggah pada sesi Pendaftaran Cepat AI
+let aiUploadedFiles = {
+  kk: null,
+  ijazah: null,
+  foto: null
+};
+
+async function handleEkstrakDataAI() {
+  const nikInput = document.getElementById('ai-reg-nik');
+  const fileKkInput = document.getElementById('ai-reg-file-kk');
+  const fileIjazahInput = document.getElementById('ai-reg-file-ijazah');
+  const fileFotoInput = document.getElementById('ai-reg-file-foto');
+
+  const nikTarget = (nikInput ? nikInput.value : "").trim();
+  const fileKk = fileKkInput && fileKkInput.files[0] ? fileKkInput.files[0] : null;
+  const fileIjazah = fileIjazahInput && fileIjazahInput.files[0] ? fileIjazahInput.files[0] : null;
+  const fileFoto = fileFotoInput && fileFotoInput.files[0] ? fileFotoInput.files[0] : null;
+
+  if (!fileKk) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Berkas KK Diperlukan',
+      text: 'Silakan pilih foto / scan Kartu Keluarga (KK) terlebih dahulu untuk dianalisis oleh AI.'
+    });
+    return;
+  }
+
+  showLoader('Gemini AI sedang membaca dan mengekstrak data dari dokumen KK & Ijazah...');
+
+  try {
+    const kkBase64 = await toBase64(fileKk);
+    const ijazahBase64 = fileIjazah ? await toBase64(fileIjazah) : "";
+    const fotoBase64 = fileFoto ? await toBase64(fileFoto) : "";
+
+    aiUploadedFiles = {
+      kk: kkBase64,
+      ijazah: ijazahBase64,
+      foto: fotoBase64
+    };
+
+    const userApiKey = localStorage.getItem('gemini_api_key') || 'AQ.Ab8RN6IsOK3hu-S-7x1mSMT91X37w4Fur-AbgFaF0WqCdaTnPA';
+
+    const result = await callAPI({
+      action: "ekstrakDataAI",
+      nikTarget: nikTarget,
+      kkBase64: kkBase64,
+      ijazahBase64: ijazahBase64,
+      apiKey: userApiKey
+    });
+
+    hideLoader();
+
+    if (!result || result.status !== "SUCCESS" || !result.data) {
+      const errMsg = result && (result.message || result.koreksi) ? (result.message || result.koreksi) : "Gagal mengekstrak data dari dokumen.";
+      Swal.fire({
+        icon: 'error',
+        title: 'Ekstraksi AI Gagal',
+        text: errMsg
+      });
+      return;
+    }
+
+    const data = result.data;
+
+    // Masukkan data hasil ekstraksi ke formulir Step 2
+    const today = new Date().toISOString().split('T')[0];
+    const outTglDaftar = document.getElementById('ai-out-tgl-daftar');
+    if (outTglDaftar) outTglDaftar.value = today;
+
+    const setField = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val !== undefined && val !== null ? val : '';
+    };
+
+    setField('ai-out-nama', data.nama || '');
+    setField('ai-out-nik', data.nik || nikTarget || '');
+    setField('ai-out-no-kk', data.noKk || '');
+    setField('ai-out-urut-kk', data.urutKk || '');
+    
+    // Normalisasi Jenis Kelamin
+    const elJk = document.getElementById('ai-out-jk');
+    if (elJk) {
+      if (data.jk && (data.jk.toLowerCase().includes('perempuan') || data.jk.toLowerCase().startsWith('p'))) {
+        elJk.value = 'Perempuan';
+      } else {
+        elJk.value = 'Laki-laki';
+      }
+    }
+
+    setField('ai-out-tempat-lahir', data.tempatLahir || '');
+    setField('ai-out-tgl-lahir', data.tglLahir || '');
+    setField('ai-out-ibu', data.namaIbu || '');
+    setField('ai-out-nik-ibu', data.nikIbu || '');
+    setField('ai-out-ayah', data.namaAyah || '');
+    setField('ai-out-nik-ayah', data.nikAyah || '');
+    setField('ai-out-kab-kota', data.kabKota || '');
+    setField('ai-out-kecamatan', data.kecamatan || '');
+    setField('ai-out-desa-kelurahan', data.desaKelurahan || '');
+    setField('ai-out-nisn', data.nisn || '');
+    setField('ai-out-tahun-lulus', data.tahunLulus || '');
+
+    // Tampilkan formulir review hasil ekstraksi
+    const container = document.getElementById('ai-extracted-container');
+    if (container) {
+      container.style.display = 'block';
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Data Berhasil Diekstrak!',
+      text: 'Silakan pilih Program / Jenjang dan tinjau kelengkapan data sebelum menyimpan.',
+      timer: 3000,
+      showConfirmButton: false
+    });
+
+  } catch (err) {
+    hideLoader();
+    console.error("AI Extraction Error:", err);
+    Swal.fire('Error', 'Terjadi kesalahan saat memproses dokumen: ' + err.message, 'error');
+  }
+}
+
+async function handleAISiswaSubmit() {
+  const getVal = (id) => {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  };
+
+  const program = getVal('ai-out-program');
+  const nama = getVal('ai-out-nama');
+  const nik = getVal('ai-out-nik');
+
+  if (!program) {
+    Swal.fire('Peringatan', 'Mohon pilih Pilihan Program / Jenjang (Paket A / B / C).', 'warning');
+    return;
+  }
+
+  if (!nama) {
+    Swal.fire('Peringatan', 'Nama lengkap siswa tidak boleh kosong.', 'warning');
+    return;
+  }
+
+  Swal.fire({
+    title: 'Mendaftarkan Calon Siswa...',
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  try {
+    const finalSiswaId = 'S' + Date.now();
+    const tglDaftar = getVal('ai-out-tgl-daftar') || new Date().toISOString().split('T')[0];
+    const b64Kk = aiUploadedFiles.kk;
+    const b64Ijazah = aiUploadedFiles.ijazah;
+    const b64Foto = aiUploadedFiles.foto;
+
+    // Simpan berkas ke penyimpanan offline / lokal seketika
+    if (b64Foto) saveFileLocal(finalSiswaId, 'foto', b64Foto);
+    if (b64Ijazah) saveFileLocal(finalSiswaId, 'ijazah', b64Ijazah);
+    if (b64Kk) saveFileLocal(finalSiswaId, 'kk', b64Kk);
+
+    const newSiswa = {
+      id: finalSiswaId,
+      tglDaftar: tglDaftar,
+      nama: nama,
+      jk: getVal('ai-out-jk') || 'Laki-laki',
+      nik: nik,
+      nisn: getVal('ai-out-nisn'),
+      noKk: getVal('ai-out-no-kk'),
+      urutKk: getVal('ai-out-urut-kk'),
+      kabKota: getVal('ai-out-kab-kota'),
+      kecamatan: getVal('ai-out-kecamatan'),
+      desaKelurahan: getVal('ai-out-desa-kelurahan'),
+      kelas: program,
+      tempatLahir: getVal('ai-out-tempat-lahir'),
+      tglLahir: getVal('ai-out-tgl-lahir'),
+      namaIbu: getVal('ai-out-ibu'),
+      tahunLahirIbu: '',
+      nikIbu: getVal('ai-out-nik-ibu'),
+      namaAyah: getVal('ai-out-ayah'),
+      tahunLahirAyah: '',
+      nikAyah: getVal('ai-out-nik-ayah'),
+      namaWali: '',
+      program: program,
+      jenjang: program,
+      tahunLulus: getVal('ai-out-tahun-lulus'),
+      syarat: 'Lengkap',
+      dokBerkas: 'KK' + (b64Ijazah ? ', Ijazah' : ''),
+      urlFoto: b64Foto || '',
+      status: 'Pending',
+      koreksiAI: 'Hasil ekstraksi otomatis Gemini AI',
+      urlIjazah: b64Ijazah || '',
+      urlKK: b64Kk || '',
+      urlBayar: '',
+      statusAktif: 'Aktif',
+      createdBy: currentUser ? currentUser.username : 'AI Quick Reg'
+    };
+
+    // Optimistic Update ke state memori & cache lokal
+    siswaDataList.push(newSiswa);
+    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+
+    // Update UI seketika
+    renderDashboardUI(siswaDataList);
+    if (typeof renderSiswaTable === 'function') renderSiswaTable(siswaDataList);
+
+    // Kirim sinkronisasi ke backend Google Sheets di latar belakang
+    const payload = {
+      action: "registerSiswa",
+      data: {
+        ...newSiswa,
+        ijazahFile: b64Ijazah,
+        kkFile: b64Kk,
+        fotoFile: b64Foto
+      }
+    };
+
+    callAPI(payload).then(res => {
+      if (res) {
+        const targetId = res.id || finalSiswaId;
+        const idx = siswaDataList.findIndex(x => String(x.id) === String(targetId) || String(x.id) === String(finalSiswaId));
+        if (idx !== -1) {
+          if (res.urlIjazah) siswaDataList[idx].urlIjazah = res.urlIjazah;
+          if (res.urlKK) siswaDataList[idx].urlKK = res.urlKK;
+          if (res.urlFoto) siswaDataList[idx].urlFoto = res.urlFoto;
+          try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+        }
+      }
+    }).catch(err => {
+      console.warn("Background sync AI registration:", err);
+    });
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Pendaftaran Berhasil!',
+      text: `Calon siswa "${nama}" berhasil didaftarkan ke program ${program}. Data sudah masuk ke daftar siswa.`,
+      confirmButtonText: 'Buka Daftar Siswa'
+    }).then(() => {
+      resetAIRegForm();
+      const tabList = document.querySelector('li[data-target="section-list"]');
+      if (tabList) tabList.click();
+    });
+
+  } catch (err) {
+    console.error("AI Submit Error:", err);
+    Swal.fire('Error', 'Gagal mendaftarkan siswa: ' + err.message, 'error');
+  }
+}
+
+function resetAIRegForm() {
+  const nikInput = document.getElementById('ai-reg-nik');
+  if (nikInput) nikInput.value = '';
+
+  const fileKk = document.getElementById('ai-reg-file-kk');
+  if (fileKk) fileKk.value = '';
+  const prevKk = document.getElementById('ai-preview-kk');
+  if (prevKk) { prevKk.innerHTML = ''; prevKk.style.display = 'none'; }
+
+  const fileIjazah = document.getElementById('ai-reg-file-ijazah');
+  if (fileIjazah) fileIjazah.value = '';
+  const prevIjazah = document.getElementById('ai-preview-ijazah');
+  if (prevIjazah) { prevIjazah.innerHTML = ''; prevIjazah.style.display = 'none'; }
+
+  const fileFoto = document.getElementById('ai-reg-file-foto');
+  if (fileFoto) fileFoto.value = '';
+  const prevFoto = document.getElementById('ai-preview-foto');
+  if (prevFoto) { prevFoto.innerHTML = ''; prevFoto.style.display = 'none'; }
+
+  const container = document.getElementById('ai-extracted-container');
+  if (container) container.style.display = 'none';
+
+  aiUploadedFiles = { kk: null, ijazah: null, foto: null };
+}
+

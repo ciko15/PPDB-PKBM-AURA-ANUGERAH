@@ -1,8 +1,8 @@
 /**
  * Pengecekan data menggunakan Gemini AI
  */
-function cekKesesuaianDenganAI(dataSiswa, urlGambar) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
+  let apiKey = clientApiKey || PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   
   if (!apiKey || apiKey === 'TARUH_API_KEY_DISINI' || apiKey.trim() === '') {
     return {
@@ -145,3 +145,136 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar) {
     return { status: "ERROR", koreksi: "Terjadi kesalahan saat memanggil API Gemini: " + e.toString() };
   }
 }
+
+/**
+ * Ekstraksi Data Otomatis dari Kartu Keluarga & Ijazah menggunakan Gemini AI
+ */
+function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
+  let apiKey = clientApiKey || PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey || apiKey === 'TARUH_API_KEY_DISINI' || apiKey.trim() === '') {
+    return {
+      status: "ERROR",
+      message: "GEMINI_API_KEY belum dikonfigurasi."
+    };
+  }
+
+  if (!kkBase64 && !ijazahBase64) {
+    return {
+      status: "ERROR",
+      message: "Mohon unggah minimal foto Kartu Keluarga (KK)."
+    };
+  }
+
+  const parts = [];
+
+  const promptText = `Anda adalah asisten AI cerdas untuk pendaftaran peserta didik baru (PPDB).\n` +
+    (nikTarget ? `NIK Target Siswa: "${nikTarget}"\n` : `NIK Target Siswa: (Cari data siswa utama pada dokumen)\n`) +
+    `Instruksi:\n` +
+    `1. Analisis gambar dokumen yang terlampir (Kartu Keluarga dan/atau Ijazah).\n` +
+    `2. Jika ada Kartu Keluarga: Temukan baris anggota keluarga yang memiliki NIK sesuai "NIK Target Siswa" (atau anggota anak jika NIK tidak spesifik).\n` +
+    `3. Ekstrak data berikut secara teliti:\n` +
+    `   - nama: Nama lengkap calon siswa\n` +
+    `   - nik: NIK calon siswa (16 digit)\n` +
+    `   - noKk: Nomor Kartu Keluarga (16 digit di bagian atas KK)\n` +
+    `   - urutKk: Nomor urut siswa di dalam tabel Kartu Keluarga (misal: 1, 2, 3, dst)\n` +
+    `   - jk: Jenis Kelamin ('Laki-laki' atau 'Perempuan')\n` +
+    `   - tempatLahir: Tempat lahir siswa\n` +
+    `   - tglLahir: Tanggal lahir format YYYY-MM-DD\n` +
+    `   - namaAyah: Nama ayah kandung\n` +
+    `   - nikAyah: NIK ayah kandung jika terbaca\n` +
+    `   - tahunLahirAyah: Tahun lahir ayah jika ada\n` +
+    `   - namaIbu: Nama ibu kandung\n` +
+    `   - nikIbu: NIK ibu kandung jika terbaca\n` +
+    `   - tahunLahirIbu: Tahun lahir ibu jika ada\n` +
+    `   - kabKota: Kabupaten / Kota domisili di KK\n` +
+    `   - kecamatan: Kecamatan di KK\n` +
+    `   - desaKelurahan: Desa / Kelurahan di KK\n` +
+    `4. Jika terlampir Ijazah: Ekstrak NISN (10 digit nomor induk siswa nasional) dan tahun kelulusan asal (tahunLulus).\n` +
+    `Kembalikan respon murni JSON (tanpa markdown), contoh format:\n` +
+    `{\n` +
+    `  "status": "SUCCESS",\n` +
+    `  "data": {\n` +
+    `    "nama": "...",\n` +
+    `    "nik": "...",\n` +
+    `    "noKk": "...",\n` +
+    `    "urutKk": "...",\n` +
+    `    "jk": "...",\n` +
+    `    "tempatLahir": "...",\n` +
+    `    "tglLahir": "YYYY-MM-DD",\n` +
+    `    "namaAyah": "...",\n` +
+    `    "nikAyah": "...",\n` +
+    `    "tahunLahirAyah": "...",\n` +
+    `    "namaIbu": "...",\n` +
+    `    "nikIbu": "...",\n` +
+    `    "tahunLahirIbu": "...",\n` +
+    `    "kabKota": "...",\n` +
+    `    "kecamatan": "...",\n` +
+    `    "desaKelurahan": "...",\n` +
+    `    "nisn": "...",\n` +
+    `    "tahunLulus": "..."\n` +
+    `  }\n` +
+    `}`;
+
+  parts.push({ text: promptText });
+
+  // Helper untuk membersihkan base64 data URL
+  function cleanB64(raw) {
+    if (!raw) return null;
+    let mime = "image/jpeg";
+    let data = raw;
+    if (raw.includes(";base64,")) {
+      const sp = raw.split(";base64,");
+      const m = sp[0].match(/data:(.*)/);
+      if (m && m[1]) mime = m[1];
+      data = sp[1];
+    }
+    return { mimeType: mime, data: data };
+  }
+
+  if (kkBase64) {
+    const cleanKk = cleanB64(kkBase64);
+    if (cleanKk) parts.push({ inline_data: { mime_type: cleanKk.mimeType, data: cleanKk.data } });
+  }
+
+  if (ijazahBase64) {
+    const cleanIjazah = cleanB64(ijazahBase64);
+    if (cleanIjazah) parts.push({ inline_data: { mime_type: cleanIjazah.mimeType, data: cleanIjazah.data } });
+  }
+
+  const payload = {
+    contents: [{ parts: parts }],
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const statusCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    if (statusCode !== 200) {
+      return { status: "ERROR", message: `Google Gemini API Error (${statusCode}): ${responseText.substring(0, 200)}` };
+    }
+
+    const resultJson = JSON.parse(responseText);
+    if (resultJson.candidates && resultJson.candidates.length > 0) {
+      const aiContent = resultJson.candidates[0].content.parts[0].text;
+      const cleaned = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
+      return JSON.parse(cleaned);
+    } else {
+      return { status: "ERROR", message: "Gemini AI tidak dapat membaca dokumen tersebut." };
+    }
+  } catch (err) {
+    return { status: "ERROR", message: "Gagal memproses AI: " + err.toString() };
+  }
+}
+

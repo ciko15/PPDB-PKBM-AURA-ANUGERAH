@@ -36,7 +36,9 @@ function doPost(e) {
       result = getSiswaToValidate(params.pendingOnly);
     } else if (action === "runAICheck") {
       const urlGambar = params.jenisDokumen === 'ijazah' ? params.dataSiswa.urlIjazah : params.dataSiswa.urlKK;
-      result = cekKesesuaianDenganAI(params.dataSiswa, urlGambar);
+      result = cekKesesuaianDenganAI(params.dataSiswa, urlGambar, params.apiKey);
+    } else if (action === "ekstrakDataAI") {
+      result = ekstrakDataDenganAI(params.nikTarget, params.kkBase64, params.ijazahBase64, params.apiKey);
     } else if (action === "updateStatus") {
       result = updateStatusSiswa(params.idSiswa, params.status, params.koreksiAI);
     } else if (action === "updateStatusAktif") {

@@ -436,10 +436,10 @@
     </header>
 
     <div class="layout-container">
-      <aside class="sidebar main-nav" id="sidebar-nav">
         <ul id="main-menu" class="siswa-list">
           <li class="active" data-target="section-dashboard" id="menu-dashboard">🏠 Beranda Dashboard</li>
           <li data-target="section-input" id="menu-input">📝 Pendaftaran Baru</li>
+          <li data-target="section-ai-reg" id="menu-ai-reg" style="background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%); color: #0284c7; font-weight: 600; border-left: 3px solid #0284c7;">🤖 Pendaftaran Cepat AI</li>
           <li data-target="section-validasi">✅ Antrean Validasi AI</li>
           <li data-target="section-list">📋 Daftar Peserta Didik</li>
           <li data-target="section-users" id="menu-users" class="hidden">⚙️ Kelola Pengguna</li>
@@ -615,6 +615,180 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: PENDAFTARAN CEPAT AI ==================== -->
+        <div id="section-ai-reg" class="content-section hidden card-panel">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
+            <div>
+              <h2 style="margin: 0; color: #0284c7; display: flex; align-items: center; gap: 8px;">
+                <span>🤖</span> Pendaftaran Cepat AI
+              </h2>
+              <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                Cukup masukkan <b>NIK Siswa</b> dan unggah foto <b>Kartu Keluarga (KK)</b> & <b>Ijazah</b>. Gemini AI akan otomatis mengekstrak seluruh data diri calon siswa!
+              </p>
+            </div>
+          </div>
+
+          <!-- Step 1: Upload & Ekstraksi Dokumen -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <h4 style="margin: 0 0 1rem 0; color: #0f172a; font-size: 1rem;">1. Masukkan NIK & Dokumen Pendukung</h4>
+            <div class="form-group-row">
+              <div class="form-group half">
+                <label>NIK Calon Siswa (16 Digit) <span style="color:red">*</span></label>
+                <input type="text" id="ai-reg-nik" placeholder="Contoh: 3201..." maxlength="16" style="font-size: 1.05rem; font-weight: 600; letter-spacing: 1px;">
+                <small style="color: #64748b; font-size: 0.75rem;">AI akan mencari data baris anggota keluarga di KK berdasarkan NIK ini.</small>
+              </div>
+              <div class="form-group half">
+                <label>Foto / Scan Kartu Keluarga (KK) <span style="color:red">*</span></label>
+                <input type="file" id="ai-reg-file-kk" accept="image/*,application/pdf">
+                <div id="ai-preview-kk" style="margin-top: 6px; display: none; align-items: center; gap: 8px;"></div>
+              </div>
+            </div>
+
+            <div class="form-group-row" style="margin-top: 1rem;">
+              <div class="form-group half">
+                <label>Foto / Scan Ijazah Terakhir (Opsional untuk NISN & Tahun Lulus)</label>
+                <input type="file" id="ai-reg-file-ijazah" accept="image/*,application/pdf">
+                <div id="ai-preview-ijazah" style="margin-top: 6px; display: none; align-items: center; gap: 8px;"></div>
+              </div>
+              <div class="form-group half">
+                <label>Pas Foto Siswa (Opsional)</label>
+                <input type="file" id="ai-reg-file-foto" accept="image/*">
+                <div id="ai-preview-foto" style="margin-top: 6px; display: none; align-items: center; gap: 8px;"></div>
+              </div>
+            </div>
+
+            <div style="margin-top: 1.25rem; display: flex; gap: 10px;">
+              <button type="button" class="btn btn-primary" id="btn-proses-ai-reg" style="padding: 10px 20px; font-weight: 600; font-size: 0.95rem; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);">
+                ✨ Ekstrak & Isi Otomatis dengan AI
+              </button>
+              <button type="button" class="btn btn-outline" onclick="resetAIRegForm()">Reset</button>
+            </div>
+          </div>
+
+          <!-- Step 2: Formulir Hasil Ekstraksi yang Dapat Ditinjau & Disimpan -->
+          <div id="ai-extracted-container" style="display: none; background: #ffffff; border: 2px solid #0284c7; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+              <h4 style="margin: 0; color: #15803d; font-size: 1.05rem;">✅ Data Berhasil Diekstrak oleh AI (Silakan Tinjau Sebelum Mendaftar)</h4>
+              <span style="background: #dcfce7; color: #15803d; font-size: 0.8rem; font-weight: 600; padding: 3px 8px; border-radius: 6px;">AI Verified</span>
+            </div>
+
+            <form id="form-ai-siswa-submit" onsubmit="event.preventDefault(); handleAISiswaSubmit();">
+              <div class="form-group-row">
+                <div class="form-group half">
+                  <label>Tanggal Daftar</label>
+                  <input type="date" id="ai-out-tgl-daftar" readonly style="background-color: #f1f5f9;">
+                </div>
+                <div class="form-group half">
+                  <label>Pilihan Program / Jenjang <span style="color:red">*</span></label>
+                  <select id="ai-out-program" class="form-control" required style="border: 2px solid #0284c7;">
+                    <option value="">-- Pilih Program --</option>
+                    <option value="Paket A">Paket A (Setara SD)</option>
+                    <option value="Paket B">Paket B (Setara SMP)</option>
+                    <option value="Paket C">Paket C (Setara SMA)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group-row" style="margin-top: 1rem;">
+                <div class="form-group half">
+                  <label>Nama Lengkap Siswa <span style="color:red">*</span></label>
+                  <input type="text" id="ai-out-nama" required>
+                </div>
+                <div class="form-group half">
+                  <label>Jenis Kelamin</label>
+                  <select id="ai-out-jk" class="form-control">
+                    <option value="Laki-laki">Laki-laki</option>
+                    <option value="Perempuan">Perempuan</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group-row" style="margin-top: 1rem;">
+                <div class="form-group half">
+                  <label>NIK Calon Siswa</label>
+                  <input type="text" id="ai-out-nik" required>
+                </div>
+                <div class="form-group half">
+                  <label>NISN (Dari Ijazah)</label>
+                  <input type="text" id="ai-out-nisn" placeholder="Kosong jika belum ada">
+                </div>
+              </div>
+
+              <div class="form-group-row" style="margin-top: 1rem;">
+                <div class="form-group half">
+                  <label>Nomor Kartu Keluarga (No. KK)</label>
+                  <input type="text" id="ai-out-no-kk">
+                </div>
+                <div class="form-group half">
+                  <label>No. Urut di KK</label>
+                  <input type="text" id="ai-out-urut-kk">
+                </div>
+              </div>
+
+              <div class="form-group-row" style="margin-top: 1rem;">
+                <div class="form-group half">
+                  <label>Tempat Lahir</label>
+                  <input type="text" id="ai-out-tempat-lahir">
+                </div>
+                <div class="form-group half">
+                  <label>Tanggal Lahir</label>
+                  <input type="date" id="ai-out-tgl-lahir">
+                </div>
+              </div>
+
+              <div class="form-group-row" style="margin-top: 1rem;">
+                <div class="form-group half">
+                  <label>Nama Ibu Kandung</label>
+                  <input type="text" id="ai-out-ibu">
+                </div>
+                <div class="form-group half">
+                  <label>NIK Ibu</label>
+                  <input type="text" id="ai-out-nik-ibu">
+                </div>
+              </div>
+
+              <div class="form-group-row" style="margin-top: 1rem;">
+                <div class="form-group half">
+                  <label>Nama Ayah Kandung</label>
+                  <input type="text" id="ai-out-ayah">
+                </div>
+                <div class="form-group half">
+                  <label>NIK Ayah</label>
+                  <input type="text" id="ai-out-nik-ayah">
+                </div>
+              </div>
+
+              <div class="form-group-row" style="margin-top: 1rem;">
+                <div class="form-group half">
+                  <label>Kabupaten / Kota</label>
+                  <input type="text" id="ai-out-kab-kota">
+                </div>
+                <div class="form-group half">
+                  <label>Kecamatan</label>
+                  <input type="text" id="ai-out-kecamatan">
+                </div>
+              </div>
+
+              <div class="form-group-row" style="margin-top: 1rem;">
+                <div class="form-group half">
+                  <label>Desa / Kelurahan</label>
+                  <input type="text" id="ai-out-desa-kelurahan">
+                </div>
+                <div class="form-group half">
+                  <label>Tahun Lulus Asal</label>
+                  <input type="text" id="ai-out-tahun-lulus">
+                </div>
+              </div>
+
+              <div style="margin-top: 2rem; display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-success" style="padding: 12px 24px; font-weight: 600; font-size: 1rem;">
+                  💾 Simpan & Daftarkan Siswa Ini
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
