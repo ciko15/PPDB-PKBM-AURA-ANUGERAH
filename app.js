@@ -1211,18 +1211,55 @@ async function handleAICheck(e) {
     hideLoader();
 
     aiResultBox.classList.remove('hidden');
-    if (result.status === "TIDAK_COCOK") {
+    const normStatus = String(result.status || '').toUpperCase();
+    if (normStatus === "TIDAK_COCOK" || normStatus === "TIDAK SESUAI") {
       aiResultBox.className = "ai-result-box error";
       aiStatusTitle.textContent = "⚠️ Ditemukan Ketidaksesuaian";
-      aiKoreksiText.textContent = result.koreksi;
-    } else if (result.status === "COCOK") {
+      aiKoreksiText.innerHTML = result.koreksi ? result.koreksi.replace(/\n/g, '<br>') : "Ada ketidaksesuaian pada dokumen.";
+      
+      // Simpan langsung ke state currentSiswa & cache lokal
+      currentSiswa.status = "Tidak Sesuai";
+      currentSiswa.koreksiAI = result.koreksi || "";
+      const idx = siswaDataList.findIndex(x => String(x.id) === String(currentSiswa.id));
+      if (idx !== -1) {
+        siswaDataList[idx].status = "Tidak Sesuai";
+        siswaDataList[idx].koreksiAI = result.koreksi || "";
+        try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+      }
+      // Otomatis sinkronkan status ke backend
+      callAPI({
+        action: "updateStatus",
+        idSiswa: currentSiswa.id,
+        status: "Tidak Sesuai",
+        koreksiAI: result.koreksi || ""
+      }).catch(err => console.warn("Sync updateStatus:", err));
+
+    } else if (normStatus === "COCOK" || normStatus === "SESUAI") {
       aiResultBox.className = "ai-result-box";
-      aiStatusTitle.textContent = "✅ Data Cocok";
-      aiKoreksiText.textContent = "AI tidak menemukan perbedaan.";
+      aiStatusTitle.textContent = "✅ Data Cocok (Sesuai)";
+      aiKoreksiText.textContent = result.koreksi || "AI mengonfirmasi seluruh data identitas sesuai dengan dokumen fisik.";
+
+      // Simpan langsung ke state currentSiswa & cache lokal
+      currentSiswa.status = "Sesuai";
+      currentSiswa.koreksiAI = result.koreksi || "Semua data sesuai dokumen.";
+      const idx = siswaDataList.findIndex(x => String(x.id) === String(currentSiswa.id));
+      if (idx !== -1) {
+        siswaDataList[idx].status = "Sesuai";
+        siswaDataList[idx].koreksiAI = result.koreksi || "Semua data sesuai dokumen.";
+        try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+      }
+      // Otomatis sinkronkan status ke backend
+      callAPI({
+        action: "updateStatus",
+        idSiswa: currentSiswa.id,
+        status: "Sesuai",
+        koreksiAI: result.koreksi || "Semua data sesuai dokumen."
+      }).catch(err => console.warn("Sync updateStatus:", err));
+
     } else {
       aiResultBox.className = "ai-result-box error";
       aiStatusTitle.textContent = "❌ Error API";
-      aiKoreksiText.textContent = result.koreksi;
+      aiKoreksiText.textContent = result.koreksi || result.message || "Gagal melakukan pengecekan.";
     }
   } catch (err) {
     hideLoader(); Swal.fire('Error', err.message, 'error');
@@ -1231,16 +1268,28 @@ async function handleAICheck(e) {
 
 async function submitValidation(status) {
   if (!currentSiswa) return;
-  showLoader(`Menyimpan status: ${status}...`);
+  // Normalisasi status ke format standar (Sesuai / Tidak Sesuai)
+  const normalizedStatus = (status === 'Selesai' || status === 'Valid' || status === 'Sesuai') ? 'Sesuai' : 'Tidak Sesuai';
+  showLoader(`Menyimpan status: ${normalizedStatus}...`);
   try {
     const response = await callAPI({
       action: "updateStatus",
       idSiswa: currentSiswa.id,
-      status: status,
-      koreksiAI: aiKoreksiText.textContent || ""
+      status: normalizedStatus,
+      koreksiAI: aiKoreksiText.innerText || aiKoreksiText.textContent || ""
     });
+
+    currentSiswa.status = normalizedStatus;
+    currentSiswa.koreksiAI = aiKoreksiText.innerText || aiKoreksiText.textContent || "";
+    const idx = siswaDataList.findIndex(x => String(x.id) === String(currentSiswa.id));
+    if (idx !== -1) {
+      siswaDataList[idx].status = normalizedStatus;
+      siswaDataList[idx].koreksiAI = currentSiswa.koreksiAI;
+      try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+    }
+
     hideLoader();
-    Swal.fire('Berhasil', response.message, 'success');
+    Swal.fire('Berhasil', response.message || 'Status berhasil disimpan!', 'success');
     fetchSiswaData(true);
   } catch (err) {
     hideLoader(); Swal.fire('Error', err.message, 'error');
@@ -1296,6 +1345,20 @@ function renderSiswaTable(data) {
     const isAktif = s.statusAktif === 'Aktif';
     const isEditable = currentUser ? (currentUser.role === 'Admin' || currentUser.role === 'Super Admin' || currentUser.role === 'Guru' || currentUser.username === s.createdBy) : true;
 
+    // Status Pemeriksaan AI
+    let aiStatusBadge = '<span style="color: #94a3b8; font-size: 0.8rem;">Belum Dicek</span>';
+    const rawAiStatus = String(s.status || '').toLowerCase();
+    const hasCorrection = s.koreksiAI && s.koreksiAI.trim() !== '';
+
+    if (rawAiStatus === 'sesuai' || rawAiStatus === 'cocok' || (rawAiStatus === 'selesai' && !hasCorrection)) {
+      aiStatusBadge = `<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">✅ Sesuai</span>`;
+    } else if (rawAiStatus === 'tidak sesuai' || rawAiStatus === 'tidak_cocok' || rawAiStatus === 'perlu perbaikan' || (hasCorrection && !s.koreksiAI.includes('cocok'))) {
+      const tooltip = s.koreksiAI ? s.koreksiAI.replace(/"/g, '&quot;') : 'Ada ketidaksesuaian';
+      aiStatusBadge = `<span title="${tooltip}" style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; cursor: help;">⚠️ Tidak Sesuai</span>`;
+    } else if (rawAiStatus === 'pending') {
+      aiStatusBadge = `<span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;">⏳ Pending</span>`;
+    }
+
     tr.style.cursor = 'pointer';
     tr.onclick = (e) => {
       if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
@@ -1304,8 +1367,9 @@ function renderSiswaTable(data) {
 
     tr.innerHTML = `
       <td>${idx + 1}</td>
-      <td>${s.nama}</td>
-      <td>${s.program}</td>
+      <td><strong>${s.nama}</strong></td>
+      <td>${s.program || '-'}</td>
+      <td>${aiStatusBadge}</td>
       <td>${s.createdBy || 'N/A'}</td>
       <td>
         <button class="btn ${isAktif ? 'btn-success' : 'btn-danger'}" onclick="toggleStatusSiswa('${s.id}', '${isAktif ? 'Tidak Aktif' : 'Aktif'}')" style="padding:4px 8px; font-size:0.8rem;">
@@ -1411,6 +1475,19 @@ function showSiswaDetail(id) {
       <div class="drawer-info-row"><span class="drawer-info-label">Kabupaten/Kota</span><span class="drawer-info-value">${s.kabKota || '-'}</span></div>
       <div class="drawer-info-row"><span class="drawer-info-label">Kecamatan</span><span class="drawer-info-value">${s.kecamatan || '-'}</span></div>
       <div class="drawer-info-row"><span class="drawer-info-label">Desa / Kelurahan</span><span class="drawer-info-value">${s.desaKelurahan || '-'}</span></div>
+    </div>
+
+    <!-- Hasil Pemeriksaan AI & Catatan Koreksi -->
+    <div class="drawer-detail-card" style="border-left: 4px solid ${s.status === 'Sesuai' ? '#16a34a' : (s.status === 'Tidak Sesuai' ? '#dc2626' : '#f59e0b')};">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <h4 style="margin: 0;">Pemeriksaan AI</h4>
+        <span style="background: ${s.status === 'Sesuai' ? '#dcfce7' : (s.status === 'Tidak Sesuai' ? '#fee2e2' : '#fef3c7')}; color: ${s.status === 'Sesuai' ? '#15803d' : (s.status === 'Tidak Sesuai' ? '#b91c1c' : '#b45309')}; font-size: 0.8rem; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+          ${s.status === 'Sesuai' ? '✅ Sesuai' : (s.status === 'Tidak Sesuai' ? '⚠️ Tidak Sesuai' : (s.status || 'Pending'))}
+        </span>
+      </div>
+      <div style="font-size: 0.88rem; color: #334155; line-height: 1.6; white-space: pre-line; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem;">
+        ${s.koreksiAI && s.koreksiAI.trim() !== '' ? s.koreksiAI : '<span style="color: #94a3b8; font-style: italic;">Belum ada catatan pemeriksaan AI untuk siswa ini.</span>'}
+      </div>
     </div>
 
     <!-- Berkas & Dokumen Terlampir -->

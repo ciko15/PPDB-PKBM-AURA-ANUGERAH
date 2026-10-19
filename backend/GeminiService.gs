@@ -80,19 +80,26 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
   const candidateModels = ["gemini-3.5-flash-lite", "gemini-3.5-flash"];
 
   const promptText = `Berikut adalah data pendaftaran calon siswa Kejar Paket (Sekolah Non-Formal):\n` +
-                     `1. NIK: ${dataSiswa.nik || '-'}\n` +
-                     `2. Nama Lengkap: ${dataSiswa.nama || '-'}\n` +
-                     `3. Tempat Lahir: ${dataSiswa.tempatLahir || '-'}\n` +
-                     `4. Tanggal Lahir: ${dataSiswa.tglLahir || '-'}\n` +
-                     `5. Nama Ibu Kandung: ${dataSiswa.namaIbu || '-'}\n\n` +
-                     `Dan terlampir adalah gambar foto dokumen pendukungnya (KK atau Ijazah).\n` +
+                     `- NIK: ${dataSiswa.nik || '-'}\n` +
+                     `- Nama Lengkap: ${dataSiswa.nama || '-'}\n` +
+                     `- Tempat Lahir: ${dataSiswa.tempatLahir || '-'}\n` +
+                     `- Tanggal Lahir: ${dataSiswa.tglLahir || '-'}\n` +
+                     `- Nama Ibu Kandung: ${dataSiswa.namaIbu || '-'}\n\n` +
+                     `Dan terlampir adalah gambar foto dokumen pendukung resmi (KK atau Ijazah).\n` +
                      `Tugasmu:\n` +
-                     `1. Ekstrak 5 data spesifik di atas (NIK, Nama Lengkap, Tempat Lahir, Tanggal Lahir, Nama Ibu Kandung) dari dokumen yang terlampir.\n` +
-                     `2. Bandingkan kelima data tersebut dengan input data teks di atas secara SANGAT TELITI dan KETAT.\n` +
-                     `3. Kelima data tersebut HARUS sama persis dengan data di dokumen pendukung.\n` +
-                     `4. Jika ada ketidaksesuaian ejaan, salah ketik, atau perbedaan angka/huruf sekecil apapun, jelaskan secara spesifik field mana yang salah dan sebutkan data yang benar berdasarkan gambar dokumen.\n` +
+                     `1. Periksa kelima data di atas (NIK, Nama Lengkap, Tempat Lahir, Tanggal Lahir, Nama Ibu Kandung) terhadap dokumen yang terlampir secara SANGAT TELITI.\n` +
+                     `2. Catatan khusus:\n` +
+                     `   - Jika dokumen adalah Ijazah dan NIK memang tidak dicantumkan di format ijazah, catat sebagai poin informasi jika relevan.\n` +
+                     `   - Format tanggal lahir: perhatikan tanggal, bulan, dan tahunnya (abaikan perbedaan format jam ISO string seperti T17:00:00Z).\n` +
+                     `3. Tentukan status pemeriksaan secara tegas HANYA ada 2 pilihan:\n` +
+                     `   - "Sesuai" (jika semua data cocok)\n` +
+                     `   - "Tidak Sesuai" (jika terdapat ketidakcocokan / perbedaan data)\n` +
+                     `4. Jika status "Tidak Sesuai", buatkan deskripsi permasalahan secara rapi dan terstruktur dalam bentuk poin-poin bernomor: 1. ..., 2. ..., 3. ... Contoh:\n` +
+                     `   1. Tanggal Lahir tidak cocok: pada dokumen tertulis 2 Juli 1999, sedangkan pada data tertera 25 Juni 1999.\n` +
+                     `   2. Nama Ibu Kandung tidak cocok: pada dokumen tertera 'AGUSTINA KELAIMI', sedangkan pada data tertera '...'.\n` +
+                     `5. Jika status "Sesuai", isi koreksi dengan "Semua data identitas cocok dengan dokumen fisik."\n\n` +
                      `Kembalikan respons murni dalam format JSON (tanpa markdown), dengan properti:\n` +
-                     `{"status": "COCOK" | "TIDAK_COCOK", "koreksi": "Penjelasan detail jika tidak cocok (kosongkan jika cocok)"}`;
+                     `{"status": "Sesuai" | "Tidak Sesuai", "koreksi": "Poin-poin bernomor 1. 2. 3. jika ada ketidaksesuaian"}`;
 
   const payload = {
     contents: [
