@@ -1169,7 +1169,15 @@ async function handleAICheck(e) {
 
   showLoader(`AI sedang menganalisis ${targetDoc.toUpperCase()}...`);
   try {
-    const result = await callAPI({ action: "runAICheck", dataSiswa: currentSiswa, jenisDokumen: targetDoc });
+    // Siapkan payload dengan fallback berkas lokal jika di server belum ada Drive URL
+    const enrichedDataSiswa = {
+      ...currentSiswa,
+      urlIjazah: (currentSiswa.urlIjazah && (currentSiswa.urlIjazah.startsWith('http') || currentSiswa.urlIjazah.startsWith('data:'))) ? currentSiswa.urlIjazah : (getFileLocal(currentSiswa.id, 'ijazah') || ""),
+      urlKK: (currentSiswa.urlKK && (currentSiswa.urlKK.startsWith('http') || currentSiswa.urlKK.startsWith('data:'))) ? currentSiswa.urlKK : (getFileLocal(currentSiswa.id, 'kk') || ""),
+      urlFoto: (currentSiswa.urlFoto && (currentSiswa.urlFoto.startsWith('http') || currentSiswa.urlFoto.startsWith('data:'))) ? currentSiswa.urlFoto : (getFileLocal(currentSiswa.id, 'foto') || "")
+    };
+
+    const result = await callAPI({ action: "runAICheck", dataSiswa: enrichedDataSiswa, jenisDokumen: targetDoc });
     hideLoader();
 
     aiResultBox.classList.remove('hidden');
@@ -1313,7 +1321,7 @@ function showSiswaDetail(id) {
     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; gap: 1rem; align-items: center;">
       <div style="position: relative; flex-shrink: 0;">
         ${finalFoto ? 
-          `<img src="${finalFoto}" alt="Foto ${s.nama}" style="width: 72px; height: 72px; border-radius: 12px; object-fit: cover; border: 2px solid #0284c7; box-shadow: 0 2px 6px rgba(0,0,0,0.1); cursor: pointer;" onclick="window.open('${finalFoto}', '_blank')" title="Klik untuk perbesar">` :
+          `<img src="${finalFoto}" alt="Foto ${s.nama}" style="width: 72px; height: 72px; border-radius: 12px; object-fit: cover; border: 2px solid #0284c7; box-shadow: 0 2px 6px rgba(0,0,0,0.1); cursor: pointer;" onclick="previewDocModal('foto', '${s.id}', '${s.nama ? s.nama.replace(/'/g, "\\'") : ''}')" title="Klik untuk perbesar">` :
           `<div style="width: 72px; height: 72px; border-radius: 12px; background: #f1f5f9; border: 2px dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.75rem; text-align: center; padding: 4px;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:2px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             <span>Tanpa Foto</span>
@@ -1383,7 +1391,7 @@ function showSiswaDetail(id) {
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
           <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Foto Siswa</span>
           ${finalFoto ?
-            `<a href="${finalFoto}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+            `<button type="button" onclick="previewDocModal('foto', '${s.id}', '${s.nama ? s.nama.replace(/'/g, "\\'") : ''}')" style="background: none; border: none; color: #0284c7; font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0;">🔍 Lihat Berkas</button>` :
             `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
           }
         </div>
@@ -1391,7 +1399,7 @@ function showSiswaDetail(id) {
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
           <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Ijazah</span>
           ${finalIjazah ?
-            `<a href="${finalIjazah}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+            `<button type="button" onclick="previewDocModal('ijazah', '${s.id}', '${s.nama ? s.nama.replace(/'/g, "\\'") : ''}')" style="background: none; border: none; color: #0284c7; font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0;">🔍 Lihat Berkas</button>` :
             `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
           }
         </div>
@@ -1399,7 +1407,7 @@ function showSiswaDetail(id) {
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
           <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Kartu Keluarga</span>
           ${finalKK ?
-            `<a href="${finalKK}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+            `<button type="button" onclick="previewDocModal('kk', '${s.id}', '${s.nama ? s.nama.replace(/'/g, "\\'") : ''}')" style="background: none; border: none; color: #0284c7; font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0;">🔍 Lihat Berkas</button>` :
             `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
           }
         </div>
@@ -1407,7 +1415,7 @@ function showSiswaDetail(id) {
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.5rem; text-align: center;">
           <span style="font-size: 0.75rem; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Bukti Bayar</span>
           ${finalBayar ?
-            `<a href="${finalBayar}" target="_blank" style="color: #0284c7; font-size: 0.8rem; font-weight: 600; text-decoration: none;">🔍 Lihat Berkas</a>` :
+            `<button type="button" onclick="previewDocModal('bayar', '${s.id}', '${s.nama ? s.nama.replace(/'/g, "\\'") : ''}')" style="background: none; border: none; color: #0284c7; font-size: 0.8rem; font-weight: 600; cursor: pointer; padding: 0;">🔍 Lihat Berkas</button>` :
             `<span style="color: #94a3b8; font-size: 0.75rem;">Tidak ada</span>`
           }
         </div>
@@ -1425,6 +1433,95 @@ function showSiswaDetail(id) {
     overlay.classList.remove('hidden');
     drawer.classList.remove('hidden');
   }
+}
+
+// ======================= MODAL LIGHTBOX PRATINJAU BERKAS =======================
+let currentDocUrl = "";
+let currentDocTitle = "";
+
+function previewDocModal(type, siswaId, namaSiswa) {
+  const s = siswaDataList.find(x => String(x.id) === String(siswaId));
+  let url = "";
+  let label = "Dokumen";
+
+  if (type === 'foto') {
+    url = (s && s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:'))) ? s.urlFoto : getFileLocal(siswaId, 'foto');
+    label = "Foto Siswa";
+  } else if (type === 'ijazah') {
+    url = (s && s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:'))) ? s.urlIjazah : getFileLocal(siswaId, 'ijazah');
+    label = "Berkas Ijazah";
+  } else if (type === 'kk') {
+    url = (s && s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:'))) ? s.urlKK : getFileLocal(siswaId, 'kk');
+    label = "Kartu Keluarga (KK)";
+  } else if (type === 'bayar') {
+    url = (s && s.urlBayar && (s.urlBayar.startsWith('http') || s.urlBayar.startsWith('data:'))) ? s.urlBayar : getFileLocal(siswaId, 'bayar');
+    label = "Bukti Pembayaran";
+  }
+
+  if (!url) {
+    Swal.fire('Informasi', 'Berkas belum tersedia atau belum diunggah.', 'info');
+    return;
+  }
+
+  currentDocUrl = url;
+  currentDocTitle = `${label}_${namaSiswa || siswaId}`;
+
+  const modal = document.getElementById('modal-doc-viewer');
+  const titleEl = document.getElementById('doc-modal-title');
+  const imgEl = document.getElementById('doc-modal-img');
+  const iframeEl = document.getElementById('doc-modal-iframe');
+
+  if (titleEl) titleEl.textContent = `${label} - ${namaSiswa || 'Siswa'}`;
+
+  const isDrive = url.includes('drive.google.com');
+  const isPdf = url.toLowerCase().includes('.pdf') || url.includes('application/pdf');
+
+  if (isDrive) {
+    let previewUrl = url;
+    if (url.includes('/view')) {
+      previewUrl = url.replace('/view', '/preview');
+    } else if (url.includes('uc?id=')) {
+      try {
+        const id = new URL(url).searchParams.get('id');
+        if (id) previewUrl = `https://drive.google.com/file/d/${id}/preview`;
+      } catch (e) {}
+    }
+    imgEl.style.display = 'none';
+    imgEl.removeAttribute('src');
+    iframeEl.style.display = 'block';
+    iframeEl.src = previewUrl;
+  } else if (isPdf) {
+    imgEl.style.display = 'none';
+    imgEl.removeAttribute('src');
+    iframeEl.style.display = 'block';
+    iframeEl.src = url;
+  } else {
+    iframeEl.style.display = 'none';
+    iframeEl.removeAttribute('src');
+    imgEl.style.display = 'block';
+    imgEl.src = url;
+  }
+
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeDocViewerModal() {
+  const modal = document.getElementById('modal-doc-viewer');
+  const imgEl = document.getElementById('doc-modal-img');
+  const iframeEl = document.getElementById('doc-modal-iframe');
+  if (imgEl) imgEl.removeAttribute('src');
+  if (iframeEl) iframeEl.removeAttribute('src');
+  if (modal) modal.classList.add('hidden');
+}
+
+function downloadCurrentDocModal() {
+  if (!currentDocUrl) return;
+  const link = document.createElement('a');
+  link.href = currentDocUrl;
+  link.download = (currentDocTitle ? currentDocTitle.replace(/[^a-zA-Z0-9_\-]/g, '_') : 'berkas_dokumen') + (currentDocUrl.startsWith('data:image/png') ? '.png' : (currentDocUrl.includes('.pdf') ? '.pdf' : '.jpg'));
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function closeSiswaDetailDrawer() {
