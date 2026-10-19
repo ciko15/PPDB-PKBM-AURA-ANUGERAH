@@ -15,6 +15,7 @@ let aiUploadedFiles = {
   ijazah: null,
   foto: null
 };
+let aiValidationResult = null;
 
 // Elemen modal pendaftaran
 const modalRegister = document.getElementById('modal-register');
@@ -2394,6 +2395,12 @@ async function handleEkstrakDataAI() {
     setField('ai-out-nisn', data.nisn || '');
     setField('ai-out-tahun-lulus', data.tahunLulus || '');
 
+    // Simpan hasil validasi kesesuaian dari AI (Sesuai / Tidak Sesuai)
+    aiValidationResult = {
+      status: (result.validationStatus === 'Tidak Sesuai') ? 'Tidak Sesuai' : 'Sesuai',
+      details: result.validationDetails || (result.validationStatus === 'Tidak Sesuai' ? 'Terdapat ketidakcocokan antara KK dan Ijazah.' : 'Semua data sesuai dengan dokumen resmi.')
+    };
+
     // Tampilkan formulir review hasil ekstraksi
     const container = document.getElementById('ai-extracted-container');
     if (container) {
@@ -2401,14 +2408,46 @@ async function handleEkstrakDataAI() {
       container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    // Tampilkan banner hasil pemeriksaan dokumen (Sesuai / Tidak Sesuai)
+    const banner = document.getElementById('ai-cross-check-banner');
+    const headerBadge = document.getElementById('ai-extract-header-badge');
+    if (banner) {
+      const isMatch = aiValidationResult.status === 'Sesuai';
+      banner.style.display = 'block';
+      banner.style.background = isMatch ? '#f0fdf4' : '#fef2f2';
+      banner.style.border = `1px solid ${isMatch ? '#86efac' : '#fca5a5'}`;
+      banner.innerHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+          <span style="font-size: 1.25rem;">${isMatch ? '✅' : '⚠️'}</span>
+          <div>
+            <strong style="color: ${isMatch ? '#15803d' : '#b91c1c'}; font-size: 0.95rem;">
+              Status Dokumen: ${isMatch ? 'Data Sesuai' : 'Ditemukan Ketidaksesuaian Antara Berkas'}
+            </strong>
+            <div style="font-size: 0.85rem; color: #334155; margin-top: 4px; line-height: 1.5; white-space: pre-line;">
+              ${aiValidationResult.details}
+            </div>
+            ${!isMatch ? '<small style="color: #64748b; display: block; margin-top: 4px;">ℹ️ Data tetap dapat disimpan ke sistem dengan status "Tidak Sesuai".</small>' : ''}
+          </div>
+        </div>
+      `;
+
+      if (headerBadge) {
+        headerBadge.textContent = isMatch ? '✅ Sesuai' : '⚠️ Perlu Perhatian';
+        headerBadge.style.background = isMatch ? '#dcfce7' : '#fee2e2';
+        headerBadge.style.color = isMatch ? '#15803d' : '#b91c1c';
+      }
+    }
+
     // Tampilkan pratinjau berkas yang berhasil diunggah di Step 2
     renderAIStep2Previews();
 
     Swal.fire({
-      icon: 'success',
-      title: 'Data Berhasil Diekstrak!',
-      text: 'Silakan tinjau data, lengkapi foto/ijazah jika perlu, lalu simpan.',
-      timer: 2500,
+      icon: aiValidationResult.status === 'Sesuai' ? 'success' : 'warning',
+      title: aiValidationResult.status === 'Sesuai' ? 'Data Berhasil Diekstrak & Sesuai!' : 'Data Diekstrak (Ada Ketidaksesuaian)',
+      text: aiValidationResult.status === 'Sesuai' 
+        ? 'Seluruh data cocok dengan dokumen resmi.' 
+        : 'Periksa catatan perbedaan pada banner sebelum menyimpan.',
+      timer: 3000,
       showConfirmButton: false
     });
 
@@ -2527,8 +2566,8 @@ async function handleAISiswaSubmit() {
       syarat: 'Lengkap',
       dokBerkas: 'KK' + (b64Ijazah ? ', Ijazah' : ''),
       urlFoto: b64Foto || '',
-      status: 'Pending',
-      koreksiAI: 'Hasil ekstraksi otomatis Gemini AI',
+      status: (aiValidationResult && aiValidationResult.status) ? aiValidationResult.status : 'Sesuai',
+      koreksiAI: (aiValidationResult && aiValidationResult.details) ? aiValidationResult.details : 'Data berhasil diekstrak dan sesuai dokumen resmi.',
       urlIjazah: b64Ijazah || '',
       urlKK: b64Kk || '',
       urlBayar: '',
@@ -2620,6 +2659,10 @@ function resetAIRegForm() {
   const container = document.getElementById('ai-extracted-container');
   if (container) container.style.display = 'none';
 
+  const banner = document.getElementById('ai-cross-check-banner');
+  if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
+
   aiUploadedFiles = { kk: null, ijazah: null, foto: null };
+  aiValidationResult = null;
 }
 

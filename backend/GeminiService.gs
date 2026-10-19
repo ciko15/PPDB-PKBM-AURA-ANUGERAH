@@ -210,9 +210,15 @@ function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
     `   - kecamatan: Kecamatan di KK\n` +
     `   - desaKelurahan: Desa / Kelurahan di KK\n` +
     `4. Jika terlampir Ijazah: Ekstrak NISN (10 digit nomor induk siswa nasional) dan tahun kelulusan asal (tahunLulus).\n` +
+    `5. PERIKSA KESESUAIAN ANTARA KK DAN IJAZAH (Jika kedua dokumen terlampir):\n` +
+    `   - Bandingkan Nama Lengkap, Tempat Lahir, dan Tanggal Lahir antara yang tertulis di Kartu Keluarga dan Ijazah.\n` +
+    `   - Jika sama persis (atau hanya ada 1 dokumen tanpa konflik): tetapkan validationStatus = "Sesuai", validationDetails = "Data identitas pada KK dan Ijazah sesuai."\n` +
+    `   - Jika ada perbedaan (misal nama di Ijazah berbeda ejaan dengan nama di KK, atau tanggal lahir berbeda): tetapkan validationStatus = "Tidak Sesuai", dan buatkan validationDetails dalam bentuk poin bernomor (1. ..., 2. ...) yang merinci letak perbedaannya.\n` +
     `Kembalikan respon murni JSON (tanpa markdown), contoh format:\n` +
     `{\n` +
     `  "status": "SUCCESS",\n` +
+    `  "validationStatus": "Sesuai" | "Tidak Sesuai",\n` +
+    `  "validationDetails": "Poin-poin catatan jika tidak cocok atau konfirmasi kesesuaian",\n` +
     `  "data": {\n` +
     `    "nama": "...",\n` +
     `    "nik": "...",\n` +

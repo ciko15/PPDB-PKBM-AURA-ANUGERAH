@@ -670,10 +670,13 @@
 
           <!-- Step 2: Formulir Hasil Ekstraksi yang Dapat Ditinjau & Disimpan -->
           <div id="ai-extracted-container" style="display: none; background: #ffffff; border: 2px solid #0284c7; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
-              <h4 style="margin: 0; color: #15803d; font-size: 1.05rem;">✅ Data Berhasil Diekstrak oleh AI (Silakan Tinjau Sebelum Mendaftar)</h4>
-              <span style="background: #dcfce7; color: #15803d; font-size: 0.8rem; font-weight: 600; padding: 3px 8px; border-radius: 6px;">AI Verified</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+              <h4 style="margin: 0; color: #0284c7; font-size: 1.05rem;">📋 Hasil Ekstraksi Data Dokumen</h4>
+              <span id="ai-extract-header-badge" style="background: #dcfce7; color: #15803d; font-size: 0.8rem; font-weight: 600; padding: 3px 8px; border-radius: 6px;">AI Checked</span>
             </div>
+
+            <!-- Banner status kesesuaian berkas (Sesuai / Tidak Sesuai) -->
+            <div id="ai-cross-check-banner" style="margin-bottom: 1.25rem; border-radius: 8px; padding: 12px; display: none;"></div>
 
             <form id="form-ai-siswa-submit" onsubmit="event.preventDefault(); handleAISiswaSubmit();">
               <div class="form-group-row">
