@@ -456,73 +456,107 @@
         <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM Aura Anugerah" class="school-logo-small">
         <span>SIS PPDB Terpadu</span>
       </div>
-      <div class="user-profile" id="user-profile-btn" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 5px; border-radius: 8px; transition: background 0.3s;">
-        <div style="text-align: right; line-height: 1.2;">
-          <span id="active-user-name" class="user-name" style="display: block; font-weight: 600; font-size: 0.95rem;">Guru</span>
-          <span id="active-user-role" style="font-size: 0.75rem; color: #64748b;">Role</span>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button id="btn-theme-nav" class="btn-icon-circle" title="Ganti Tema (Dark/Light)" onclick="toggleTheme()" style="background: var(--surface-2); border: 1px solid var(--border-color); color: var(--text-color); width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+          <i data-lucide="moon" id="icon-theme-nav" style="width: 18px; height: 18px;"></i>
+        </button>
+        <div class="user-profile" id="user-profile-btn" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 8px; transition: background 0.3s; border: 1px solid transparent;">
+          <div style="text-align: right; line-height: 1.2;">
+            <span id="active-user-name" class="user-name" style="display: block; font-weight: 600; font-size: 0.92rem; color: var(--text-color);">Guru</span>
+            <span id="active-user-role" style="font-size: 0.75rem; color: var(--text-muted);">Role</span>
+          </div>
+          <img id="active-user-avatar" src="tut_wuri.svg" alt="Avatar" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
         </div>
-        <img id="active-user-avatar" src="tut_wuri.svg" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
       </div>
     </header>
 
     <div class="layout-container">
       <aside class="sidebar">
-        <ul id="main-menu" class="siswa-list">
-          <!-- Menu Petugas / Admin / Guru -->
-          <li class="active" data-target="section-dashboard" id="menu-dashboard">
-            <i data-lucide="layout-dashboard" class="menu-icon"></i>
-            <span>Dashboard</span>
-          </li>
-          <li data-target="section-input" id="menu-input">
-            <i data-lucide="user-plus" class="menu-icon"></i>
-            <span>Pendaftaran Baru</span>
-          </li>
-          <li data-target="section-ai-reg" id="menu-ai-reg" class="menu-ai-item">
-            <i data-lucide="wand-2" class="menu-icon"></i>
-            <span>Pendaftaran Cepat AI</span>
-          </li>
-          <li data-target="section-validasi" id="menu-validasi">
-            <i data-lucide="check-circle-2" class="menu-icon"></i>
-            <span>Antrean Validasi AI</span>
-          </li>
-          <li data-target="section-list" id="menu-list">
-            <i data-lucide="clipboard-list" class="menu-icon"></i>
-            <span>Daftar Peserta Didik</span>
-          </li>
+        <!-- Brand Sidebar -->
+        <div class="sidebar-brand-box">
+          <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="sidebar-brand-logo">
+          <div class="sidebar-brand-text">
+            <span class="sidebar-title">PKBM Aura Anugerah</span>
+            <span class="sidebar-subtitle">Sistem Terpadu & PPDB</span>
+          </div>
+        </div>
 
-          <!-- Menu Akademik Terpadu (ala MyAura) -->
-          <li data-target="section-absensi" id="menu-absensi">
-            <i data-lucide="calendar-days" class="menu-icon"></i>
-            <span>Absensi & Kehadiran</span>
-          </li>
-          <li data-target="section-bayar" id="menu-bayar">
-            <i data-lucide="wallet" class="menu-icon"></i>
-            <span>SPP & Tabungan</span>
-          </li>
+        <div class="sidebar-nav-scroll">
+          <div class="sidebar-section-label">MENU UTAMA</div>
+          <ul id="main-menu" class="siswa-list">
+            <!-- Menu Petugas / Admin / Guru -->
+            <li class="active" data-target="section-dashboard" id="menu-dashboard">
+              <i data-lucide="layout-dashboard" class="menu-icon"></i>
+              <span>Dashboard</span>
+            </li>
+            <li data-target="section-list" id="menu-list">
+              <i data-lucide="clipboard-list" class="menu-icon"></i>
+              <span>Daftar Peserta Didik</span>
+            </li>
+            <li data-target="section-ai-reg" id="menu-ai-reg" class="menu-ai-item">
+              <i data-lucide="wand-2" class="menu-icon"></i>
+              <span>Pendaftaran Cepat AI</span>
+            </li>
+            <li data-target="section-validasi" id="menu-validasi">
+              <i data-lucide="check-circle-2" class="menu-icon"></i>
+              <span>Antrean Validasi AI</span>
+            </li>
 
-          <!-- Menu Khusus Siswa (Tampil jika login sebagai Siswa) -->
-          <li data-target="section-portal-siswa" id="menu-portal-siswa" class="hidden menu-siswa-item">
-            <i data-lucide="graduation-cap" class="menu-icon"></i>
-            <span>Profil & Status Saya</span>
-          </li>
-          <li data-target="section-pengumuman-siswa" id="menu-pengumuman-siswa" class="hidden">
-            <i data-lucide="bell" class="menu-icon"></i>
-            <span>Pengumuman & Jadwal</span>
-          </li>
+            <!-- Menu Akademik Terpadu (ala MyAura) -->
+            <div class="sidebar-section-label" style="margin-top: 12px;">AKADEMIK & KEUANGAN</div>
+            <li data-target="section-absensi" id="menu-absensi">
+              <i data-lucide="calendar-days" class="menu-icon"></i>
+              <span>Absensi & Kehadiran</span>
+            </li>
+            <li data-target="section-bayar" id="menu-bayar">
+              <i data-lucide="wallet" class="menu-icon"></i>
+              <span>SPP & Tabungan</span>
+            </li>
 
-          <li data-target="section-users" id="menu-users" class="hidden">
-            <i data-lucide="settings" class="menu-icon"></i>
-            <span>Kelola Pengguna</span>
-          </li>
-          <li data-target="section-api-keys" id="menu-api-keys" class="hidden menu-api-item">
-            <i data-lucide="key" class="menu-icon"></i>
-            <span>Kelola API Gemini</span>
-          </li>
-          <li id="menu-logout" class="menu-logout-item">
-            <i data-lucide="log-out" class="menu-icon"></i>
-            <span>Keluar</span>
-          </li>
-        </ul>
+            <!-- Menu Khusus Siswa (Tampil jika login sebagai Siswa) -->
+            <div class="sidebar-section-label label-siswa hidden" style="margin-top: 12px;">PORTAL SISWA</div>
+            <li data-target="section-portal-siswa" id="menu-portal-siswa" class="hidden menu-siswa-item">
+              <i data-lucide="graduation-cap" class="menu-icon"></i>
+              <span>Profil & Status Saya</span>
+            </li>
+            <li data-target="section-pengumuman-siswa" id="menu-pengumuman-siswa" class="hidden">
+              <i data-lucide="bell" class="menu-icon"></i>
+              <span>Pengumuman & Jadwal</span>
+            </li>
+
+            <!-- Menu Pengaturan Sistem -->
+            <div class="sidebar-section-label label-admin hidden" id="label-admin-section" style="margin-top: 12px;">PENGATURAN</div>
+            <li data-target="section-users" id="menu-users" class="hidden">
+              <i data-lucide="settings" class="menu-icon"></i>
+              <span>Kelola Pengguna</span>
+            </li>
+            <li data-target="section-api-keys" id="menu-api-keys" class="hidden menu-api-item">
+              <i data-lucide="key" class="menu-icon"></i>
+              <span>Kelola API Gemini</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Box Profil & Action Bawah (.who) ala Rostering Teknik -->
+        <div class="who">
+          <div class="who-info">
+            <span class="who-sub">Masuk sebagai</span>
+            <button class="who-name-btn" onclick="showUserProfileModal()" id="btn-who-profile" title="Klik untuk edit profil">
+              <span id="who-user-name">Pengguna</span>
+              <span id="who-user-role" class="who-role-badge">Role</span>
+            </button>
+          </div>
+          <div class="who-actions">
+            <button class="who-btn who-theme-btn" id="who-toggle-theme" onclick="toggleTheme()" title="Ganti Tema (Dark / Light)">
+              <i data-lucide="moon" id="icon-theme-sidebar" style="width: 16px; height: 16px;"></i>
+              <span id="theme-text-sidebar">Mode Gelap</span>
+            </button>
+            <button class="who-btn who-logout-btn" id="btn-sidebar-logout" onclick="handleLogout()" title="Keluar dari Aplikasi">
+              <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+              <span>Keluar</span>
+            </button>
+          </div>
+        </div>
       </aside>
 
       <div id="sidebar-overlay" class="overlay hidden"></div>
@@ -918,10 +952,15 @@
         <!-- ==================== SECTION: DAFTAR SISWA ==================== -->
         <div id="section-list" class="content-section hidden card-panel">
           <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <h3 style="margin: 0;">Daftar Peserta Didik</h3>
-              <button id="btn-batch-ai" class="btn btn-primary" onclick="runBatchAICheck()" style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
-                🤖 Periksa AI (Batch Terpilih)
+              <button class="btn btn-primary" onclick="resetAndOpenRegisterForm()" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 0 14px; height: 36px;">
+                <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                <span>Tambah Siswa Baru</span>
+              </button>
+              <button id="btn-batch-ai" class="btn" onclick="runBatchAICheck()" style="background: var(--surface-2); border: 1px solid var(--border-color); color: var(--text-color); display: inline-flex; align-items: center; gap: 6px; font-weight: 500; height: 36px;">
+                <i data-lucide="wand-2" style="width: 15px; height: 15px; color: #0284c7;"></i>
+                <span>Periksa AI (Terpilih)</span>
               </button>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">

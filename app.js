@@ -232,8 +232,47 @@ const formAddUser = document.getElementById('form-add-user');
 const tableUsersBody = document.getElementById('table-users-body');
 
 
+// ======================= THEME SWITCHER (DARK / LIGHT) =======================
+function initTheme() {
+  const savedTheme = localStorage.getItem('app_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcons(savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  try {
+    localStorage.setItem('app_theme', newTheme);
+  } catch (e) {}
+  updateThemeIcons(newTheme);
+}
+
+function updateThemeIcons(theme) {
+  const isDark = theme === 'dark';
+  const navBtn = document.getElementById('btn-theme-nav');
+  const sidebarBtn = document.getElementById('who-toggle-theme');
+  const themeText = document.getElementById('theme-text-sidebar');
+
+  if (navBtn) {
+    navBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" style="width: 18px; height: 18px;"></i>`;
+  }
+  if (sidebarBtn) {
+    sidebarBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" style="width: 16px; height: 16px;"></i> <span id="theme-text-sidebar">${isDark ? 'Mode Terang' : 'Mode Gelap'}</span>`;
+  }
+  if (themeText && !sidebarBtn) {
+    themeText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
+  }
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
 // ======================= INITIALIZATION =======================
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
   setupEventListeners();
   checkLocalSession();
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
@@ -734,6 +773,11 @@ function showDashboard() {
   activeUserName.textContent = currentUser.nama;
   if (activeUserRole) activeUserRole.textContent = currentUser.role;
   if (activeUserAvatar) activeUserAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=0284c7&color=fff`;
+
+  const whoNameEl = document.getElementById('who-user-name');
+  const whoRoleEl = document.getElementById('who-user-role');
+  if (whoNameEl) whoNameEl.textContent = currentUser.nama;
+  if (whoRoleEl) whoRoleEl.textContent = currentUser.role;
 
   const menuApiKeys = document.getElementById('menu-api-keys');
   const menuInput = document.getElementById('menu-input');

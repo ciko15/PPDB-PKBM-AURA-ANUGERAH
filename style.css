@@ -1,21 +1,47 @@
-:root {
-  --primary-color: #059669;       /* Emerald Green Utama ala Rostering */
+:root, :root[data-theme="light"] {
+  color-scheme: light;
+  --primary-color: #059669;       /* Emerald Green Utama */
   --primary-hover: #047857;       /* Dark Emerald */
-  --primary-light: #ecfdf5;       /* Light Mint tint */
-  --secondary-color: #10b981;     /* Jade Green */
-  --accent-color: #0d9488;        /* Teal accent */
+  --primary-light: #ecfdf5;       /* Mint tint */
+  --secondary-color: #10b981;
+  --accent-color: #0d9488;
   --success-color: #10b981;
   --danger-color: #ef4444;
   --warning-color: #f59e0b;
-  --bg-color: #f8fafc;            /* Clean light grey-white background */
+  --bg-color: #f8fafc;            /* Clean light grey-white */
   --surface-color: #ffffff;
-  --text-color: #0f172a;          /* Slate 900 for high readability */
-  --text-muted: #64748b;          /* Slate 500 */
+  --surface-hover: #f1f5f9;
+  --surface-2: #f1f5f9;
+  --text-color: #0f172a;          /* Dark slate */
+  --text-muted: #64748b;          /* Muted slate */
   --border-color: #e2e8f0;
-  --border-radius: 12px;          /* Smooth rounded modern cards */
+  --border-radius: 10px;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --primary-color: #10b981;       /* Brighter Emerald for Dark Mode */
+  --primary-hover: #059669;
+  --primary-light: rgba(16, 185, 129, 0.15); /* Translucent Mint */
+  --secondary-color: #34d399;
+  --accent-color: #2dd4bf;
+  --success-color: #34d399;
+  --danger-color: #f87171;
+  --warning-color: #fbbf24;
+  --bg-color: #0b192c;            /* Deep navy dark background */
+  --surface-color: #12263a;       /* Dark slate card */
+  --surface-hover: #1e3a5f;
+  --surface-2: #182f47;
+  --text-color: #e2e8f0;          /* Crisp light text */
+  --text-muted: #94a3b8;          /* Light muted text */
+  --border-color: #263f57;
+  --border-radius: 10px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -36,7 +62,7 @@ body {
 
 /* ==================== TYPOGRAPHY & LOGOS ==================== */
 h2, h3, h4 {
-  color: #111827;
+  color: var(--text-color);
   font-weight: 600;
 }
 .school-logo-large {
@@ -89,7 +115,7 @@ h2, h3, h4 {
   font-size: 0.9rem;
   font-weight: 500;
   margin-bottom: 0.4rem;
-  color: #374151;
+  color: var(--text-color);
 }
 .form-group input, .form-group select {
   padding: 0.75rem;
@@ -97,17 +123,18 @@ h2, h3, h4 {
   border-radius: 6px;
   font-size: 1rem;
   font-family: 'Inter', sans-serif;
-  background-color: #f9fafb;
-  transition: border-color 0.2s;
+  background-color: var(--surface-2);
+  color: var(--text-color);
+  transition: border-color 0.2s, background-color 0.2s;
 }
 .form-group input:focus, .form-group select:focus {
   outline: none;
   border-color: var(--primary-color);
-  background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+  background-color: var(--surface-color);
+  box-shadow: 0 0 0 3px var(--primary-light);
 }
 .form-group input[readonly] {
-  background-color: #e5e7eb;
+  background-color: var(--surface-2);
   color: var(--text-muted);
   cursor: not-allowed;
 }
@@ -176,43 +203,91 @@ h2, h3, h4 {
   overflow: hidden;
 }
 .sidebar {
-  width: 260px;
+  width: 250px;
   background-color: var(--surface-color);
   border-right: 1px solid var(--border-color);
-  overflow-y: auto;
-  transition: transform 0.3s ease;
-}
-.siswa-list {
-  list-style: none;
-  padding: 1rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  transition: transform 0.3s ease, background-color 0.2s ease;
+  flex-shrink: 0;
+  height: 100%;
+}
+
+.sidebar-brand-box {
+  padding: 16px 16px 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.sidebar-brand-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.06));
+}
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.sidebar-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--primary-color);
+  letter-spacing: -0.2px;
+}
+.sidebar-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.sidebar-nav-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 10px;
+}
+.sidebar-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 8px 10px 4px 10px;
+  text-transform: uppercase;
+}
+
+.siswa-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .siswa-list li {
-  padding: 0.65rem 0.9rem;
+  padding: 0.6rem 0.85rem;
   cursor: pointer;
   border-radius: 8px;
   border-left: 3px solid transparent;
-  color: #334155;
+  color: var(--text-color);
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   transition: all 0.15s ease;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 .siswa-list li .menu-icon {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   stroke-width: 1.8;
-  color: #64748b;
+  color: var(--text-muted);
   flex-shrink: 0;
   transition: color 0.15s ease;
 }
 .siswa-list li:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
+  background-color: var(--surface-hover);
+  color: var(--text-color);
 }
 .siswa-list li:hover .menu-icon {
   color: var(--primary-color);
@@ -227,28 +302,98 @@ h2, h3, h4 {
   color: var(--primary-color);
 }
 .menu-ai-item {
-  background: #f0fdf4 !important;
-  color: #166534 !important;
+  background: var(--surface-2) !important;
+  color: var(--primary-color) !important;
+  font-weight: 600 !important;
 }
 .menu-ai-item .menu-icon {
-  color: #059669 !important;
+  color: var(--primary-color) !important;
 }
 .menu-api-item {
-  background: #fffbeb !important;
-  color: #92400e !important;
+  color: #d97706 !important;
 }
 .menu-api-item .menu-icon {
   color: #d97706 !important;
 }
-.menu-logout-item {
-  margin-top: 1.5rem !important;
-  color: #dc2626 !important;
-  border-top: 1px solid #e2e8f0 !important;
-  padding-top: 12px !important;
-  border-radius: 0 0 8px 8px !important;
+
+/* Box Profil Bawah (.who) ala Rostering Teknik */
+.who {
+  padding: 12px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-.menu-logout-item .menu-icon {
-  color: #dc2626 !important;
+.who-info {
+  display: flex;
+  flex-direction: column;
+}
+.who-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.who-name-btn {
+  background: none;
+  border: none;
+  padding: 2px 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-color);
+  border-radius: 4px;
+}
+.who-name-btn:hover {
+  color: var(--primary-color);
+}
+.who-role-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--primary-light);
+  color: var(--primary-color);
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+.who-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 4px;
+}
+.who-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
+  background: var(--surface-2);
+  color: var(--text-color);
+}
+.who-theme-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.who-logout-btn {
+  color: var(--danger-color);
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.05);
+}
+.who-logout-btn:hover {
+  background: var(--danger-color);
+  color: white;
+  border-color: var(--danger-color);
 }
 
 .main-content {
@@ -412,7 +557,7 @@ h2, h3, h4 {
   position: sticky;
   top: 0;
   z-index: 10;
-  background-color: #f8fafc;
+  background-color: var(--surface-2);
   font-weight: 600;
   color: var(--text-muted);
   font-size: 0.82rem;
@@ -421,7 +566,7 @@ h2, h3, h4 {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 .data-table tbody tr:hover {
-  background-color: #f1f5f9;
+  background-color: var(--surface-hover);
 }
 .list-header {
   display: flex; 
