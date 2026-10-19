@@ -298,8 +298,9 @@ function switchMobileTab(targetId, btnEl) {
   try { localStorage.setItem('ppdb_last_section', targetId); } catch (e) {}
 
   if (targetId === 'section-dashboard') loadDashboardData();
-  if (targetId === 'section-validasi') fetchSiswaData(true);
   if (targetId === 'section-list') loadAllSiswa();
+  if (targetId === 'section-materi') loadBukuData();
+  if (targetId === 'section-ujian') loadUjianData();
   if (targetId === 'section-users') loadAllUsers();
   if (targetId === 'section-api-keys') loadApiKeys();
 
@@ -377,8 +378,9 @@ function setupEventListeners() {
       try { localStorage.setItem('ppdb_last_section', targetId); } catch (e) {}
 
       if (targetId === 'section-dashboard') loadDashboardData();
-      if (targetId === 'section-validasi') fetchSiswaData(true);
       if (targetId === 'section-list') loadAllSiswa();
+      if (targetId === 'section-materi') loadBukuData();
+      if (targetId === 'section-ujian') loadUjianData();
       if (targetId === 'section-users') loadAllUsers();
       if (targetId === 'section-api-keys') loadApiKeys();
 
@@ -875,8 +877,12 @@ function showDashboard() {
   const menuPortalSiswa = document.getElementById('menu-portal-siswa');
   const menuPengumumanSiswa = document.getElementById('menu-pengumuman-siswa');
 
+  const menuMateri = document.getElementById('menu-materi');
+  const menuUjian = document.getElementById('menu-ujian');
+  const menuSiswaMateri = document.getElementById('menu-siswa-materi');
+  const menuSiswaUjian = document.getElementById('menu-siswa-ujian');
+
   if (currentUser.role === 'Siswa') {
-    // Pengguna adalah Peserta Didik
     // Sembunyikan menu manajemen petugas
     menuDashboard.classList.add('hidden');
     if (menuInput) menuInput.classList.add('hidden');
@@ -885,14 +891,20 @@ function showDashboard() {
     if (menuList) menuList.classList.add('hidden');
     if (menuUsers) menuUsers.classList.add('hidden');
     if (menuApiKeys) menuApiKeys.classList.add('hidden');
+    if (menuMateri) menuMateri.classList.add('hidden');
+    if (menuUjian) menuUjian.classList.add('hidden');
     if (menuAbsensi) menuAbsensi.classList.remove('hidden');
     if (menuBayar) menuBayar.classList.remove('hidden');
 
-    // Tampilkan menu khusus siswa
+    // Tampilkan menu khusus siswa (termasuk Buku Belajar & Hasil Ujian)
     if (menuPortalSiswa) menuPortalSiswa.classList.remove('hidden');
+    if (menuSiswaMateri) menuSiswaMateri.classList.remove('hidden');
+    if (menuSiswaUjian) menuSiswaUjian.classList.remove('hidden');
     if (menuPengumumanSiswa) menuPengumumanSiswa.classList.remove('hidden');
 
     renderPortalSiswaData(currentUser.dataSiswa);
+    loadBukuData();
+    loadUjianData();
     if (menuPortalSiswa) menuPortalSiswa.click();
     return;
   }
@@ -901,12 +913,19 @@ function showDashboard() {
   menuDashboard.classList.remove('hidden');
   if (menuInput) menuInput.classList.remove('hidden');
   if (menuAiReg) menuAiReg.classList.remove('hidden');
-  if (menuValidasi) menuValidasi.classList.remove('hidden');
+  if (menuValidasi) menuValidasi.classList.add('hidden'); // Menu Antrean Validasi AI dihilangkan
   if (menuList) menuList.classList.remove('hidden');
+  if (menuMateri) menuMateri.classList.remove('hidden');
+  if (menuUjian) menuUjian.classList.remove('hidden');
   if (menuAbsensi) menuAbsensi.classList.remove('hidden');
   if (menuBayar) menuBayar.classList.remove('hidden');
   if (menuPortalSiswa) menuPortalSiswa.classList.add('hidden');
+  if (menuSiswaMateri) menuSiswaMateri.classList.add('hidden');
+  if (menuSiswaUjian) menuSiswaUjian.classList.add('hidden');
   if (menuPengumumanSiswa) menuPengumumanSiswa.classList.add('hidden');
+
+  loadBukuData();
+  loadUjianData();
 
   const mobileTabDashboard = document.querySelector('.mobile-tab-btn[data-target="section-dashboard"]');
   const mobileTabList = document.querySelector('.mobile-tab-btn[data-target="section-list"]');
@@ -3889,4 +3908,761 @@ function catatTransaksiBaru() {
     }
   });
 }
+
+// ====================================================================================
+// ==================== SISTEM MATERI BELAJAR & UJIAN SISWA (ALA MYAURA) ====================
+// ====================================================================================
+
+// In-Memory Data / Storage Cache
+let bukuList = [
+  {
+    id: "BK-001",
+    nama: "Bahasa Indonesia Paket C - Mahir Berbahasa & Sastra",
+    jenjang: "Paket C",
+    kategori: "Bahasa Indonesia",
+    keterangan: "Modul 1: Memahami teks eksposisi, argumentasi, dan resensi buku kesetaraan tingkat mahir.",
+    totalHal: 35,
+    dibaca: 18,
+    file: ""
+  },
+  {
+    id: "BK-002",
+    nama: "Matematika Terapan Paket C - Logika & Statistik Keuangan",
+    jenjang: "Paket C",
+    kategori: "Matematika",
+    keterangan: "Modul 2: Penerapan persamaan linear, bunga tabungan, dan dasar pengelolaan keuangan.",
+    totalHal: 42,
+    dibaca: 14,
+    file: ""
+  },
+  {
+    id: "BK-003",
+    nama: "Ilmu Pengetahuan Alam Paket B - Sains Lingkungan Hidup",
+    jenjang: "Paket B",
+    kategori: "IPA / Sains",
+    keterangan: "Modul 1: Ekosistem darat dan perairan Papua, pelestarian hutan, dan siklus air bersih.",
+    totalHal: 28,
+    dibaca: 9,
+    file: ""
+  },
+  {
+    id: "BK-004",
+    nama: "Pendidikan Kewarganegaraan Paket A - Hak & Kewajiban Warga",
+    jenjang: "Paket A",
+    kategori: "Kewarganegaraan",
+    keterangan: "Modul 1: Pengenalan Pancasila, toleransi masyarakat, dan kerukunan warga sekitar.",
+    totalHal: 20,
+    dibaca: 7,
+    file: ""
+  },
+  {
+    id: "BK-005",
+    nama: "Keterampilan Wirausaha Paket C - Pemasaran Produk Lokal",
+    jenjang: "Paket C",
+    kategori: "Keterampilan",
+    keterangan: "Modul 3: Manajemen modal kecil, pemasaran produk UMKM lokal, dan pemanfaatan media digital.",
+    totalHal: 30,
+    dibaca: 23,
+    file: ""
+  }
+];
+
+let sesiBelajarLog = [];
+let ujianHasilList = [];
+
+// State Aktif Sesi Belajar
+let activeBelajarSession = null;
+let liveTimerInterval = null;
+
+function loadBukuData() {
+  try {
+    const saved = localStorage.getItem('ppdb_buku_list');
+    if (saved) bukuList = JSON.parse(saved);
+  } catch (e) {}
+
+  try {
+    const savedLogs = localStorage.getItem('ppdb_belajar_log');
+    if (savedLogs) sesiBelajarLog = JSON.parse(savedLogs);
+  } catch (e) {}
+
+  try {
+    const savedUjian = localStorage.getItem('ppdb_ujian_list');
+    if (savedUjian) ujianHasilList = JSON.parse(savedUjian);
+  } catch (e) {}
+
+  renderBukuGrid();
+  renderBelajarLogTable();
+  updateBelajarStats();
+  renderUjianTable();
+  populateUjianSelectOptions();
+}
+
+function updateBelajarStats() {
+  const elTotalBuku = document.getElementById('stat-total-buku');
+  const elSiswaAktif = document.getElementById('stat-siswa-aktif-belajar');
+  const elJamBelajar = document.getElementById('stat-jam-belajar');
+
+  if (elTotalBuku) elTotalBuku.textContent = bukuList.length;
+
+  // Hitung siswa aktif belajar hari ini
+  const todayStr = new Date().toLocaleDateString('id-ID');
+  const todayLogs = sesiBelajarLog.filter(x => x.tanggal === todayStr);
+  const uniqueStudents = new Set(todayLogs.map(x => x.namaSiswa));
+  if (elSiswaAktif) elSiswaAktif.textContent = uniqueStudents.size;
+
+  // Hitung total jam belajar
+  const totalDetik = sesiBelajarLog.reduce((acc, curr) => acc + (curr.durasiDetik || 0), 0);
+  const totalJam = (totalDetik / 3600).toFixed(1);
+  if (elJamBelajar) elJamBelajar.textContent = `${totalJam} Jam`;
+}
+
+function filterBukuGrid() {
+  const query = (document.getElementById('search-buku')?.value || '').toLowerCase().trim();
+  const jenjang = document.getElementById('filter-buku-jenjang')?.value || '';
+  const mapel = document.getElementById('filter-buku-mapel')?.value || '';
+
+  const filtered = bukuList.filter(b => {
+    const matchQuery = !query || b.nama.toLowerCase().includes(query) || (b.keterangan || '').toLowerCase().includes(query);
+    const matchJenjang = !jenjang || b.jenjang === jenjang;
+    const matchMapel = !mapel || b.kategori === mapel;
+    return matchQuery && matchJenjang && matchMapel;
+  });
+
+  renderBukuGrid(filtered);
+}
+
+function renderBukuGrid(data) {
+  const grid = document.getElementById('grid-buku-belajar');
+  if (!grid) return;
+
+  const list = data || bukuList;
+  if (list.length === 0) {
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted); background: var(--surface-color); border-radius: var(--radius); border: 1px dashed var(--border-color);">Belum ada modul / buku pelajaran yang sesuai filter.</div>';
+    return;
+  }
+
+  const isPetugas = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin' || currentUser.role === 'Guru');
+
+  grid.innerHTML = list.map(b => {
+    return `
+      <div class="book-card">
+        <div class="book-cover">
+          <i data-lucide="book-open" class="book-cover-icon"></i>
+          <span class="book-badge-program">${b.jenjang}</span>
+        </div>
+        <div class="book-info-body">
+          <div style="font-size: 11px; color: var(--primary-color); font-weight: 600; text-transform: uppercase; margin-bottom: 2px;">${b.kategori}</div>
+          <div class="book-title" title="${b.nama}">${b.nama}</div>
+          <div class="book-desc">${b.keterangan || 'Tidak ada deskripsi modul.'}</div>
+          <div class="book-meta">
+            <span>📄 ${b.totalHal || 30} Halaman</span>
+            <span>👁️ Dibaca ${b.dibaca || 0}x</span>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: auto;">
+            <button class="btn btn-primary" style="flex: 1; justify-content: center; font-size: 13px;" onclick="mulaiBelajarBuku('${b.id}')">
+              <i data-lucide="play-circle" style="width: 15px; height: 15px;"></i> Mulai Belajar
+            </button>
+            ${isPetugas ? `
+              <button class="btn btn-icon" onclick="showEditBukuModal('${b.id}')" title="Edit Buku">
+                <i data-lucide="pencil" style="width: 14px; height: 14px;"></i>
+              </button>
+              <button class="btn btn-icon btn-danger-text" onclick="hapusBuku('${b.id}')" title="Hapus Buku">
+                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+// ==================== LIVE BELAJAR, ABSENSI, & READER ====================
+
+function mulaiBelajarBuku(bukuId) {
+  const book = bukuList.find(b => b.id === bukuId);
+  if (!book) return;
+
+  // Nama siswa yang belajar
+  const studentName = currentUser ? currentUser.nama : "Peserta Didik Mandiri";
+
+  // Buka dialog konfirmasi presensi belajar (Absen Belajar Otomatis)
+  Swal.fire({
+    title: 'Mulai Sesi Belajar Mandiri?',
+    html: `
+      <div style="text-align: left; font-size: 13.5px; line-height: 1.5; color: var(--text-color);">
+        <p>Halo <b>${studentName}</b>, sistem akan mencatat kehadiran dan absensi belajar Anda secara otomatis:</p>
+        <div style="background: var(--surface-2); padding: 12px; border-radius: 8px; margin: 10px 0; border: 1px solid var(--border-color);">
+          <div>📚 <b>Buku:</b> ${book.nama}</div>
+          <div style="margin-top: 4px;">🎯 <b>Program:</b> ${book.jenjang} - ${book.kategori}</div>
+          <div style="margin-top: 4px;">⏱️ <b>Pelacak:</b> Timer durasi dan halaman akan direkam ke log guru.</div>
+        </div>
+        <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Setelah membaca modul, Anda dapat langsung menuntaskan ke sesi Ujian & Penilaian.</p>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Mulai Belajar Sekarang 📖',
+    cancelButtonText: 'Nanti Dulu',
+    confirmButtonColor: 'var(--primary-color)'
+  }).then(res => {
+    if (res.isConfirmed) {
+      launchReaderSession(book, studentName);
+    }
+  });
+}
+
+function launchReaderSession(book, studentName) {
+  // Update view count
+  book.dibaca = (book.dibaca || 0) + 1;
+  saveBukuListToStorage();
+
+  // Inisialisasi Sesi Belajar
+  activeBelajarSession = {
+    sessionId: 'SES-' + Date.now(),
+    bukuId: book.id,
+    bukuJudul: book.nama,
+    namaSiswa: studentName,
+    tanggal: new Date().toLocaleDateString('id-ID'),
+    jamMulai: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+    halamanAwal: 1,
+    halamanSekarang: 1,
+    totalHalaman: book.totalHal || 30,
+    detikMulai: Date.now(),
+    durasiDetik: 0,
+    status: 'Aktif Belajar'
+  };
+
+  // Setup UI Modal Reader
+  document.getElementById('reader-book-title').textContent = book.nama;
+  document.getElementById('reader-book-info').textContent = `${book.jenjang} · ${book.kategori}`;
+  document.getElementById('reader-current-page').textContent = '1';
+  document.getElementById('reader-total-page').textContent = book.totalHal || 30;
+  document.getElementById('reader-active-student').textContent = studentName;
+
+  const iframeEl = document.getElementById('reader-iframe');
+  const textViewerEl = document.getElementById('reader-text-viewer');
+  const chapterContentEl = document.getElementById('reader-chapter-content');
+
+  if (book.file && book.file.startsWith('http')) {
+    iframeEl.style.display = 'block';
+    iframeEl.src = book.file;
+    textViewerEl.style.display = 'none';
+  } else {
+    iframeEl.style.display = 'none';
+    textViewerEl.style.display = 'block';
+    renderBookChapterContent(chapterContentEl, book, 1);
+  }
+
+  // Buka modal reader
+  const modalReader = document.getElementById('modal-reader');
+  if (modalReader) modalReader.classList.remove('hidden');
+
+  // Start Live Timer
+  startLiveTimer();
+
+  // Rekam status awal ke log aktivitas presensi belajar
+  catatLogBelajarBaru(activeBelajarSession);
+}
+
+function renderBookChapterContent(container, book, pageNum) {
+  container.innerHTML = `
+    <div style="max-width: 680px; margin: 0 auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-bottom: 20px;">
+        <span style="font-size: 12px; font-weight: 700; color: var(--primary-color); text-transform: uppercase;">MODUL PEMBELAJARAN PKBM AURA ANUGERAH</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Hal. ${pageNum} / ${book.totalHal || 30}</span>
+      </div>
+
+      <h2 style="font-size: 20px; font-weight: 700; color: var(--text-color); margin-bottom: 12px;">Bab ${pageNum}: Pengantar & Pemahaman Konsep ${book.kategori}</h2>
+      
+      <p style="margin-bottom: 14px;">Selamat datang di modul pembelajaran mandiri kesetaraan ${book.jenjang}. Pada bab dan halaman ini, peserta didik diarahkan untuk memahami materi dasar secara cermat dan memecahkan persoalan kontekstual.</p>
+      
+      <div style="background: var(--surface-2); padding: 16px; border-radius: 8px; border-left: 4px solid var(--primary-color); margin: 20px 0;">
+        <h4 style="margin: 0 0 6px 0; font-size: 14px; color: var(--text-color);">💡 Poin Pembelajaran Kunci</h4>
+        <ul style="margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--text-muted);">
+          <li>Memahami definisi, terminologi, dan latar belakang materi bab ini.</li>
+          <li>Mengidentifikasi contoh studi kasus dan penerapannya di lingkungan sehari-hari.</li>
+          <li>Menyiapkan ringkasan mandiri sebelum melangkah ke tes evaluasi pemahaman modul.</li>
+        </ul>
+      </div>
+
+      <p style="margin-bottom: 14px;">Bagi peserta didik pendidikan kesetaraan, kemandirian dalam membaca dan menelaah setiap bab adalah kunci keberhasilan kelulusan. Diskusikan materi yang belum Anda pahami dengan tutor atau rekan belajar.</p>
+      
+      <div style="margin-top: 30px; padding: 14px; background: rgba(242, 169, 0, 0.1); border: 1px dashed var(--accent); border-radius: 8px; font-size: 13px; color: var(--text-color);">
+        📌 <b>Aktivitas Mandiri:</b> Buatlah 3 rangkuman penting dari halaman ini pada buku catatan Anda sebelum menekan tombol <b>Halaman Berikutnya</b> di bawah.
+      </div>
+    </div>
+  `;
+}
+
+function navigasiHalamanBuku(step) {
+  if (!activeBelajarSession) return;
+  const newPage = activeBelajarSession.halamanSekarang + step;
+  if (newPage < 1 || newPage > activeBelajarSession.totalHalaman) return;
+
+  activeBelajarSession.halamanSekarang = newPage;
+  document.getElementById('reader-current-page').textContent = newPage;
+
+  const book = bukuList.find(b => b.id === activeBelajarSession.bukuId);
+  const chapterContentEl = document.getElementById('reader-chapter-content');
+  if (book && chapterContentEl) {
+    renderBookChapterContent(chapterContentEl, book, newPage);
+  }
+
+  // Update Log Belajar
+  updateLogBelajarSession(activeBelajarSession);
+}
+
+function startLiveTimer() {
+  if (liveTimerInterval) clearInterval(liveTimerInterval);
+  const timerEl = document.getElementById('reader-live-timer');
+
+  liveTimerInterval = setInterval(() => {
+    if (!activeBelajarSession) return;
+    const now = Date.now();
+    const elapsedSeconds = Math.floor((now - activeBelajarSession.detikMulai) / 1000);
+    activeBelajarSession.durasiDetik = elapsedSeconds;
+
+    const hours = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(elapsedSeconds % 60).padStart(2, '0');
+
+    if (timerEl) timerEl.textContent = `${hours}:${minutes}:${seconds}`;
+
+    // Sinkronkan ke log setiap 15 detik
+    if (elapsedSeconds % 15 === 0) {
+      updateLogBelajarSession(activeBelajarSession);
+    }
+  }, 1000);
+}
+
+function closeReaderModal() {
+  if (activeBelajarSession) {
+    activeBelajarSession.status = 'Selesai Belajar';
+    updateLogBelajarSession(activeBelajarSession);
+  }
+  if (liveTimerInterval) clearInterval(liveTimerInterval);
+  activeBelajarSession = null;
+
+  const modalReader = document.getElementById('modal-reader');
+  if (modalReader) modalReader.classList.add('hidden');
+  renderBelajarLogTable();
+  updateBelajarStats();
+}
+
+function selesaiBelajarDanUjian() {
+  if (!activeBelajarSession) return;
+  const session = { ...activeBelajarSession };
+  closeReaderModal();
+
+  // Buka konfirmasi langsung untuk ujian
+  Swal.fire({
+    title: 'Selesai Belajar! Lanjut ke Ujian?',
+    html: `
+      <div style="text-align: left; font-size: 13.5px; color: var(--text-color);">
+        <p>Selamat <b>${session.namaSiswa}</b>, Anda telah tuntas membaca <b>${session.bukuJudul}</b> (Hingga Hal. ${session.halamanSekarang}) dengan durasi <b>${Math.max(1, Math.ceil(session.durasiDetik / 60))} menit</b>.</p>
+        <p>Apakah Anda ingin membuka lembar ujian evaluasi sekarang untuk dinilai oleh Tutor / Guru?</p>
+      </div>
+    `,
+    icon: 'success',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Laksanakan Ujian 📝',
+    cancelButtonText: 'Nanti Saja',
+    confirmButtonColor: 'var(--primary-color)'
+  }).then(res => {
+    if (res.isConfirmed) {
+      // Buka modal input ujian dengan preset buku & siswa
+      showInputNilaiModal(session.bukuId, session.namaSiswa);
+    }
+  });
+}
+
+function catatLogBelajarBaru(session) {
+  sesiBelajarLog.unshift({
+    id: session.sessionId,
+    tanggal: session.tanggal,
+    jamMulai: session.jamMulai,
+    namaSiswa: session.namaSiswa,
+    bukuJudul: session.bukuJudul,
+    halamanTerbaca: `Hal. 1`,
+    durasiDetik: 0,
+    status: 'Aktif Membaca 🟢'
+  });
+  saveLogBelajarToStorage();
+  renderBelajarLogTable();
+}
+
+function updateLogBelajarSession(session) {
+  const item = sesiBelajarLog.find(x => x.id === session.sessionId);
+  if (item) {
+    item.halamanTerbaca = `Hal. 1 - ${session.halamanSekarang}`;
+    item.durasiDetik = session.durasiDetik;
+    const durasiMenit = Math.max(1, Math.ceil(session.durasiDetik / 60));
+    item.status = session.status === 'Selesai Belajar' ? `Selesai (${durasiMenit} mnt) ✅` : `Aktif Membaca (${durasiMenit} mnt) 🟢`;
+    saveLogBelajarToStorage();
+    renderBelajarLogTable();
+  }
+}
+
+function renderBelajarLogTable() {
+  const tbody = document.getElementById('table-log-belajar-body');
+  if (!tbody) return;
+
+  if (sesiBelajarLog.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Belum ada riwayat aktivitas belajar siswa.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = sesiBelajarLog.slice(0, 10).map((log, idx) => {
+    const menit = Math.ceil((log.durasiDetik || 0) / 60);
+    return `
+      <tr>
+        <td><small>${log.tanggal || '-'} ${log.jamMulai || ''}</small></td>
+        <td><strong>${log.namaSiswa || 'Siswa'}</strong></td>
+        <td>${log.bukuJudul || '-'}</td>
+        <td><span style="background: var(--surface-2); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">${log.halamanTerbaca || 'Hal. 1'}</span></td>
+        <td>${menit} Menit</td>
+        <td><span style="font-size: 12px; font-weight: 600;">${log.status || 'Aktif'}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function saveBukuListToStorage() {
+  try { localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList)); } catch (e) {}
+}
+
+function saveLogBelajarToStorage() {
+  try { localStorage.setItem('ppdb_belajar_log', JSON.stringify(sesiBelajarLog)); } catch (e) {}
+}
+
+// ==================== MODAL TAMBAH & EDIT BUKU ====================
+
+function showAddBukuModal() {
+  document.getElementById('buku-form-title').textContent = 'Tambah Buku Pelajaran Baru';
+  document.getElementById('buku-id').value = '';
+  document.getElementById('buku-nama').value = '';
+  document.getElementById('buku-total-hal').value = '30';
+  document.getElementById('buku-keterangan').value = '';
+  document.getElementById('buku-file-url').value = '';
+  document.getElementById('modal-form-buku').classList.remove('hidden');
+}
+
+function showEditBukuModal(id) {
+  const b = bukuList.find(x => x.id === id);
+  if (!b) return;
+
+  document.getElementById('buku-form-title').textContent = 'Edit Buku Pelajaran';
+  document.getElementById('buku-id').value = b.id;
+  document.getElementById('buku-nama').value = b.nama;
+  document.getElementById('buku-jenjang').value = b.jenjang;
+  document.getElementById('buku-kategori').value = b.kategori;
+  document.getElementById('buku-total-hal').value = b.totalHal || 30;
+  document.getElementById('buku-keterangan').value = b.keterangan || '';
+  document.getElementById('buku-file-url').value = b.file || '';
+  document.getElementById('modal-form-buku').classList.remove('hidden');
+}
+
+function closeBukuFormModal() {
+  document.getElementById('modal-form-buku').classList.add('hidden');
+}
+
+function simpanBukuData() {
+  const id = document.getElementById('buku-id').value;
+  const nama = document.getElementById('buku-nama').value.trim();
+  const jenjang = document.getElementById('buku-jenjang').value;
+  const kategori = document.getElementById('buku-kategori').value;
+  const totalHal = parseInt(document.getElementById('buku-total-hal').value, 10) || 30;
+  const keterangan = document.getElementById('buku-keterangan').value.trim();
+  const file = document.getElementById('buku-file-url').value.trim();
+
+  if (!nama) {
+    Swal.fire('Peringatan', 'Judul buku pelajaran wajib diisi!', 'warning');
+    return;
+  }
+
+  if (id) {
+    // Edit mode
+    const idx = bukuList.findIndex(x => x.id === id);
+    if (idx !== -1) {
+      bukuList[idx] = { ...bukuList[idx], nama, jenjang, kategori, totalHal, keterangan, file };
+    }
+  } else {
+    // Tambah baru
+    const newBook = {
+      id: 'BK-' + String(bukuList.length + 1).padStart(3, '0'),
+      nama,
+      jenjang,
+      kategori,
+      totalHal,
+      keterangan,
+      file,
+      dibaca: 0
+    };
+    bukuList.unshift(newBook);
+  }
+
+  saveBukuListToStorage();
+  closeBukuFormModal();
+  renderBukuGrid();
+  updateBelajarStats();
+  populateUjianSelectOptions();
+  Swal.fire('Berhasil', 'Data buku pelajaran berhasil disimpan.', 'success');
+}
+
+function hapusBuku(id) {
+  Swal.fire({
+    title: 'Hapus Buku Pelajaran?',
+    text: 'Buku ini akan dihapus dari daftar bahan bacaan siswa.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    confirmButtonColor: 'var(--danger-color)',
+    cancelButtonText: 'Batal'
+  }).then(res => {
+    if (res.isConfirmed) {
+      bukuList = bukuList.filter(x => x.id !== id);
+      saveBukuListToStorage();
+      renderBukuGrid();
+      updateBelajarStats();
+      populateUjianSelectOptions();
+      Swal.fire('Dihapus', 'Buku telah berhasil dihapus.', 'success');
+    }
+  });
+}
+
+// ==================== SISTEM UJIAN & PENILAIAN HASIL BELAJAR ====================
+
+function populateUjianSelectOptions() {
+  const selectSiswa = document.getElementById('ujian-siswa-id');
+  const selectBuku = document.getElementById('ujian-buku-id');
+  if (!selectSiswa || !selectBuku) return;
+
+  // Isi data siswa dari siswaDataList
+  selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>' +
+    siswaDataList.map(s => `<option value="${s.id}">${s.nama} (${s.program || 'Paket C'})</option>`).join('');
+
+  // Isi data buku
+  selectBuku.innerHTML = '<option value="">-- Pilih Buku / Modul --</option>' +
+    bukuList.map(b => `<option value="${b.id}">${b.nama} [${b.jenjang}]</option>`).join('');
+}
+
+function hitungPredikatNilai(val) {
+  const num = Number(val);
+  const elPredikat = document.getElementById('ujian-predikat');
+  if (!elPredikat) return;
+
+  if (num >= 88) elPredikat.value = 'Sangat Baik (A)';
+  else if (num >= 75) elPredikat.value = 'Baik (B)';
+  else if (num >= 60) elPredikat.value = 'Cukup (C)';
+  else elPredikat.value = 'Perlu Bimbingan (D)';
+}
+
+function showInputNilaiModal(presetBukuId = null, presetNamaSiswa = null) {
+  populateUjianSelectOptions();
+  const selectSiswa = document.getElementById('ujian-siswa-id');
+  const selectBuku = document.getElementById('ujian-buku-id');
+
+  if (presetBukuId && selectBuku) selectBuku.value = presetBukuId;
+  if (presetNamaSiswa && selectSiswa) {
+    const matchingSiswa = siswaDataList.find(s => s.nama.toLowerCase() === presetNamaSiswa.toLowerCase());
+    if (matchingSiswa) selectSiswa.value = matchingSiswa.id;
+  }
+
+  document.getElementById('ujian-angka').value = '';
+  document.getElementById('ujian-predikat').value = 'Baik (B)';
+  document.getElementById('ujian-catatan').value = '';
+
+  const modal = document.getElementById('modal-input-nilai');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeInputNilaiModal() {
+  const modal = document.getElementById('modal-input-nilai');
+  if (modal) modal.classList.add('hidden');
+}
+
+function simpanNilaiUjian() {
+  const siswaId = document.getElementById('ujian-siswa-id').value;
+  const bukuId = document.getElementById('ujian-buku-id').value;
+  const nilaiAngka = parseInt(document.getElementById('ujian-angka').value, 10);
+  const predikat = document.getElementById('ujian-predikat').value;
+  const catatan = document.getElementById('ujian-catatan').value.trim();
+
+  if (!siswaId || !bukuId || isNaN(nilaiAngka)) {
+    Swal.fire('Peringatan', 'Harap lengkapi semua kolom penilaian ujian!', 'warning');
+    return;
+  }
+
+  const s = siswaDataList.find(x => String(x.id) === String(siswaId));
+  const b = bukuList.find(x => String(x.id) === String(bukuId));
+
+  const newUjian = {
+    id: 'EX-' + Date.now(),
+    tanggal: new Date().toLocaleDateString('id-ID'),
+    siswaId,
+    namaSiswa: s ? s.nama : 'Peserta Didik',
+    program: s ? (s.program || 'Paket C') : 'Paket C',
+    bukuJudul: b ? b.nama : 'Modul Pembelajaran',
+    nilai: nilaiAngka,
+    predikat,
+    catatan: catatan || 'Siswa telah menyelesaikan evaluasi pembelajaran.',
+    penguji: currentUser ? `${currentUser.nama} (${currentUser.role})` : 'Tutor Evaluator'
+  };
+
+  ujianHasilList.unshift(newUjian);
+  saveUjianListToStorage();
+  closeInputNilaiModal();
+  renderUjianTable();
+
+  Swal.fire({
+    title: 'Nilai Ujian Berhasil Disimpan! 🎉',
+    html: `
+      <div style="text-align: left; font-size: 13.5px; color: var(--text-color);">
+        <p>Hasil ujian telah tersimpan ke rapor akademik siswa:</p>
+        <div style="background: var(--surface-2); padding: 12px; border-radius: 8px;">
+          <div>👤 <b>Nama:</b> ${newUjian.namaSiswa}</div>
+          <div>📚 <b>Mata Uji:</b> ${newUjian.bukuJudul}</div>
+          <div>⭐ <b>Nilai Akhir:</b> <span style="font-weight: 700; color: #16a34a; font-size: 16px;">${newUjian.nilai}</span> (${newUjian.predikat})</div>
+        </div>
+      </div>
+    `,
+    icon: 'success',
+    confirmButtonColor: 'var(--primary-color)'
+  });
+}
+
+function saveUjianListToStorage() {
+  try { localStorage.setItem('ppdb_ujian_list', JSON.stringify(ujianHasilList)); } catch (e) {}
+}
+
+function loadUjianData() {
+  try {
+    const saved = localStorage.getItem('ppdb_ujian_list');
+    if (saved) ujianHasilList = JSON.parse(saved);
+  } catch (e) {}
+  renderUjianTable();
+}
+
+function filterUjianTable() {
+  const query = (document.getElementById('search-ujian')?.value || '').toLowerCase().trim();
+  const program = document.getElementById('filter-ujian-program')?.value || '';
+  const predikat = document.getElementById('filter-ujian-predikat')?.value || '';
+
+  const filtered = ujianHasilList.filter(u => {
+    const matchQuery = !query || u.namaSiswa.toLowerCase().includes(query) || u.bukuJudul.toLowerCase().includes(query) || (u.penguji || '').toLowerCase().includes(query);
+    const matchProgram = !program || u.program === program;
+    const matchPredikat = !predikat || u.predikat.includes(predikat);
+    return matchQuery && matchProgram && matchPredikat;
+  });
+
+  renderUjianTable(filtered);
+}
+
+function renderUjianTable(data) {
+  const tbody = document.getElementById('table-ujian-body');
+  if (!tbody) return;
+
+  let list = data || ujianHasilList;
+
+  // Jika login sebagai siswa, hanya tampilkan nilai miliknya
+  if (currentUser && currentUser.role === 'Siswa') {
+    list = list.filter(u => u.namaSiswa.toLowerCase() === currentUser.nama.toLowerCase());
+  }
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">Belum ada data nilai ujian peserta didik.</td></tr>';
+    return;
+  }
+
+  const isPetugas = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin' || currentUser.role === 'Guru');
+
+  tbody.innerHTML = list.map((u, idx) => {
+    const nilaiColor = u.nilai >= 75 ? '#15803d' : (u.nilai >= 60 ? '#b45309' : '#b91c1c');
+    const badgeBg = u.nilai >= 75 ? '#dcfce7' : (u.nilai >= 60 ? '#fef3c7' : '#fee2e2');
+
+    return `
+      <tr>
+        <td>${idx + 1}</td>
+        <td><small>${u.tanggal || '-'}</small></td>
+        <td><strong>${u.namaSiswa}</strong></td>
+        <td><span class="tag def">${u.program}</span></td>
+        <td>${u.bukuJudul}</td>
+        <td>
+          <span style="font-weight: 700; font-size: 15px; color: ${nilaiColor}; background: ${badgeBg}; padding: 3px 10px; border-radius: 6px;">
+            ${u.nilai}
+          </span>
+        </td>
+        <td>${u.predikat}</td>
+        <td><small style="color: var(--text-muted);">${u.penguji || '-'}</small></td>
+        <td style="text-align: right;">
+          <button class="btn btn-sm btn-outline" onclick="cetakSertifikatUjian('${u.id}')" title="Cetak Transkrip / Sertifikat Kelulusan Modul">
+            📜 Transkrip
+          </button>
+          ${isPetugas ? `
+            <button class="btn btn-icon btn-danger-text" onclick="hapusNilaiUjian('${u.id}')" title="Hapus Nilai">
+              <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+            </button>
+          ` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+function hapusNilaiUjian(id) {
+  Swal.fire({
+    title: 'Hapus Nilai Ujian?',
+    text: 'Data nilai ujian siswa ini akan dihapus permanen.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    confirmButtonColor: 'var(--danger-color)',
+    cancelButtonText: 'Batal'
+  }).then(res => {
+    if (res.isConfirmed) {
+      ujianHasilList = ujianHasilList.filter(x => x.id !== id);
+      saveUjianListToStorage();
+      renderUjianTable();
+      Swal.fire('Terhapus', 'Nilai ujian telah dihapus.', 'success');
+    }
+  });
+}
+
+function cetakSertifikatUjian(id) {
+  const u = ujianHasilList.find(x => x.id === id);
+  if (!u) return;
+
+  Swal.fire({
+    title: 'Transkrip Kelulusan Modul Pembelajaran',
+    html: `
+      <div style="border: 2px solid var(--primary-color); padding: 18px; border-radius: 10px; text-align: center; background: #fff; color: #1e293b;">
+        <h4 style="margin: 0; color: #0f5c7a; text-transform: uppercase;">PKBM Aura Anugerah</h4>
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 12px;">Sentani, Jayapura · Sistem Pendidikan Kesetaraan Terpadu</div>
+        <hr style="border: none; border-top: 1px solid #cbd5e1; margin: 10px 0;">
+        <div style="font-size: 13px;">Diberikan kepada:</div>
+        <div style="font-size: 17px; font-weight: 700; color: #0f172a; margin: 4px 0;">${u.namaSiswa}</div>
+        <div style="font-size: 12.5px; color: #475569;">Jenjang: <b>${u.program}</b></div>
+        <div style="margin: 14px auto; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px; max-width: 320px;">
+          <div style="font-size: 12px; color: #166534;">Mata Pelajaran: <b>${u.bukuJudul}</b></div>
+          <div style="font-size: 22px; font-weight: 800; color: #15803d; margin: 4px 0;">NILAI: ${u.nilai}</div>
+          <div style="font-size: 12px; font-weight: 600; color: #166534;">Predikat: ${u.predikat}</div>
+        </div>
+        <div style="font-size: 11px; color: #64748b; margin-top: 12px;">Divalidasi oleh: ${u.penguji} · Tanggal: ${u.tanggal}</div>
+      </div>
+    `,
+    showCloseButton: true,
+    confirmButtonText: 'Tutup',
+    confirmButtonColor: 'var(--primary-color)'
+  });
+}
+
 

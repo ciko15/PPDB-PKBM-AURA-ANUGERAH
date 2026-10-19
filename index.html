@@ -486,9 +486,14 @@
               <i data-lucide="wand-2" class="menu-icon"></i>
               <span>Pendaftaran Cepat AI</span>
             </li>
-            <li data-target="section-validasi" id="menu-validasi">
-              <i data-lucide="check-circle-2" class="menu-icon"></i>
-              <span>Antrean Validasi AI</span>
+            <!-- Menu Pembelajaran & Ujian (ala MyAura) -->
+            <li data-target="section-materi" id="menu-materi">
+              <i data-lucide="book-open" class="menu-icon"></i>
+              <span>Materi & Buku Belajar</span>
+            </li>
+            <li data-target="section-ujian" id="menu-ujian">
+              <i data-lucide="file-check" class="menu-icon"></i>
+              <span>Ujian & Nilai Siswa</span>
             </li>
 
             <!-- Menu Akademik Terpadu (ala MyAura) -->
@@ -507,6 +512,14 @@
             <li data-target="section-portal-siswa" id="menu-portal-siswa" class="hidden menu-siswa-item">
               <i data-lucide="graduation-cap" class="menu-icon"></i>
               <span>Profil & Status Saya</span>
+            </li>
+            <li data-target="section-materi" id="menu-siswa-materi" class="hidden menu-siswa-item">
+              <i data-lucide="book-open" class="menu-icon"></i>
+              <span>Buku & Materi Belajar</span>
+            </li>
+            <li data-target="section-ujian" id="menu-siswa-ujian" class="hidden menu-siswa-item">
+              <i data-lucide="award" class="menu-icon"></i>
+              <span>Hasil Ujian & Nilai</span>
             </li>
             <li data-target="section-pengumuman-siswa" id="menu-pengumuman-siswa" class="hidden">
               <i data-lucide="bell" class="menu-icon"></i>
@@ -627,90 +640,168 @@
         </div>
 
 
-        <!-- ==================== SECTION: VALIDASI AI ==================== -->
-        <div id="section-validasi" class="content-section hidden nested-layout">
-          <!-- Antrean Validasi Inner Sidebar -->
-          <aside class="sidebar inner-sidebar">
-            <div class="sidebar-header">
-              <h3>Antrean Validasi</h3>
+        <!-- ==================== SECTION: MATERI & BUKU PEMBELAJARAN (ALA MYAURA) ==================== -->
+        <div id="section-materi" class="content-section hidden">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <h1 style="margin: 0;">Materi & Buku Pelajaran</h1>
+              <p class="sub" style="margin: 4px 0 0 0;">Modul pembelajaran kesetaraan Paket A, B, dan C dilengkapi pelacak aktivitas belajar otomatis.</p>
             </div>
-            <ul id="siswa-list" class="siswa-list">
-              <li class="loading-text">Memuat data...</li>
-            </ul>
-          </aside>
-
-          <!-- Validasi Panel Inner Main -->
-          <div class="inner-main card-panel">
-            <div id="no-selection" class="empty-state">
-              <p>Pilih siswa dari antrean untuk mulai validasi.</p>
+            <div id="btn-tambah-buku-wrapper">
+              <button class="btn p" onclick="showAddBukuModal()"><i data-lucide="plus" style="width: 16px; height: 16px;"></i>Tambah Buku Pelajaran</button>
             </div>
+          </div>
 
-            <div id="validation-panel" class="validation-panel hidden">
-              <div class="form-panel">
-                <h3>Data Siswa</h3>
-                
-                <div id="eligibility-box" class="eligibility-box hidden">
-                  <h4 id="elig-status-title">Status Kelayakan</h4>
-                  <p id="elig-status-text"></p>
-                </div>
-
-                <div class="form-group-row">
-                  <div class="form-group half"><label>Nama</label><input type="text" id="input-nama" readonly></div>
-                  <div class="form-group half"><label>JK</label><input type="text" id="input-jk" readonly></div>
-                </div>
-                <div class="form-group-row">
-                  <div class="form-group half"><label>NIK</label><input type="text" id="input-nik" readonly></div>
-                  <div class="form-group half"><label>NISN</label><input type="text" id="input-nisn" readonly></div>
-                </div>
-                <div class="form-group-row">
-                  <div class="form-group half"><label>Tempat Lahir</label><input type="text" id="input-tempat-lahir" readonly></div>
-                  <div class="form-group half"><label>Tanggal Lahir</label><input type="date" id="input-tgl-lahir" readonly></div>
-                </div>
-                <div class="form-group-row">
-                  <div class="form-group half"><label>Ibu Kandung</label><input type="text" id="input-ibu" readonly></div>
-                  <div class="form-group half"><label>Program</label><input type="text" id="input-program" readonly></div>
-                </div>
-                <div class="form-group-row">
-                  <div class="form-group half"><label>Nama Ayah</label><input type="text" id="input-ayah" readonly></div>
-                  <div class="form-group half"><label>Nama Wali</label><input type="text" id="input-wali" readonly></div>
-                </div>
-                <div class="form-group">
-                  <label>Tahun Lulus Sebelumnya</label><input type="text" id="input-tahun-lulus" readonly>
-                </div>
-                
-                <div id="ai-result-box" class="ai-result-box hidden">
-                  <h4 id="ai-status-title">🤖 Hasil AI</h4>
-                  <p id="ai-koreksi-text"></p>
-                </div>
-
-                <div class="action-buttons" style="margin-top: 1rem;">
-                  <button id="btn-cek-ai" class="btn btn-primary btn-block">Cek dengan AI (Ijazah)</button>
-                  <div class="btn-group-row">
-                    <button id="btn-setuju" class="btn btn-success">Valid / Setuju</button>
-                    <button id="btn-tolak" class="btn btn-danger">Tolak / Perbaikan</button>
-                  </div>
-                </div>
+          <!-- Quick Activity Stats (Siapa yang sedang aktif belajar) -->
+          <div class="stat-cards" style="margin-bottom: 20px;">
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#e0f2fe; color:#0369a1; border: 1px solid #bae6fd;">
+                <i data-lucide="book-open" style="width: 24px; height: 24px;"></i>
               </div>
-
-              <!-- Document Viewer -->
-              <div class="document-panel">
-                <div class="doc-tabs">
-                  <button class="tab-btn active" data-target="ijazah">Ijazah</button>
-                  <button class="tab-btn" data-target="kk">KK</button>
-                  <button class="tab-btn" data-target="foto">Foto Siswa</button>
-                  <button class="tab-btn" data-target="bayar">Bukti Bayar</button>
-                </div>
-                <div class="doc-viewer">
-                  <div class="doc-loader" id="doc-loader">Loading document...</div>
-                  <div id="doc-placeholder" style="display:none; padding: 40px 20px; text-align: center; color: var(--text-muted);">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 12px; display: block; opacity: 0.6;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    <p id="doc-placeholder-text" style="font-size: 0.95rem; margin: 0; font-weight: 500;">Tidak ada dokumen</p>
-                  </div>
-                  <img id="doc-image" src="" alt="Dokumen" onload="document.getElementById('doc-loader').style.display='none'">
-                  <iframe id="doc-iframe" src="" style="width:100%; height:400px; display:none; border:none;" onload="document.getElementById('doc-loader').style.display='none'"></iframe>
-                </div>
+              <div class="stat-info">
+                <h3>Total Buku Pelajaran</h3>
+                <p id="stat-total-buku">0</p>
               </div>
             </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#dcfce7; color:#15803d; border: 1px solid #bbf7d0;">
+                <i data-lucide="activity" style="width: 24px; height: 24px;"></i>
+              </div>
+              <div class="stat-info">
+                <h3>Siswa Aktif Belajar Hari Ini</h3>
+                <p id="stat-siswa-aktif-belajar">0</p>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#fef3c7; color:#b45309; border: 1px solid #fde68a;">
+                <i data-lucide="clock" style="width: 24px; height: 24px;"></i>
+              </div>
+              <div class="stat-info">
+                <h3>Total Jam Belajar</h3>
+                <p id="stat-jam-belajar">0 Jam</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Activity Log: Siapa yang sedang aktif belajar -->
+          <div class="card" style="margin-bottom: 20px; background: var(--surface-color); border: 1px solid var(--border-color); padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e;"></span>
+                <h3 style="margin: 0; font-size: 14px;">Log Presensi Belajar Siswa (Real-Time)</h3>
+              </div>
+              <button class="btn btn-sm" onclick="renderBelajarLogTable()"><i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Refresh Log</button>
+            </div>
+            <div class="wrap" style="max-height: 220px; overflow-y: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Waktu / Tanggal</th>
+                    <th>Nama Siswa</th>
+                    <th>Judul Buku & Modul</th>
+                    <th>Halaman Terbaca</th>
+                    <th>Durasi Belajar</th>
+                    <th>Status Sesi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-log-belajar-body">
+                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada sesi belajar siswa yang aktif saat ini.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Filter & Search Buku -->
+          <div class="filter-toolbar">
+            <div class="filter-toolbar-top">
+              <div class="filter-search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-buku" placeholder="Cari judul buku pelajaran, modul, atau mata pelajaran..." oninput="filterBukuGrid()">
+              </div>
+              <div class="filter-controls-group">
+                <select id="filter-buku-jenjang" class="filter-select" onchange="filterBukuGrid()">
+                  <option value="">Semua Jenjang</option>
+                  <option value="Paket A">Paket A (SD)</option>
+                  <option value="Paket B">Paket B (SMP)</option>
+                  <option value="Paket C">Paket C (SMA)</option>
+                </select>
+                <select id="filter-buku-mapel" class="filter-select" onchange="filterBukuGrid()">
+                  <option value="">Semua Kategori</option>
+                  <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+                  <option value="Matematika">Matematika</option>
+                  <option value="IPA / Sains">IPA / Sains</option>
+                  <option value="IPS / Sejarah">IPS / Sejarah</option>
+                  <option value="Kewarganegaraan">PPKn / Kewarganegaraan</option>
+                  <option value="Keterampilan">Keterampilan Mandiri</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid Daftar Buku Belajar ala MyAura -->
+          <div id="grid-buku-belajar" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 16px;">
+            <!-- Rendered by JavaScript -->
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: UJIAN & PENILAIAN SISWA ==================== -->
+        <div id="section-ujian" class="content-section hidden">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <h1 style="margin: 0;">Ujian & Evaluasi Hasil Belajar</h1>
+              <p class="sub" style="margin: 4px 0 0 0;">Evaluasi hasil belajar siswa pasca membaca modul. Guru dan Admin dapat menginput & memverifikasi nilai ujian.</p>
+            </div>
+            <div id="btn-tambah-ujian-wrapper">
+              <button class="btn p" onclick="showInputNilaiModal()"><i data-lucide="plus" style="width: 16px; height: 16px;"></i>Input Nilai Ujian Siswa</button>
+            </div>
+          </div>
+
+          <!-- Ujian Filter Bar -->
+          <div class="filter-toolbar">
+            <div class="filter-toolbar-top">
+              <div class="filter-search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-ujian" placeholder="Cari nama peserta didik, mata pelajaran, atau penguji..." oninput="filterUjianTable()">
+              </div>
+              <div class="filter-controls-group">
+                <select id="filter-ujian-program" class="filter-select" onchange="filterUjianTable()">
+                  <option value="">Semua Jenjang</option>
+                  <option value="Paket A">Paket A</option>
+                  <option value="Paket B">Paket B</option>
+                  <option value="Paket C">Paket C</option>
+                </select>
+                <select id="filter-ujian-predikat" class="filter-select" onchange="filterUjianTable()">
+                  <option value="">Semua Predikat</option>
+                  <option value="Sangat Baik">Sangat Baik (A)</option>
+                  <option value="Baik">Baik (B)</option>
+                  <option value="Cukup">Cukup (C)</option>
+                  <option value="Perlu Bimbingan">Perlu Bimbingan (D)</option>
+                </select>
+                <button class="btn btn-icon" onclick="loadUjianData()" title="Refresh"><i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel Hasil Ujian Siswa -->
+          <div class="wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;">No</th>
+                  <th>Tanggal Ujian</th>
+                  <th>Nama Peserta Didik</th>
+                  <th>Program</th>
+                  <th>Buku / Mata Uji</th>
+                  <th>Nilai Angka</th>
+                  <th>Predikat / Keterangan</th>
+                  <th>Tutor Penguji / Penilai</th>
+                  <th style="text-align: right;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="table-ujian-body">
+                <tr><td colspan="9" style="text-align: center; padding: 32px; color: var(--text-muted);">Memuat riwayat ujian siswa...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -1345,8 +1436,11 @@
           <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-bayar'); toggleMobileMoreMenu(false);">
             <i data-lucide="wallet" style="width: 18px; height: 18px;"></i> SPP & Tabungan
           </button>
-          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-validasi'); toggleMobileMoreMenu(false);">
-            <i data-lucide="check-circle-2" style="width: 18px; height: 18px;"></i> Antrean Validasi AI
+          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-materi'); toggleMobileMoreMenu(false);">
+            <i data-lucide="book-open" style="width: 18px; height: 18px;"></i> Materi & Buku Belajar
+          </button>
+          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-ujian'); toggleMobileMoreMenu(false);">
+            <i data-lucide="file-check" style="width: 18px; height: 18px;"></i> Ujian & Nilai Siswa
           </button>
           <button class="btn" id="mobile-sheet-btn-users" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-users'); toggleMobileMoreMenu(false);">
             <i data-lucide="settings" style="width: 18px; height: 18px;"></i> Kelola Pengguna
@@ -1411,6 +1505,160 @@
         <button type="button" class="btn btn-outline" onclick="closeDocViewerModal()">Tutup</button>
         <button type="button" class="btn btn-primary" id="btn-doc-download" onclick="downloadCurrentDocModal()">⬇️ Unduh Berkas</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: BACA BUKU & PELACAK WAKTU BELAJAR ==================== -->
+  <div id="modal-reader" class="login-modal hidden" style="z-index: 99999;">
+    <div class="login-modal-overlay"></div>
+    <div class="modal-content" style="max-width: 900px; width: 95%; height: 90vh; display: flex; flex-direction: column; padding: 0; border-radius: 14px; background: var(--surface-color); overflow: hidden;">
+      
+      <!-- Reader Header Bar -->
+      <div style="padding: 12px 18px; background: var(--surface-2); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--primary-color); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="book-open" style="width: 18px; height: 18px;"></i>
+          </div>
+          <div style="min-width: 0;">
+            <div id="reader-book-title" style="font-weight: 700; font-size: 14px; color: var(--text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px;">Judul Buku</div>
+            <div id="reader-book-info" style="font-size: 11px; color: var(--text-muted);">Paket C · Hal. 1</div>
+          </div>
+        </div>
+
+        <!-- Timer Belajar Aktif (Live Tracker) -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.12); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.3); padding: 5px 12px; border-radius: 99px; font-weight: 600; font-size: 13px;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite;"></span>
+            <span id="reader-live-timer">00:00:00</span>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="selesaiBelajarDanUjian()" style="background: var(--accent); color: #12263A; font-weight: 700; border: none;">
+            Selesai Belajar & Ujian 📝
+          </button>
+          <button type="button" class="btn-close-modal" onclick="closeReaderModal()" style="position: static; font-size: 20px;">&times;</button>
+        </div>
+      </div>
+
+      <!-- Reader Body (Content / Iframe / PDF / Teks) -->
+      <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #0f172a; position: relative;">
+        <!-- Iframe preview jika URL/PDF -->
+        <iframe id="reader-iframe" src="" style="width: 100%; height: 100%; border: none; display: none;"></iframe>
+        <!-- Reader Reader Box (Teks Interaktif jika bukan file eksternal) -->
+        <div id="reader-text-viewer" style="flex: 1; padding: 24px 32px; overflow-y: auto; background: var(--surface-color); color: var(--text-color); font-size: 15px; line-height: 1.7; display: none;">
+          <div id="reader-chapter-content">
+            <!-- Isi Bab Pelajaran -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Reader Footer Toolbar (Navigasi Halaman & Pencatat Halaman Terbaca) -->
+      <div style="padding: 10px 18px; background: var(--surface-2); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn btn-sm" onclick="navigasiHalamanBuku(-1)"><i data-lucide="chevron-left" style="width: 14px; height: 14px;"></i> Hal. Sebelumnya</button>
+          <span style="font-size: 13px; font-weight: 600;">Halaman <span id="reader-current-page">1</span> dari <span id="reader-total-page">25</span></span>
+          <button class="btn btn-sm" onclick="navigasiHalamanBuku(1)">Hal. Berikutnya <i data-lucide="chevron-right" style="width: 14px; height: 14px;"></i></button>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted);" id="reader-student-status">
+          👤 Masuk sebagai: <b id="reader-active-student">Peserta Didik</b>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: INPUT / EDIT BUKU PELAJARAN ==================== -->
+  <div id="modal-form-buku" class="login-modal hidden" style="z-index: 99998;">
+    <div class="login-modal-overlay" onclick="closeBukuFormModal()"></div>
+    <div class="login-card modal-content" style="max-width: 540px; text-align: left;">
+      <button class="btn-close-modal" onclick="closeBukuFormModal()">&times;</button>
+      <h3 style="margin-top: 0; margin-bottom: 6px;" id="buku-form-title">Tambah Buku Pelajaran</h3>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Kelola modul dan referensi bacaan paket kesetaraan.</p>
+      
+      <form id="form-buku" onsubmit="event.preventDefault(); simpanBukuData();">
+        <input type="hidden" id="buku-id" value="">
+        <div class="form-group">
+          <label>Judul Buku / Modul <span style="color:red">*</span></label>
+          <input type="text" id="buku-nama" placeholder="Contoh: Modul 1 Bahasa Indonesia Paket C" required>
+        </div>
+        <div class="form-group-row" style="margin-top: 12px;">
+          <div class="form-group half">
+            <label>Jenjang / Program <span style="color:red">*</span></label>
+            <select id="buku-jenjang" class="form-control" required>
+              <option value="Paket A">Paket A (Setara SD)</option>
+              <option value="Paket B">Paket B (Setara SMP)</option>
+              <option value="Paket C" selected>Paket C (Setara SMA)</option>
+            </select>
+          </div>
+          <div class="form-group half">
+            <label>Kategori Mata Pelajaran <span style="color:red">*</span></label>
+            <select id="buku-kategori" class="form-control" required>
+              <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+              <option value="Matematika">Matematika</option>
+              <option value="IPA / Sains">IPA / Sains</option>
+              <option value="IPS / Sejarah">IPS / Sejarah</option>
+              <option value="Kewarganegaraan">PPKn / Kewarganegaraan</option>
+              <option value="Keterampilan">Keterampilan Mandiri</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label>Jumlah Halaman Modul</label>
+          <input type="number" id="buku-total-hal" value="30" min="1" max="1000" required>
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label>Deskripsi Ringkas / Silabus</label>
+          <textarea id="buku-keterangan" rows="2" placeholder="Kompetensi dasar materi yang dipelajari..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color);"></textarea>
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label>Link Berkas PDF / Bahan Bacaan (Opsional)</label>
+          <input type="text" id="buku-file-url" placeholder="https://... atau biarkan kosong untuk modul interaktif standar">
+        </div>
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeBukuFormModal()">Batal</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-buku">Simpan Buku</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: INPUT / VERIFIKASI NILAI UJIAN ==================== -->
+  <div id="modal-input-nilai" class="login-modal hidden" style="z-index: 99998;">
+    <div class="login-modal-overlay" onclick="closeInputNilaiModal()"></div>
+    <div class="login-card modal-content" style="max-width: 520px; text-align: left;">
+      <button class="btn-close-modal" onclick="closeInputNilaiModal()">&times;</button>
+      <h3 style="margin-top: 0; margin-bottom: 6px;">Input Nilai Ujian Siswa</h3>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Masukkan penilaian hasil belajar setelah siswa menuntaskan materi.</p>
+
+      <form id="form-nilai-ujian" onsubmit="event.preventDefault(); simpanNilaiUjian();">
+        <div class="form-group">
+          <label>Pilih Peserta Didik <span style="color:red">*</span></label>
+          <select id="ujian-siswa-id" class="form-control" required>
+            <option value="">-- Pilih Siswa --</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label>Materi / Mata Uji <span style="color:red">*</span></label>
+          <select id="ujian-buku-id" class="form-control" required>
+            <option value="">-- Pilih Buku / Modul --</option>
+          </select>
+        </div>
+        <div class="form-group-row" style="margin-top: 12px;">
+          <div class="form-group half">
+            <label>Nilai Ujian (Skala 0 - 100) <span style="color:red">*</span></label>
+            <input type="number" id="ujian-angka" min="0" max="100" placeholder="Contoh: 85" required oninput="hitungPredikatNilai(this.value)">
+          </div>
+          <div class="form-group half">
+            <label>Predikat Mutu</label>
+            <input type="text" id="ujian-predikat" readonly value="Baik (B)" style="background: var(--surface-2); font-weight: 600;">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label>Catatan Tutor / Evaluator</label>
+          <textarea id="ujian-catatan" rows="2" placeholder="Catatan pemahaman, kemampuan analisis, rekomendasi..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color);"></textarea>
+        </div>
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeInputNilaiModal()">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Hasil Ujian</button>
+        </div>
+      </form>
     </div>
   </div>
 
