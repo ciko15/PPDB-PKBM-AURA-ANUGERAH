@@ -541,17 +541,45 @@ async function callAPI(payload) {
   }
 }
 
-// ======================= SESSION & LOGIN =======================
-function checkLocalSession() {
+// ======================= CLIENT ROUTING & SESSION =======================
+function handleClientRouting() {
+  const path = window.location.pathname.toLowerCase();
   const session = localStorage.getItem('ppdb_session');
+
   if (session) {
     currentUser = JSON.parse(session);
     showDashboard();
-  } else {
+    return;
+  }
+
+  // Jika belum login:
+  // /pkbm => Tampilkan Halaman Informasi Awal
+  // / atau /login => Langsung arahkan ke Form Login
+  if (path === '/pkbm' || path.startsWith('/pkbm/')) {
     pageLanding.classList.remove('hidden');
     pageDashboard.classList.add('hidden');
-    if(modalLogin) modalLogin.classList.add('hidden');
+    if (modalLogin) modalLogin.classList.add('hidden');
+  } else {
+    // Default root (/) atau /login => Buka Form Login langsung
+    pageLanding.classList.remove('hidden');
+    pageDashboard.classList.add('hidden');
+    if (modalLogin) modalLogin.classList.remove('hidden');
   }
+}
+
+window.navigateToRoute = function(routePath) {
+  try {
+    window.history.pushState({}, '', routePath);
+  } catch (e) {}
+  handleClientRouting();
+};
+
+window.addEventListener('popstate', () => {
+  handleClientRouting();
+});
+
+function checkLocalSession() {
+  handleClientRouting();
 }
 
 async function handleLogin(e) {
@@ -2770,12 +2798,18 @@ if (landingBrandLogo) {
 if (btnCloseLogin) {
   btnCloseLogin.addEventListener('click', () => {
     modalLogin.classList.add('hidden');
+    if (window.location.pathname === '/' || window.location.pathname === '/login') {
+      try { window.history.pushState({}, '', '/pkbm'); } catch (e) {}
+    }
   });
 }
 
 if (loginModalOverlay) {
   loginModalOverlay.addEventListener('click', () => {
     modalLogin.classList.add('hidden');
+    if (window.location.pathname === '/' || window.location.pathname === '/login') {
+      try { window.history.pushState({}, '', '/pkbm'); } catch (e) {}
+    }
   });
 }
 

@@ -580,6 +580,11 @@ app.post('/api', async (req, res) => {
   }
 });
 
+// Rute frontend
+app.get(['/', '/pkbm', '/login'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Server Google Sheets API v4 berjalan di http://localhost:${PORT}`);
 });

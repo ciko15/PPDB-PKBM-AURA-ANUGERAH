@@ -38,6 +38,9 @@
         <a href="#" onclick="document.getElementById('cara-pendaftaran').scrollIntoView({behavior: 'smooth'}); return false;">Cara Pendaftaran</a>
         <a href="#" onclick="if(typeof resetAndOpenRegisterForm === 'function') resetAndOpenRegisterForm(); else document.getElementById('modal-register').classList.remove('hidden'); return false;">Formulir</a>
         <a href="#" onclick="document.getElementById('kontak').scrollIntoView({behavior: 'smooth'}); return false;">Kontak</a>
+        <a href="/login" onclick="window.navigateToRoute ? window.navigateToRoute('/login') : (modalLogin && modalLogin.classList.remove('hidden')); return false;" style="font-weight: 600; color: #1e3a8a; display: inline-flex; align-items: center; gap: 4px;">
+          🔐 Login Petugas
+        </a>
       </nav>
       <button class="btn btn-landing-primary" onclick="if(typeof resetAndOpenRegisterForm === 'function') resetAndOpenRegisterForm(); else document.getElementById('modal-register').classList.remove('hidden');">Daftar Sekarang</button>
     </header>
@@ -415,6 +418,11 @@
           <input type="password" id="login-password" placeholder="Masukkan password" required>
         </div>
         <button id="btn-login" type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Masuk Aplikasi</button>
+        <div style="margin-top: 1.2rem; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
+          <a href="/pkbm" onclick="window.navigateToRoute ? window.navigateToRoute('/pkbm') : (modalLogin && modalLogin.classList.add('hidden')); return false;" style="color: #2563eb; font-size: 0.88rem; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+            ← Lihat Informasi Awal PKBM
+          </a>
+        </div>
       </form>
     </div>
   </div>
