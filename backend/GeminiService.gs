@@ -112,8 +112,6 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
     return { status: "ERROR", koreksi: "Gagal memproses file dokumen untuk AI: " + e.message };
   }
 
-  // Daftar model yang didukung (diurutkan dari yang paling stabil & hemat kuota)
-  const candidateModels = ["gemini-3.5-flash-lite", "gemini-3.5-flash"];
 
   const promptText = `Berikut adalah data pendaftaran calon siswa Kejar Paket (Sekolah Non-Formal):\n` +
                      `- NIK: ${dataSiswa.nik || '-'}\n` +
