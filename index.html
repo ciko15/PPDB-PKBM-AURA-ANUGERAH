@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#1e3a8a">
-  <title>Sistem Informasi PPDB (Kejar Paket)</title>
+  <meta name="theme-color" content="#059669">
+  <title>SIS PPDB & Portal Akademik - PKBM Aura Anugerah</title>
   
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="logo_PKBM_Aura_Anugerah_transparan.png">
@@ -406,12 +406,12 @@
       </div>
       <form id="form-login" onsubmit="event.preventDefault();">
         <div class="form-group">
-          <label>Username</label>
-          <input type="text" id="login-username" placeholder="Masukkan username" required>
+          <label>Username / NIK / NISN</label>
+          <input type="text" id="login-username" placeholder="Petugas: Username | Siswa: NIK/NISN" required>
         </div>
         <div class="form-group" style="margin-top: 1rem;">
-          <label>Password</label>
-          <input type="password" id="login-password" placeholder="Masukkan password" required>
+          <label>Password / Tanggal Lahir</label>
+          <input type="password" id="login-password" placeholder="Petugas: Password | Siswa: Tgl Lahir (DDMMYYYY)" required>
         </div>
 
         <!-- Captcha Keamanan (Gaya Rostering Teknik) -->
@@ -422,11 +422,17 @@
           </label>
           <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
             <canvas id="login-captcha-canvas" width="120" height="40" style="border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);"></canvas>
-            <button type="button" id="btn-refresh-captcha" onclick="generateCaptchaLogin()" title="Ganti Captcha" style="height: 40px; padding: 0 12px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-size: 1rem; color: #1e3a8a; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+            <button type="button" id="btn-refresh-captcha" onclick="generateCaptchaLogin()" title="Ganti Captcha" style="height: 40px; padding: 0 12px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-size: 1rem; color: #059669; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
               🔄
             </button>
           </div>
           <input type="text" id="login-captcha-input" placeholder="Masukkan kode di atas" required autocomplete="off" style="margin-top: 6px; letter-spacing: 1px; font-weight: 600;">
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; margin-top: 0.75rem; font-size: 0.78rem; color: #166534; line-height: 1.4;">
+          💡 <strong>Info Akses:</strong><br>
+          • <strong>Petugas:</strong> Masuk dengan username & password Anda.<br>
+          • <strong>Peserta Didik:</strong> Masuk dengan NIK & Password Tanggal Lahir (contoh: <code>21092003</code>).
         </div>
 
         <button id="btn-login" type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Masuk Aplikasi</button>
