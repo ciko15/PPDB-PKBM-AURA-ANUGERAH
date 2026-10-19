@@ -1378,14 +1378,16 @@ function renderSiswaTable(data) {
           ${isAktif ? 'Aktif' : 'Tidak Aktif'}
         </button>
       </td>
-      <td style="display: flex; gap: 0.4rem; justify-content: center; align-items: center; flex-wrap: wrap;">
-        <button class="btn btn-primary" onclick="runSingleRowAICheck('${s.id}')" title="Jalankan pemeriksaan AI untuk siswa ini" style="padding:4px 8px; font-size:0.8rem; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);">
-          🤖 Cek AI
-        </button>
-        <button class="btn btn-outline" onclick="loadSiswaForEdit('${s.id}')" style="padding:4px 8px; font-size:0.8rem;">
-          Edit
-        </button>
-        ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin') ? `<button class="btn btn-danger" onclick="deleteSiswaData('${s.id}')" style="padding:4px 8px; font-size:0.8rem;">Hapus</button>` : ''}
+      <td style="text-align: center; white-space: nowrap; width: 1%;" onclick="event.stopPropagation();">
+        <div style="display: inline-flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
+          <button class="btn btn-primary" onclick="runSingleRowAICheck('${s.id}')" title="Periksa kesesuaian berkas dengan AI" style="padding: 4px 8px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);">
+            🤖 Cek AI
+          </button>
+          <button class="btn btn-outline" onclick="loadSiswaForEdit('${s.id}')" title="Edit data" style="padding: 4px 8px; font-size: 0.78rem; font-weight: 600; white-space: nowrap;">
+            Edit
+          </button>
+          ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin') ? `<button class="btn btn-danger" onclick="deleteSiswaData('${s.id}')" title="Hapus siswa" style="padding: 4px 8px; font-size: 0.78rem; font-weight: 600; white-space: nowrap;">Hapus</button>` : ''}
+        </div>
       </td>
     `;
     tableSiswaBody.appendChild(tr);
