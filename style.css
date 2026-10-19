@@ -1,4 +1,36 @@
-:root, :root[data-theme="dark"] {
+:root, :root[data-theme="light"] {
+  color-scheme: light;
+  --bg-color: #F3F6F9;
+  --surface-color: #FFFFFF;
+  --surface-2: #EAF0F5;
+  --surface-hover: #e0e9f1;
+  --border-color: #D5DFE8;
+  --text-color: #12263A;
+  --text-muted: #5A6C7D;
+  --primary-color: #0F5C7A;
+  --primary-hover: #0C4A63;
+  --primary-light: rgba(15, 92, 122, 0.12);
+  --primary: #0F5C7A;
+  --accent: #F2A900;
+  --accent-color: #F2A900;
+  --success-color: #13804F;
+  --success-bg: #E1F4EA;
+  --warning-color: #8A5A00;
+  --warning-bg: #FDF0D5;
+  --danger-color: #B42318;
+  --danger-text: #B42318;
+  --danger-bg: #FDE7E5;
+  --info: #0F5C7A;
+  --info-bg: #E0F0F6;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --border-radius: 10px;
+  --shadow: 0 1px 2px rgba(18,38,58,.08), 0 4px 14px rgba(18,38,58,.06);
+  --shadow-sm: 0 1px 2px rgba(18,38,58,.05);
+  --shadow-lg: 0 10px 25px rgba(18,38,58,.1);
+}
+
+:root[data-theme="dark"] {
   color-scheme: dark;
   /* Permukaan Rostering Teknik */
   --bg-color: #0B1A2B;
@@ -33,38 +65,6 @@
   --shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.18);
   --shadow-sm: 0 1px 3px rgba(0,0,0,.25);
   --shadow-lg: 0 10px 25px rgba(0,0,0,.4);
-}
-
-:root[data-theme="light"] {
-  color-scheme: light;
-  --bg-color: #F3F6F9;
-  --surface-color: #FFFFFF;
-  --surface-2: #EAF0F5;
-  --surface-hover: #e0e9f1;
-  --border-color: #D5DFE8;
-  --text-color: #12263A;
-  --text-muted: #5A6C7D;
-  --primary-color: #0F5C7A;
-  --primary-hover: #0C4A63;
-  --primary-light: rgba(15, 92, 122, 0.12);
-  --primary: #0F5C7A;
-  --accent: #F2A900;
-  --accent-color: #F2A900;
-  --success-color: #13804F;
-  --success-bg: #E1F4EA;
-  --warning-color: #8A5A00;
-  --warning-bg: #FDF0D5;
-  --danger-color: #B42318;
-  --danger-text: #B42318;
-  --danger-bg: #FDE7E5;
-  --info: #0F5C7A;
-  --info-bg: #E0F0F6;
-  --radius: 10px;
-  --radius-sm: 6px;
-  --border-radius: 10px;
-  --shadow: 0 1px 2px rgba(18,38,58,.08), 0 4px 14px rgba(18,38,58,.06);
-  --shadow-sm: 0 1px 2px rgba(18,38,58,.05);
-  --shadow-lg: 0 10px 25px rgba(18,38,58,.1);
 }
 
 * {
@@ -1201,12 +1201,12 @@ main.main-content {
   z-index: 1001;
   background: var(--surface-color);
   color: var(--text-color);
-  padding: 32px;
+  padding: 32px 28px;
   border-radius: var(--radius);
   border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
   width: 100%;
-  max-width: 420px;
+  max-width: 410px;
   box-sizing: border-box;
 }
 
@@ -1218,12 +1218,50 @@ main.main-content {
   display: block;
 }
 
+.login-modal h2 {
+  color: var(--text-color);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 12px 0 4px;
+}
+
+.login-modal p {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.login-modal .form-group {
+  margin-bottom: 14px;
+}
+
+.login-modal .form-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-color);
+  margin-bottom: 6px;
+}
+
 .login-modal .form-group input {
   width: 100%;
   box-sizing: border-box;
   background: var(--surface-2);
   border: 1px solid var(--border-color);
   color: var(--text-color);
+  height: 38px;
+  padding: 0 12px;
+  font-size: 0.92rem;
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.login-modal .form-group input:focus {
+  border-color: var(--primary);
+}
+
+.login-modal .form-group input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.75;
 }
 
 .btn-close-modal {
