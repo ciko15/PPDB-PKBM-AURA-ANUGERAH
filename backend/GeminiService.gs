@@ -97,9 +97,14 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
                      `4. Jika status "Tidak Sesuai", buatkan deskripsi permasalahan secara rapi dan terstruktur dalam bentuk poin-poin bernomor: 1. ..., 2. ..., 3. ... Contoh:\n` +
                      `   1. Tanggal Lahir tidak cocok: pada dokumen tertulis 2 Juli 1999, sedangkan pada data tertera 25 Juni 1999.\n` +
                      `   2. Nama Ibu Kandung tidak cocok: pada dokumen tertera 'AGUSTINA KELAIMI', sedangkan pada data tertera '...'.\n` +
-                     `5. Jika status "Sesuai", isi koreksi dengan "Semua data identitas cocok dengan dokumen fisik."\n\n` +
+                     `5. Jika status "Sesuai", WAJIB buatkan rincian bukti verifikasi (evidence checklist) dalam bentuk poin-poin bernomor 1. ..., 2. ..., 3. ... yang merinci setiap data yang berhasil diverifikasi dan cocok dengan dokumen. Contoh:\n` +
+                     `   1. Nama Lengkap: Cocok (Tertulis '${dataSiswa.nama || '-'}' pada dokumen).\n` +
+                     `   2. NIK: Cocok (Tertera 16 digit sesuai pada dokumen).\n` +
+                     `   3. Tempat Lahir: Cocok (Tertulis '${dataSiswa.tempatLahir || '-'}' pada dokumen).\n` +
+                     `   4. Tanggal Lahir: Cocok (Tertulis sesuai pada dokumen).\n` +
+                     `   5. Nama Ibu Kandung: Cocok (Tertera sesuai pada dokumen).\n\n` +
                      `Kembalikan respons murni dalam format JSON (tanpa markdown), dengan properti:\n` +
-                     `{"status": "Sesuai" | "Tidak Sesuai", "koreksi": "Poin-poin bernomor 1. 2. 3. jika ada ketidaksesuaian"}`;
+                     `{"status": "Sesuai" | "Tidak Sesuai", "koreksi": "Poin-poin bernomor 1. 2. 3. berisi rincian bukti verifikasi jika Sesuai, atau temuan perbedaan jika Tidak Sesuai"}`;
 
   const payload = {
     contents: [
@@ -212,13 +217,13 @@ function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
     `4. Jika terlampir Ijazah: Ekstrak NISN (10 digit nomor induk siswa nasional) dan tahun kelulusan asal (tahunLulus).\n` +
     `5. PERIKSA KESESUAIAN ANTARA KK DAN IJAZAH (Jika kedua dokumen terlampir):\n` +
     `   - Bandingkan Nama Lengkap, Tempat Lahir, dan Tanggal Lahir antara yang tertulis di Kartu Keluarga dan Ijazah.\n` +
-    `   - Jika sama persis (atau hanya ada 1 dokumen tanpa konflik): tetapkan validationStatus = "Sesuai", validationDetails = "Data identitas pada KK dan Ijazah sesuai."\n` +
+    `   - Jika sama persis (atau hanya ada 1 dokumen tanpa konflik): tetapkan validationStatus = "Sesuai", dan WAJIB buatkan validationDetails dalam bentuk poin-poin bernomor (1. ..., 2. ...) sebagai bukti pencocokan (evidence audit), contoh: 1. Nama Lengkap: Cocok antara KK dan Ijazah. 2. Tempat & Tanggal Lahir: Cocok antara KK dan Ijazah. 3. Identitas siswa terverifikasi sah.\n` +
     `   - Jika ada perbedaan (misal nama di Ijazah berbeda ejaan dengan nama di KK, atau tanggal lahir berbeda): tetapkan validationStatus = "Tidak Sesuai", dan buatkan validationDetails dalam bentuk poin bernomor (1. ..., 2. ...) yang merinci letak perbedaannya.\n` +
     `Kembalikan respon murni JSON (tanpa markdown), contoh format:\n` +
     `{\n` +
     `  "status": "SUCCESS",\n` +
     `  "validationStatus": "Sesuai" | "Tidak Sesuai",\n` +
-    `  "validationDetails": "Poin-poin catatan jika tidak cocok atau konfirmasi kesesuaian",\n` +
+    `  "validationDetails": "Poin-poin bernomor 1. 2. 3. berisi rincian bukti verifikasi jika Sesuai, atau rincian perbedaan jika Tidak Sesuai",\n` +
     `  "data": {\n` +
     `    "nama": "...",\n` +
     `    "nik": "...",\n` +

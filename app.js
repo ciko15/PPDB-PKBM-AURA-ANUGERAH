@@ -1428,8 +1428,9 @@ function showAICheckPopup(siswaId) {
           </div>
         </div>
 
-        <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px;">
-          Rincian Temuan AI:
+        <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+          <span>${isCocok ? '📋 Bukti Otentikasi & Verifikasi (Evidence Audit):' : '⚠️ Rincian Temuan AI:'}</span>
+          ${isCocok ? '<span style="font-size: 0.75rem; background: #bbf7d0; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Terverifikasi Sah</span>' : '<span style="font-size: 0.75rem; background: #fecaca; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Perlu Tindak Lanjut</span>'}
         </div>
         <div style="background: ${statusBg}; border: 1px solid ${isCocok ? '#86efac' : '#fca5a5'}; border-radius: 8px; padding: 14px; font-size: 0.9rem; line-height: 1.65; max-height: 350px; overflow-y: auto;">
           ${formattedContent}
