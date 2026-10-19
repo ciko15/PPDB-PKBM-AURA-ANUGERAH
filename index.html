@@ -783,6 +783,48 @@
                 </div>
               </div>
 
+              <!-- Berkas Dokumen yang akan Disimpan (Bisa Ditinjau / Diupload Ulang) -->
+              <div style="margin-top: 1.5rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 1.25rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #0f172a; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                  📁 Berkas Dokumen Calon Siswa (Siap Disimpan)
+                </h4>
+                <p style="margin: 0 0 1rem 0; color: #64748b; font-size: 0.8rem;">
+                  Berkas dari langkah 1 otomatis terpasang. Anda dapat melihat pratinjaunya atau mengganti/melengkapi berkas lain sebelum klik Simpan.
+                </p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                  <!-- KK -->
+                  <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <label style="font-weight: 600; font-size: 0.85rem; margin: 0;">Kartu Keluarga (KK)</label>
+                      <span id="ai-status-badge-kk" style="font-size: 0.75rem; color: #15803d; font-weight: 600;">✓ Terlampir</span>
+                    </div>
+                    <div id="ai-preview-box-kk" style="margin-bottom: 8px;"></div>
+                    <input type="file" id="ai-step2-file-kk" accept="image/*,application/pdf" style="font-size: 0.8rem;">
+                  </div>
+
+                  <!-- Ijazah -->
+                  <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <label style="font-weight: 600; font-size: 0.85rem; margin: 0;">Ijazah Terakhir</label>
+                      <span id="ai-status-badge-ijazah" style="font-size: 0.75rem; color: #64748b;">(Opsional)</span>
+                    </div>
+                    <div id="ai-preview-box-ijazah" style="margin-bottom: 8px;"></div>
+                    <input type="file" id="ai-step2-file-ijazah" accept="image/*,application/pdf" style="font-size: 0.8rem;">
+                  </div>
+
+                  <!-- Pas Foto -->
+                  <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <label style="font-weight: 600; font-size: 0.85rem; margin: 0;">Pas Foto Siswa</label>
+                      <span id="ai-status-badge-foto" style="font-size: 0.75rem; color: #64748b;">(Opsional)</span>
+                    </div>
+                    <div id="ai-preview-box-foto" style="margin-bottom: 8px;"></div>
+                    <input type="file" id="ai-step2-file-foto" accept="image/*" style="font-size: 0.8rem;">
+                  </div>
+                </div>
+              </div>
+
               <div style="margin-top: 2rem; display: flex; gap: 10px;">
                 <button type="submit" class="btn btn-success" style="padding: 12px 24px; font-weight: 600; font-size: 1rem;">
                   💾 Simpan & Daftarkan Siswa Ini

@@ -2401,11 +2401,14 @@ async function handleEkstrakDataAI() {
       container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    // Tampilkan pratinjau berkas yang berhasil diunggah di Step 2
+    renderAIStep2Previews();
+
     Swal.fire({
       icon: 'success',
       title: 'Data Berhasil Diekstrak!',
-      text: 'Silakan pilih Program / Jenjang dan tinjau kelengkapan data sebelum menyimpan.',
-      timer: 3000,
+      text: 'Silakan tinjau data, lengkapi foto/ijazah jika perlu, lalu simpan.',
+      timer: 2500,
       showConfirmButton: false
     });
 
@@ -2414,6 +2417,42 @@ async function handleEkstrakDataAI() {
     console.error("AI Extraction Error:", err);
     Swal.fire('Error', 'Terjadi kesalahan saat memproses dokumen: ' + err.message, 'error');
   }
+}
+
+function renderAIStep2Previews() {
+  const updateBox = (boxId, badgeId, b64, label) => {
+    const box = document.getElementById(boxId);
+    const badge = document.getElementById(badgeId);
+    if (!box) return;
+
+    if (b64) {
+      if (badge) {
+        badge.textContent = "✓ Terlampir";
+        badge.style.color = "#15803d";
+        badge.style.fontWeight = "600";
+      }
+      if (b64.startsWith('data:image')) {
+        box.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <img src="${b64}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #0284c7;">
+            <span style="font-size: 0.8rem; color: #0284c7; font-weight: 600;">Berkas siap disimpan</span>
+          </div>`;
+      } else {
+        box.innerHTML = `<span style="font-size: 0.8rem; color: #0284c7; font-weight: 600;">📄 Dokumen PDF terlampir</span>`;
+      }
+    } else {
+      if (badge) {
+        badge.textContent = "(Belum ada)";
+        badge.style.color = "#94a3b8";
+        badge.style.fontWeight = "normal";
+      }
+      box.innerHTML = `<span style="font-size: 0.78rem; color: #94a3b8; font-style: italic;">Belum diunggah</span>`;
+    }
+  };
+
+  updateBox('ai-preview-box-kk', 'ai-status-badge-kk', aiUploadedFiles.kk, 'KK');
+  updateBox('ai-preview-box-ijazah', 'ai-status-badge-ijazah', aiUploadedFiles.ijazah, 'Ijazah');
+  updateBox('ai-preview-box-foto', 'ai-status-badge-foto', aiUploadedFiles.foto, 'Foto');
 }
 
 async function handleAISiswaSubmit() {
@@ -2445,9 +2484,15 @@ async function handleAISiswaSubmit() {
   try {
     const finalSiswaId = 'S' + Date.now();
     const tglDaftar = getVal('ai-out-tgl-daftar') || new Date().toISOString().split('T')[0];
-    const b64Kk = aiUploadedFiles.kk;
-    const b64Ijazah = aiUploadedFiles.ijazah;
-    const b64Foto = aiUploadedFiles.foto;
+
+    // Periksa apakah ada file pengganti / tambahan yang diunggah di Step 2
+    const step2Kk = document.getElementById('ai-step2-file-kk');
+    const step2Ijazah = document.getElementById('ai-step2-file-ijazah');
+    const step2Foto = document.getElementById('ai-step2-file-foto');
+
+    let b64Kk = (step2Kk && step2Kk.files[0]) ? await toBase64(step2Kk.files[0]) : aiUploadedFiles.kk;
+    let b64Ijazah = (step2Ijazah && step2Ijazah.files[0]) ? await toBase64(step2Ijazah.files[0]) : aiUploadedFiles.ijazah;
+    let b64Foto = (step2Foto && step2Foto.files[0]) ? await toBase64(step2Foto.files[0]) : aiUploadedFiles.foto;
 
     // Simpan berkas ke penyimpanan offline / lokal seketika
     if (b64Foto) saveFileLocal(finalSiswaId, 'foto', b64Foto);
@@ -2491,7 +2536,7 @@ async function handleAISiswaSubmit() {
       createdBy: currentUser ? currentUser.username : 'AI Quick Reg'
     };
 
-    // Optimistic Update ke state memori & cache lokal
+    // Optimistic Update ke state memori & cache lokal secara seketika
     siswaDataList.push(newSiswa);
     try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
 
@@ -2499,7 +2544,21 @@ async function handleAISiswaSubmit() {
     renderDashboardUI(siswaDataList);
     if (typeof renderSiswaTable === 'function') renderSiswaTable(siswaDataList);
 
-    // Kirim sinkronisasi ke backend Google Sheets di latar belakang
+    // Langsung reset formulir agar user bisa langsung mendaftarkan siswa baru lagi
+    resetAIRegForm();
+
+    // Notifikasi Toast Instan (Non-blocking, tidak menahan layar)
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: `Siswa "${nama}" berhasil didaftarkan!`,
+      text: 'Data langsung tersimpan. Sinkronisasi Google Drive berjalan di latar belakang.',
+      showConfirmButton: false,
+      timer: 3500
+    });
+
+    // Kirim sinkronisasi ke backend Google Sheets di latar belakang tanpa menghalangi user
     const payload = {
       action: "registerSiswa",
       data: {
@@ -2523,17 +2582,6 @@ async function handleAISiswaSubmit() {
       }
     }).catch(err => {
       console.warn("Background sync AI registration:", err);
-    });
-
-    Swal.fire({
-      icon: 'success',
-      title: 'Pendaftaran Berhasil!',
-      text: `Calon siswa "${nama}" berhasil didaftarkan ke program ${program}. Data sudah masuk ke daftar siswa.`,
-      confirmButtonText: 'Buka Daftar Siswa'
-    }).then(() => {
-      resetAIRegForm();
-      const tabList = document.querySelector('li[data-target="section-list"]');
-      if (tabList) tabList.click();
     });
 
   } catch (err) {
@@ -2560,6 +2608,14 @@ function resetAIRegForm() {
   if (fileFoto) fileFoto.value = '';
   const prevFoto = document.getElementById('ai-preview-foto');
   if (prevFoto) { prevFoto.innerHTML = ''; prevFoto.style.display = 'none'; }
+
+  // Reset input berkas Step 2
+  const s2Kk = document.getElementById('ai-step2-file-kk');
+  if (s2Kk) s2Kk.value = '';
+  const s2Ijazah = document.getElementById('ai-step2-file-ijazah');
+  if (s2Ijazah) s2Ijazah.value = '';
+  const s2Foto = document.getElementById('ai-step2-file-foto');
+  if (s2Foto) s2Foto.value = '';
 
   const container = document.getElementById('ai-extracted-container');
   if (container) container.style.display = 'none';
