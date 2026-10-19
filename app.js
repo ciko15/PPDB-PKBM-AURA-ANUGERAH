@@ -9,6 +9,18 @@ let siswaDataList = [];
 let usersDataList = [];
 let currentSiswa = null;
 
+// Penyimpanan sementara berkas yang diunggah pada sesi Pendaftaran Cepat AI
+let aiUploadedFiles = {
+  kk: null,
+  ijazah: null,
+  foto: null
+};
+
+// Elemen modal pendaftaran
+const modalRegister = document.getElementById('modal-register');
+const btnCloseRegister = document.getElementById('btn-close-register');
+const registerModalOverlay = document.getElementById('register-modal-overlay');
+
 // Helper konversi format tanggal (mendukung Excel Serial Number misal 45091, ISO string, atau Date object) ke 'yyyy-MM-dd'
 function formatToDateInput(val) {
   if (!val && val !== 0) return '';
@@ -1957,12 +1969,6 @@ if (registerModalOverlay && modalRegister) {
 }
 
 // ======================= PENDAFTARAN CEPAT AI (GEMINI) =======================
-// Penyimpanan sementara berkas yang diunggah pada sesi Pendaftaran Cepat AI
-let aiUploadedFiles = {
-  kk: null,
-  ijazah: null,
-  foto: null
-};
 
 async function handleEkstrakDataAI() {
   const nikInput = document.getElementById('ai-reg-nik');
