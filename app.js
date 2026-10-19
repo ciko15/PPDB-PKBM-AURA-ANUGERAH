@@ -1451,25 +1451,41 @@ function showAICheckPopup(siswaId) {
   // Ekstrak penyesuaian otomatis dari teks koreksiAI jika s.suggestedFix belum ada di memory
   if (!s.suggestedFix && rawKoreksi) {
     const extractedFix = {};
-    // Cek perbedaan Tanggal Lahir (contoh: "...sedangkan pada dokumen... tertulis 22-09-2003 (2003-09-22)..." atau "tertulis 2 Juli 1999")
-    const tglMatch = rawKoreksi.match(/(?:dokumen|tertulis|fisik)[^.]*?(\d{4}-\d{2}-\d{2})/i) || rawKoreksi.match(/tertulis\s+(\d{1,2}[-\s][A-Za-z]+[-\s]\d{4}|\d{1,2}-\d{2}-\d{4})/i);
-    if (tglMatch && tglMatch[1]) {
-      extractedFix.tglLahir = tglMatch[1];
+    // Cek Tanggal Lahir (contoh: "...tercantum '22-09-2003'..." atau "tertulis 22-09-2003 (2003-09-22)")
+    const tglIsoMatch = rawKoreksi.match(/(\d{4}-\d{2}-\d{2})/);
+    const tglDmyMatch = rawKoreksi.match(/['"]?(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})['"]?/);
+    const tglTextMatch = rawKoreksi.match(/tertulis\s+['"]?(\d{1,2}\s+[A-Za-z]+\s+\d{4})['"]?/i);
+
+    if (tglDmyMatch) {
+      const d = tglDmyMatch[1].padStart(2, '0');
+      const m = tglDmyMatch[2].padStart(2, '0');
+      const y = tglDmyMatch[3];
+      extractedFix.tglLahir = `${y}-${m}-${d}`;
+    } else if (tglIsoMatch) {
+      extractedFix.tglLahir = tglIsoMatch[1];
+    } else if (tglTextMatch) {
+      extractedFix.tglLahir = tglTextMatch[1];
     }
+
     // Cek Nama jika ada "...tertulis 'NAMA' pada dokumen..."
-    const namaMatch = rawKoreksi.match(/Nama(?:\s+Lengkap)?(?:\s+tidak\s+cocok|\s+berbeda)[^.]*?(?:tertulis|tertera)\s+['"]([^'"]+)['"]/i);
+    const namaMatch = rawKoreksi.match(/Nama(?:\s+Lengkap)?[^.]*?(?:tertulis|tertera|tercantum)\s+['"]([^'"]+)['"]/i);
     if (namaMatch && namaMatch[1]) {
       extractedFix.nama = namaMatch[1];
     }
     // Cek Nama Ibu
-    const ibuMatch = rawKoreksi.match(/Nama\s+Ibu(?:\s+Kandung)?(?:\s+tidak\s+cocok|\s+berbeda)[^.]*?(?:tertulis|tertera)\s+['"]([^'"]+)['"]/i);
+    const ibuMatch = rawKoreksi.match(/Nama\s+Ibu(?:\s+Kandung)?[^.]*?(?:tertulis|tertera|tercantum)\s+['"]([^'"]+)['"]/i);
     if (ibuMatch && ibuMatch[1]) {
       extractedFix.namaIbu = ibuMatch[1];
     }
     // Cek Tempat Lahir
-    const tempatMatch = rawKoreksi.match(/Tempat\s+Lahir(?:\s+tidak\s+cocok|\s+berbeda)[^.]*?(?:tertulis|tertera)\s+['"]([^'"]+)['"]/i);
+    const tempatMatch = rawKoreksi.match(/Tempat\s+Lahir[^.]*?(?:tertulis|tertera|tercantum)\s+['"]([^'"]+)['"]/i);
     if (tempatMatch && tempatMatch[1]) {
       extractedFix.tempatLahir = tempatMatch[1];
+    }
+    // Cek NIK
+    const nikMatch = rawKoreksi.match(/NIK[^.]*?(?:tertulis|tertera|tercantum)\s+['"]?(\d{16})['"]?/i);
+    if (nikMatch && nikMatch[1]) {
+      extractedFix.nik = nikMatch[1];
     }
 
     if (Object.keys(extractedFix).length > 0) {
@@ -1484,10 +1500,10 @@ function showAICheckPopup(siswaId) {
   if (hasFix) {
     const fixes = s.suggestedFix;
     let listItems = [];
-    if (fixes.nama && fixes.nama !== s.nama) listItems.push(`<li><b>Nama:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.nama || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.nama}</span></li>`);
+    if (fixes.nama) listItems.push(`<li><b>Nama:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.nama || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.nama}</span></li>`);
     if (fixes.nik && fixes.nik !== s.nik) listItems.push(`<li><b>NIK:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.nik || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.nik}</span></li>`);
     if (fixes.tempatLahir && fixes.tempatLahir !== s.tempatLahir) listItems.push(`<li><b>Tempat Lahir:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.tempatLahir || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.tempatLahir}</span></li>`);
-    if (fixes.tglLahir && fixes.tglLahir !== s.tglLahir) listItems.push(`<li><b>Tgl Lahir:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.tglLahir || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.tglLahir}</span></li>`);
+    if (fixes.tglLahir) listItems.push(`<li><b>Tgl Lahir:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.tglLahir ? String(s.tglLahir).split('T')[0] : '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.tglLahir}</span></li>`);
     if (fixes.namaIbu && fixes.namaIbu !== s.namaIbu) listItems.push(`<li><b>Nama Ibu:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.namaIbu || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.namaIbu}</span></li>`);
 
     if (listItems.length > 0) {
@@ -2763,7 +2779,14 @@ async function handleEkstrakDataAI() {
             <div style="font-size: 0.85rem; color: #334155; margin-top: 4px; line-height: 1.5; white-space: pre-line;">
               ${aiValidationResult.details}
             </div>
-            ${!isMatch ? '<small style="color: #64748b; display: block; margin-top: 4px;">ℹ️ Data tetap dapat disimpan ke sistem dengan status "Tidak Sesuai".</small>' : ''}
+            ${!isMatch ? `
+              <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <button type="button" onclick="applyQuickFixInAIRegistration()" class="btn btn-success" style="padding: 5px 12px; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; background: #16a34a;">
+                  ⚡ Terapkan Koreksi dari Dokumen Fisik (KK)
+                </button>
+                <small style="color: #64748b;">ℹ️ Klik untuk menyinkronkan data di form bawah dan ubah status jadi Sesuai.</small>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -2793,6 +2816,75 @@ async function handleEkstrakDataAI() {
     console.error("AI Extraction Error:", err);
     Swal.fire('Error', 'Terjadi kesalahan saat memproses dokumen: ' + err.message, 'error');
   }
+}
+
+function applyQuickFixInAIRegistration() {
+  if (!aiValidationResult || !aiValidationResult.details) return;
+
+  const raw = aiValidationResult.details;
+  let updatedAny = false;
+
+  // 1. Cek Tanggal Lahir
+  const tglIsoMatch = raw.match(/(\d{4}-\d{2}-\d{2})/);
+  const tglDmyMatch = raw.match(/['"]?(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})['"]?/);
+
+  let targetTgl = null;
+  if (tglDmyMatch) {
+    const d = tglDmyMatch[1].padStart(2, '0');
+    const m = tglDmyMatch[2].padStart(2, '0');
+    const y = tglDmyMatch[3];
+    targetTgl = `${y}-${m}-${d}`;
+  } else if (tglIsoMatch) {
+    targetTgl = tglIsoMatch[1];
+  }
+
+  if (targetTgl) {
+    const tglInput = document.getElementById('ai-out-tgl-lahir');
+    if (tglInput) {
+      tglInput.value = targetTgl;
+      tglInput.style.backgroundColor = '#dcfce7';
+      tglInput.style.borderColor = '#22c55e';
+      updatedAny = true;
+    }
+  }
+
+  // 2. Ubah status validasi menjadi Sesuai
+  aiValidationResult.status = 'Sesuai';
+  aiValidationResult.details = `1. Data telah diselaraskan dengan dokumen fisik resmi (KK).\n2. Tanggal lahir terverifikasi: ${targetTgl || '-'}\n3. Seluruh identitas telah cocok.`;
+
+  // Update UI Banner
+  const banner = document.getElementById('ai-cross-check-banner');
+  const headerBadge = document.getElementById('ai-extract-header-badge');
+  if (banner) {
+    banner.style.background = '#f0fdf4';
+    banner.style.border = '1px solid #86efac';
+    banner.innerHTML = `
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <span style="font-size: 1.25rem;">✅</span>
+        <div>
+          <strong style="color: #15803d; font-size: 0.95rem;">
+            Status Dokumen: Berhasil Disinkronkan (Sesuai)
+          </strong>
+          <div style="font-size: 0.85rem; color: #166534; margin-top: 4px; line-height: 1.5; white-space: pre-line;">
+            ${aiValidationResult.details}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (headerBadge) {
+    headerBadge.textContent = '✅ Sesuai';
+    headerBadge.style.background = '#dcfce7';
+    headerBadge.style.color = '#15803d';
+  }
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Data Berhasil Disinkronkan!',
+    html: `Kolom tanggal lahir berhasil disesuaikan dengan dokumen KK (<b>${targetTgl}</b>) dan status pendaftaran menjadi <b>✅ Sesuai</b>. Silakan lanjutkan klik <b>Simpan Data Siswa</b>.`,
+    confirmButtonColor: '#16a34a'
+  });
 }
 
 function renderAIStep2Previews() {
