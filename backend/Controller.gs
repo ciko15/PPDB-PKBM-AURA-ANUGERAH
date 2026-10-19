@@ -45,6 +45,14 @@ function doPost(e) {
       result = updateStatusAktif(params.idSiswa, params.statusAktif);
     } else if (action === "deleteSiswa") {
       result = deleteSiswa(params.idSiswa);
+    } else if (action === "getApiKeys") {
+      result = getApiKeysListFromDB();
+    } else if (action === "addApiKey") {
+      result = addApiKeyToDB(params.email, params.apiKey, params.limitHarian);
+    } else if (action === "deleteApiKey") {
+      result = deleteApiKeyFromDB(params.idKey);
+    } else if (action === "resetKeyUsage") {
+      result = resetKeyUsageInDB(params.idKey);
     } else {
       result = { error: "Action not found" };
     }

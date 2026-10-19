@@ -443,6 +443,7 @@
           <li data-target="section-validasi">✅ Antrean Validasi AI</li>
           <li data-target="section-list">📋 Daftar Peserta Didik</li>
           <li data-target="section-users" id="menu-users" class="hidden">⚙️ Kelola Pengguna</li>
+          <li data-target="section-api-keys" id="menu-api-keys" class="hidden" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; font-weight: 700; border-left: 3px solid #d97706;">🔑 Kelola API Gemini (Super)</li>
           <li id="menu-logout" style="margin-top: 1.5rem; color: #dc2626; border-top: 1px solid #eee; padding-top: 15px;">🚪 Keluar</li>
         </ul>
       </aside>
@@ -929,6 +930,91 @@
               </thead>
               <tbody id="table-users-body">
                 <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: KELOLA API GEMINI (SUPER ADMIN) ==================== -->
+        <div id="section-api-keys" class="content-section hidden card-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
+            <div>
+              <h3 style="margin: 0; color: #b45309; display: flex; align-items: center; gap: 8px;">
+                <span>🔑</span> Database & Kuota API Gemini (Super Admin)
+              </h3>
+              <p style="color:var(--text-muted); margin: 0.25rem 0 0 0; font-size: 0.9rem;">
+                Kelola daftar akun Google / API Key gratis untuk rotasi otomatis tanpa batas kuota.
+              </p>
+            </div>
+            <button id="btn-toggle-add-key" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem; background: #d97706; border-color: #b45309;">
+              <span>➕ Tambah Kunci API Baru</span>
+            </button>
+          </div>
+
+          <!-- Ringkasan Kuota API Realtime -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">TOTAL AKUN / KEY AKTIF</div>
+              <div id="api-stat-total-keys" style="font-size: 1.6rem; font-weight: 700; color: #0f172a; margin-top: 4px;">0</div>
+            </div>
+            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 0.8rem; color: #047857; font-weight: 600;">TOTAL KUOTA HARIAN</div>
+              <div id="api-stat-total-quota" style="font-size: 1.6rem; font-weight: 700; color: #065f46; margin-top: 4px;">0 Cek</div>
+            </div>
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 0.8rem; color: #1d4ed8; font-weight: 600;">TOTAL TERPAKAI HARI INI</div>
+              <div id="api-stat-total-used" style="font-size: 1.6rem; font-weight: 700; color: #1e40af; margin-top: 4px;">0 Cek</div>
+            </div>
+            <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 0.8rem; color: #b45309; font-weight: 600;">SISA KUOTA TERSEDIA (AVAILABLE)</div>
+              <div id="api-stat-total-remaining" style="font-size: 1.6rem; font-weight: 700; color: #92400e; margin-top: 4px;">0 Cek</div>
+            </div>
+          </div>
+
+          <!-- Form Tambah API Key (Hidden by default) -->
+          <div id="wrapper-form-key" class="card-panel hidden" style="margin-bottom: 1.5rem; background: #fffbeb; border: 1px solid #fde68a;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h4 style="margin: 0; color: #92400e;">Daftarkan Kunci API Google AI Studio Baru</h4>
+              <button type="button" id="btn-cancel-add-key" class="btn btn-danger" style="padding: 4px 10px; font-size: 0.85rem;">Batal</button>
+            </div>
+            <form id="form-add-key" onsubmit="event.preventDefault();">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+                <div class="form-group">
+                  <label>Email Google / Label Akun <span style="color:red">*</span></label>
+                  <input type="text" id="key-email" required placeholder="Contoh: admin.sekolah@gmail.com">
+                </div>
+                <div class="form-group">
+                  <label>API Key Gemini (Google AI Studio) <span style="color:red">*</span></label>
+                  <input type="text" id="key-token" required placeholder="AQ.Ab8... atau AIzaSy...">
+                </div>
+                <div class="form-group">
+                  <label>Limit Harian (Default Free Tier)</label>
+                  <input type="number" id="key-limit" value="1500" required>
+                </div>
+              </div>
+              <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                <button type="submit" id="btn-save-key" class="btn btn-success" style="padding: 8px 18px; background: #16a34a;">Simpan ke Database</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Tabel Kunci API & Status Pemakaian -->
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Akun / Email</th>
+                  <th>Kunci API</th>
+                  <th>Terpakai</th>
+                  <th>Limit</th>
+                  <th>Sisa Kuota (Available)</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="table-api-keys-body">
+                <tr><td colspan="8" style="text-align:center;">Memuat data kunci API...</td></tr>
               </tbody>
             </table>
           </div>

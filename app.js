@@ -265,6 +265,7 @@ function setupEventListeners() {
       if (targetId === 'section-validasi') fetchSiswaData(true);
       if (targetId === 'section-list') loadAllSiswa();
       if (targetId === 'section-users') loadAllUsers();
+      if (targetId === 'section-api-keys') loadApiKeys();
     });
   });
 
@@ -388,6 +389,33 @@ function setupEventListeners() {
       formAddUser.reset();
       wrapperFormUser.classList.add('hidden');
     });
+  }
+
+  // Listener untuk Form Tambah Kunci API (Super Admin)
+  const btnToggleAddKey = document.getElementById('btn-toggle-add-key');
+  const btnCancelAddKey = document.getElementById('btn-cancel-add-key');
+  const wrapperFormKey = document.getElementById('wrapper-form-key');
+  const formAddKey = document.getElementById('form-add-key');
+
+  if (btnToggleAddKey && wrapperFormKey) {
+    btnToggleAddKey.addEventListener('click', () => {
+      wrapperFormKey.classList.toggle('hidden');
+      if (!wrapperFormKey.classList.contains('hidden')) {
+        document.getElementById('key-email').focus();
+        wrapperFormKey.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  if (btnCancelAddKey && wrapperFormKey) {
+    btnCancelAddKey.addEventListener('click', () => {
+      if (formAddKey) formAddKey.reset();
+      wrapperFormKey.classList.add('hidden');
+    });
+  }
+
+  if (formAddKey) {
+    formAddKey.addEventListener('submit', handleAddApiKey);
   }
 
   // Drawer Detail Siswa Close Listeners
@@ -580,10 +608,16 @@ function showDashboard() {
   if (activeUserRole) activeUserRole.textContent = currentUser.role;
   if (activeUserAvatar) activeUserAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=0284c7&color=fff`;
 
-  if (currentUser.role === 'Admin' || currentUser.role === 'Super Admin') {
+  const menuApiKeys = document.getElementById('menu-api-keys');
+  if (currentUser.role === 'Super Admin') {
     menuUsers.classList.remove('hidden');
+    if (menuApiKeys) menuApiKeys.classList.remove('hidden');
+  } else if (currentUser.role === 'Admin') {
+    menuUsers.classList.remove('hidden');
+    if (menuApiKeys) menuApiKeys.classList.add('hidden');
   } else {
     menuUsers.classList.add('hidden');
+    if (menuApiKeys) menuApiKeys.classList.add('hidden');
   }
 
   // Muat data dari cache lokal secara instan (0 detik)
@@ -1201,7 +1235,7 @@ async function handleAICheck(e) {
       urlFoto: (currentSiswa.urlFoto && (currentSiswa.urlFoto.startsWith('http') || currentSiswa.urlFoto.startsWith('data:'))) ? currentSiswa.urlFoto : (getFileLocal(currentSiswa.id, 'foto') || "")
     };
 
-    const userApiKey = localStorage.getItem('gemini_api_key') || 'AQ.Ab8RN6IsOK3hu-S-7x1mSMT91X37w4Fur-AbgFaF0WqCdaTnPA';
+    const userApiKey = localStorage.getItem('gemini_api_key') || '';
 
     const result = await callAPI({ 
       action: "runAICheck", 
@@ -1608,7 +1642,7 @@ async function runSingleRowAICheck(siswaId) {
   showLoader(`Gemini AI sedang memeriksa berkas ${targetDoc.toUpperCase()} untuk ${s.nama}...`);
 
   try {
-    const userApiKey = localStorage.getItem('gemini_api_key') || 'AQ.Ab8RN6IsOK3hu-S-7x1mSMT91X37w4Fur-AbgFaF0WqCdaTnPA';
+    const userApiKey = localStorage.getItem('gemini_api_key') || '';
     const enrichedDataSiswa = {
       ...s,
       urlIjazah: urlIjazah,
@@ -1682,7 +1716,7 @@ async function runBatchAICheck() {
   const total = selectedCbs.length;
   let suksesCount = 0;
   let gagalCount = 0;
-  const userApiKey = localStorage.getItem('gemini_api_key') || 'AQ.Ab8RN6IsOK3hu-S-7x1mSMT91X37w4Fur-AbgFaF0WqCdaTnPA';
+  const userApiKey = localStorage.getItem('gemini_api_key') || '';
 
   for (let i = 0; i < total; i++) {
     const siswaId = selectedCbs[i].value;
@@ -2211,6 +2245,166 @@ async function deleteUser(username) {
   }
 }
 
+// =================== KELOLA API GEMINI (SUPER ADMIN) ===================
+async function loadApiKeys() {
+  const tbody = document.getElementById('table-api-keys-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Memuat data kunci API dari Google Sheets...</td></tr>';
+
+  try {
+    const list = await callAPI({ action: "getApiKeys" });
+    tbody.innerHTML = '';
+
+    if (!list || list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#64748b;">Belum ada kunci API terdaftar.</td></tr>';
+      return;
+    }
+
+    let totalKeys = list.length;
+    let totalQuota = 0;
+    let totalUsed = 0;
+    let totalRemaining = 0;
+
+    list.forEach((item, idx) => {
+      totalQuota += (item.limit || 1500);
+      totalUsed += (item.terpakai || 0);
+      totalRemaining += (item.sisa || 0);
+
+      const percent = Math.min(100, Math.round(((item.terpakai || 0) / (item.limit || 1500)) * 100));
+      const barColor = percent > 85 ? '#ef4444' : percent > 50 ? '#f59e0b' : '#10b981';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align:center; font-weight:600;">${idx + 1}</td>
+        <td>
+          <div style="font-weight:700; color:#0f172a;">${item.email || '-'}</div>
+          <div style="font-size:0.75rem; color:#64748b;">ID: ${item.id}</div>
+        </td>
+        <td>
+          <code style="background:#f1f5f9; padding:3px 6px; border-radius:4px; font-size:0.82rem; color:#334155;">${item.maskedKey || item.apiKey}</code>
+        </td>
+        <td style="font-weight:600; color:#1e293b;">
+          ${item.terpakai || 0}
+          <div style="width:100%; background:#e2e8f0; height:6px; border-radius:3px; margin-top:4px; overflow:hidden;">
+            <div style="width:${percent}%; background:${barColor}; height:100%;"></div>
+          </div>
+        </td>
+        <td style="color:#64748b;">${item.limit || 1500} / hari</td>
+        <td style="font-weight:700; color:#16a34a;">
+          ${item.sisa || 0}
+        </td>
+        <td>
+          <span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:4px; font-size:0.78rem; font-weight:600;">
+            ${item.status || 'Aktif'}
+          </span>
+        </td>
+        <td>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-warning" onclick="resetApiKeyUsage('${item.id}')" style="padding:4px 8px; font-size:0.75rem;" title="Reset hitungan pemakaian jadi 0">🔄 Reset</button>
+            <button class="btn btn-danger" onclick="deleteApiKey('${item.id}', '${item.email}')" style="padding:4px 8px; font-size:0.75rem;">Hapus</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Update Ringkasan Dashboard Kuota
+    const elTotal = document.getElementById('api-stat-total-keys');
+    const elQuota = document.getElementById('api-stat-total-quota');
+    const elUsed = document.getElementById('api-stat-total-used');
+    const elRem = document.getElementById('api-stat-total-remaining');
+
+    if (elTotal) elTotal.textContent = totalKeys;
+    if (elQuota) elQuota.textContent = totalQuota.toLocaleString() + ' Cek';
+    if (elUsed) elUsed.textContent = totalUsed.toLocaleString() + ' Cek';
+    if (elRem) elRem.textContent = totalRemaining.toLocaleString() + ' Cek';
+
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8" style="color:red; text-align:center;">Gagal memuat kunci API: ${err.message}</td></tr>`;
+  }
+}
+
+async function handleAddApiKey() {
+  const email = document.getElementById('key-email').value;
+  const token = document.getElementById('key-token').value;
+  const limit = document.getElementById('key-limit').value || 1500;
+
+  if (!email || !token) {
+    Swal.fire('Form Belum Lengkap', 'Mohon isi Email Akun dan API Key Gemini.', 'warning');
+    return;
+  }
+
+  showLoader("Mendaftarkan kunci API baru ke database...");
+
+  try {
+    await callAPI({
+      action: "addApiKey",
+      email: email,
+      apiKey: token,
+      limitHarian: limit
+    });
+
+    hideLoader();
+
+    // Reset & Sembunyikan Form
+    document.getElementById('form-add-key').reset();
+    const wrapper = document.getElementById('wrapper-form-key');
+    if (wrapper) wrapper.classList.add('hidden');
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Kunci API Berhasil Ditambahkan!',
+      text: `Akun ${email} sekarang aktif di rotasi otomatis AI.`,
+      timer: 2500,
+      showConfirmButton: false
+    });
+
+    loadApiKeys();
+
+  } catch (err) {
+    hideLoader();
+    Swal.fire('Error', 'Gagal menambahkan kunci API: ' + err.message, 'error');
+  }
+}
+
+async function deleteApiKey(idKey, email) {
+  const confirm = await Swal.fire({
+    title: 'Hapus Kunci API?',
+    html: `Apakah Anda yakin ingin menghapus kunci API untuk <b>${email}</b> dari database rotasi?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#dc2626'
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  showLoader("Menghapus kunci API...");
+  try {
+    await callAPI({ action: "deleteApiKey", idKey: idKey });
+    hideLoader();
+    Swal.fire('Terhapus', 'Kunci API telah dihapus dari database.', 'success');
+    loadApiKeys();
+  } catch (err) {
+    hideLoader();
+    Swal.fire('Error', err.message, 'error');
+  }
+}
+
+async function resetApiKeyUsage(idKey) {
+  showLoader("Mereset hitungan kuota...");
+  try {
+    await callAPI({ action: "resetKeyUsage", idKey: idKey });
+    hideLoader();
+    Swal.fire('Reset Berhasil', 'Hitungan terpakai kunci API ini telah dikembalikan ke 0.', 'success');
+    loadApiKeys();
+  } catch (err) {
+    hideLoader();
+    Swal.fire('Error', err.message, 'error');
+  }
+}
+
 
 // ======================= UTILS =======================
 function showLoader(text) {
@@ -2448,7 +2642,7 @@ async function handleEkstrakDataAI() {
       foto: fotoBase64
     };
 
-    const userApiKey = localStorage.getItem('gemini_api_key') || 'AQ.Ab8RN6IsOK3hu-S-7x1mSMT91X37w4Fur-AbgFaF0WqCdaTnPA';
+    const userApiKey = localStorage.getItem('gemini_api_key') || '';
 
     const result = await callAPI({
       action: "ekstrakDataAI",
