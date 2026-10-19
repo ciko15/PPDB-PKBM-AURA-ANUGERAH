@@ -507,10 +507,20 @@ function getSiswaToValidate(pendingOnly) {
     const row = data[i];
     const statusValidasi = row[23];
     
+    const formatTgl = (val) => {
+      if (!val) return "";
+      if (Object.prototype.toString.call(val) === '[object Date]') {
+        return Utilities.formatDate(val, "GMT+7", "yyyy-MM-dd");
+      }
+      const s = String(val).trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+      return s;
+    };
+
     if (!pendingOnly || statusValidasi === 'Pending' || statusValidasi === '') { 
       siswaList.push({
         id: row[0],
-        tglDaftar: row[1],
+        tglDaftar: formatTgl(row[1]),
         nisn: row[2],
         nik: row[3],
         noKk: row[4],
@@ -520,7 +530,7 @@ function getSiswaToValidate(pendingOnly) {
         desaKelurahan: row[8],
         nama: row[9],
         tempatLahir: row[10],
-        tglLahir: row[11],
+        tglLahir: formatTgl(row[11]),
         namaAyah: row[12],
         tahunLahirAyah: row[13],
         nikAyah: row[14],
