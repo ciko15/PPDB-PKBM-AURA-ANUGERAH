@@ -26,7 +26,7 @@
   <!-- ==================== LANDING PAGE ==================== -->
   <div id="page-landing" class="landing-page">
     <header class="landing-header">
-      <div class="landing-brand" id="landing-brand-logo" style="cursor: pointer;" title="Klik 5 kali untuk login">
+      <div class="landing-brand" id="landing-brand-logo">
         <div class="brand-icon">A</div>
         <div class="brand-text">
           <h1>PKBM Aura Anugerah</h1>
@@ -38,9 +38,6 @@
         <a href="#" onclick="document.getElementById('cara-pendaftaran').scrollIntoView({behavior: 'smooth'}); return false;">Cara Pendaftaran</a>
         <a href="#" onclick="if(typeof resetAndOpenRegisterForm === 'function') resetAndOpenRegisterForm(); else document.getElementById('modal-register').classList.remove('hidden'); return false;">Formulir</a>
         <a href="#" onclick="document.getElementById('kontak').scrollIntoView({behavior: 'smooth'}); return false;">Kontak</a>
-        <a href="/login" onclick="window.navigateToRoute ? window.navigateToRoute('/login') : (modalLogin && modalLogin.classList.remove('hidden')); return false;" style="font-weight: 600; color: #1e3a8a; display: inline-flex; align-items: center; gap: 4px;">
-          🔐 Login Petugas
-        </a>
       </nav>
       <button class="btn btn-landing-primary" onclick="if(typeof resetAndOpenRegisterForm === 'function') resetAndOpenRegisterForm(); else document.getElementById('modal-register').classList.remove('hidden');">Daftar Sekarang</button>
     </header>

@@ -581,7 +581,7 @@ app.post('/api', async (req, res) => {
 });
 
 // Rute frontend
-app.get(['/', '/pkbm', '/login'], (req, res) => {
+app.get(['/', '/pkbm', '/portal-pkbm', '/login'], (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 

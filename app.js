@@ -553,17 +553,17 @@ function handleClientRouting() {
   }
 
   // Jika belum login:
-  // /pkbm => Tampilkan Halaman Informasi Awal
-  // / atau /login => Langsung arahkan ke Form Login
-  if (path === '/pkbm' || path.startsWith('/pkbm/')) {
-    pageLanding.classList.remove('hidden');
-    pageDashboard.classList.add('hidden');
-    if (modalLogin) modalLogin.classList.add('hidden');
-  } else {
-    // Default root (/) atau /login => Buka Form Login langsung
+  // Hanya rute rahasia '/portal-pkbm' yang akan membuka Form Login
+  // Rute root '/' atau '/pkbm' menampilkan Halaman Informasi Awal publik
+  if (path === '/portal-pkbm' || path === '/portal-pkbm/') {
     pageLanding.classList.remove('hidden');
     pageDashboard.classList.add('hidden');
     if (modalLogin) modalLogin.classList.remove('hidden');
+  } else {
+    // Publik: '/' atau '/pkbm' atau halaman lainnya
+    pageLanding.classList.remove('hidden');
+    pageDashboard.classList.add('hidden');
+    if (modalLogin) modalLogin.classList.add('hidden');
   }
 }
 
@@ -2779,26 +2779,12 @@ function importDataFromFile(event) {
 }
 
 // ======================= HIDDEN LOGIN MECHANISM =======================
-if (landingBrandLogo) {
-  landingBrandLogo.addEventListener('click', () => {
-    loginClickCount++;
-    if (loginClickTimer) clearTimeout(loginClickTimer);
-    
-    if (loginClickCount >= 5) {
-      modalLogin.classList.remove('hidden');
-      loginClickCount = 0;
-    } else {
-      loginClickTimer = setTimeout(() => {
-        loginClickCount = 0;
-      }, 1000); // Reset count after 1 second of inactivity
-    }
-  });
-}
+// (Mekanisme klik 5x dinonaktifkan sesuai permintaan - login hanya via portal-pkbm)
 
 if (btnCloseLogin) {
   btnCloseLogin.addEventListener('click', () => {
     modalLogin.classList.add('hidden');
-    if (window.location.pathname === '/' || window.location.pathname === '/login') {
+    if (window.location.pathname.includes('portal-pkbm')) {
       try { window.history.pushState({}, '', '/pkbm'); } catch (e) {}
     }
   });
@@ -2807,7 +2793,7 @@ if (btnCloseLogin) {
 if (loginModalOverlay) {
   loginModalOverlay.addEventListener('click', () => {
     modalLogin.classList.add('hidden');
-    if (window.location.pathname === '/' || window.location.pathname === '/login') {
+    if (window.location.pathname.includes('portal-pkbm')) {
       try { window.history.pushState({}, '', '/pkbm'); } catch (e) {}
     }
   });
