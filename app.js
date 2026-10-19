@@ -1402,8 +1402,7 @@ function showAICheckPopup(siswaId) {
   if (!s) return;
 
   const isCocok = s.status === 'Sesuai' || s.status === 'Cocok';
-  const title = isCocok ? '✅ Hasil Pemeriksaan AI: Sesuai' : '⚠️ Hasil Pemeriksaan AI: Tidak Sesuai';
-  const icon = isCocok ? 'success' : 'warning';
+  const title = isCocok ? '✅ Hasil Pemeriksaan AI: Sesuai' : '⚠️ Hasil Pemeriksaan AI: Perlu Tindak Lanjut';
   const statusColor = isCocok ? '#15803d' : '#b91c1c';
   const statusBg = isCocok ? '#dcfce7' : '#fee2e2';
 
@@ -1411,10 +1410,54 @@ function showAICheckPopup(siswaId) {
 
   // Format poin-poin agar terbaca sangat jelas
   let formattedContent = rawKoreksi;
-  // Jika poin-poin dipisahkan oleh angka seperti "1. " atau "2. "
   formattedContent = formattedContent
     .replace(/([0-9]+\.\s)/g, '<br><strong style="color: #0f172a;">$1</strong>')
     .replace(/^<br>/, '');
+
+  const hasFix = !isCocok && s.suggestedFix && Object.values(s.suggestedFix).some(v => v !== null && v !== undefined && String(v).trim() !== '');
+  const hasRekomendasi = !isCocok && (s.rekomendasiResmi || (s.tipeMasalah === 'REKOMENDASI_RESMI'));
+
+  let fixPreviewHtml = '';
+  if (hasFix) {
+    const fixes = s.suggestedFix;
+    let listItems = [];
+    if (fixes.nama && fixes.nama !== s.nama) listItems.push(`<li><b>Nama:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.nama || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.nama}</span></li>`);
+    if (fixes.nik && fixes.nik !== s.nik) listItems.push(`<li><b>NIK:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.nik || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.nik}</span></li>`);
+    if (fixes.tempatLahir && fixes.tempatLahir !== s.tempatLahir) listItems.push(`<li><b>Tempat Lahir:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.tempatLahir || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.tempatLahir}</span></li>`);
+    if (fixes.tglLahir && fixes.tglLahir !== s.tglLahir) listItems.push(`<li><b>Tgl Lahir:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.tglLahir || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.tglLahir}</span></li>`);
+    if (fixes.namaIbu && fixes.namaIbu !== s.namaIbu) listItems.push(`<li><b>Nama Ibu:</b> <span style="color:#dc2626; text-decoration:line-through;">${s.namaIbu || '-'}</span> ➔ <span style="color:#16a34a; font-weight:700;">${fixes.namaIbu}</span></li>`);
+
+    if (listItems.length > 0) {
+      fixPreviewHtml = `
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-top: 12px; text-align: left;">
+          <div style="font-weight: 700; color: #1e40af; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+            <span>⚡ Penyesuaian Nilai dari Dokumen Fisik:</span>
+          </div>
+          <ul style="margin: 6px 0 0 16px; padding: 0; font-size: 0.85rem; color: #1e293b;">
+            ${listItems.join('')}
+          </ul>
+          <div style="font-size: 0.78rem; color: #64748b; margin-top: 6px;">
+            *Klik tombol <b>"⚡ Terapkan Koreksi AI"</b> di bawah untuk langsung memperbarui data ke dokumen fisik.
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  let rekomendasiHtml = '';
+  if (hasRekomendasi) {
+    const textRek = s.rekomendasiResmi || 'Terdapat perbedaan data identitas resmi (misal antara KK dan Ijazah). Disarankan siswa/wali melampirkan Surat Keterangan Beda Nama dari Kelurahan/Disdukcapil atau Sekolah Asal.';
+    rekomendasiHtml = `
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; margin-top: 12px; text-align: left;">
+        <div style="font-weight: 700; color: #92400e; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+          <span>🏛️ Rekomendasi Resmi Pihak Terkait:</span>
+        </div>
+        <div style="font-size: 0.85rem; color: #78350f; margin-top: 4px; line-height: 1.5;">
+          ${textRek}
+        </div>
+      </div>
+    `;
+  }
 
   Swal.fire({
     title: `<span style="font-size: 1.2rem; color: ${statusColor}; font-weight: 700;">${title}</span>`,
@@ -1430,24 +1473,92 @@ function showAICheckPopup(siswaId) {
 
         <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
           <span>${isCocok ? '📋 Bukti Otentikasi & Verifikasi (Evidence Audit):' : '⚠️ Rincian Temuan AI:'}</span>
-          ${isCocok ? '<span style="font-size: 0.75rem; background: #bbf7d0; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Terverifikasi Sah</span>' : '<span style="font-size: 0.75rem; background: #fecaca; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Perlu Tindak Lanjut</span>'}
+          ${isCocok ? '<span style="font-size: 0.75rem; background: #bbf7d0; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Terverifikasi Sah</span>' : '<span style="font-size: 0.75rem; background: #fecaca; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Perlu Penyesuaian</span>'}
         </div>
-        <div style="background: ${statusBg}; border: 1px solid ${isCocok ? '#86efac' : '#fca5a5'}; border-radius: 8px; padding: 14px; font-size: 0.9rem; line-height: 1.65; max-height: 350px; overflow-y: auto;">
+        <div style="background: ${statusBg}; border: 1px solid ${isCocok ? '#86efac' : '#fca5a5'}; border-radius: 8px; padding: 14px; font-size: 0.9rem; line-height: 1.65; max-height: 250px; overflow-y: auto;">
           ${formattedContent}
         </div>
+
+        ${fixPreviewHtml}
+        ${rekomendasiHtml}
       </div>
     `,
     showCloseButton: true,
+    showDenyButton: hasFix,
     showCancelButton: true,
+    denyButtonText: '⚡ Terapkan Koreksi AI',
+    denyButtonColor: '#10b981',
     confirmButtonText: '✏️ Buka & Edit Siswa',
     cancelButtonText: 'Tutup',
     confirmButtonColor: '#0284c7',
-    width: '580px'
+    width: '620px'
   }).then((res) => {
-    if (res.isConfirmed) {
+    if (res.isDenied) {
+      applyAISuggestedFix(s.id);
+    } else if (res.isConfirmed) {
       loadSiswaForEdit(s.id);
     }
   });
+}
+
+async function applyAISuggestedFix(siswaId) {
+  const s = siswaDataList.find(x => String(x.id) === String(siswaId));
+  if (!s || !s.suggestedFix) return;
+
+  const fixes = s.suggestedFix;
+  const oldNama = s.nama;
+
+  showLoader(`Menerapkan koreksi data otomatis untuk ${s.nama}...`);
+
+  try {
+    if (fixes.nama) s.nama = fixes.nama;
+    if (fixes.nik) s.nik = fixes.nik;
+    if (fixes.tempatLahir) s.tempatLahir = fixes.tempatLahir;
+    if (fixes.tglLahir) s.tglLahir = fixes.tglLahir;
+    if (fixes.namaIbu) s.namaIbu = fixes.namaIbu;
+
+    // Status otomatis berubah jadi Sesuai karena sudah disinkronkan dengan dokumen
+    s.status = 'Sesuai';
+    s.koreksiAI = `1. Data berhasil disesuaikan dengan dokumen fisik resmi.\n2. Verifikasi identitas: Nama, NIK, Tempat/Tgl Lahir, dan Ibu Kandung telah sinkron.`;
+    delete s.suggestedFix;
+
+    // Simpan ke local cache
+    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+
+    // Simpan update ke backend Spreadsheet
+    await callAPI({
+      action: "updateSiswa",
+      data: {
+        id: s.id,
+        nama: s.nama,
+        nik: s.nik,
+        tempatLahir: s.tempatLahir,
+        tglLahir: s.tglLahir,
+        namaIbu: s.namaIbu
+      }
+    });
+
+    await callAPI({
+      action: "updateStatus",
+      idSiswa: s.id,
+      status: 'Sesuai',
+      koreksiAI: s.koreksiAI
+    });
+
+    hideLoader();
+    renderSiswaTable(siswaDataList);
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Koreksi Berhasil Diterapkan!',
+      html: `Data calon siswa <b>${s.nama}</b> berhasil diperbarui sesuai dokumen fisik dan status otomatis berubah menjadi <b>✅ Sesuai</b>.`,
+      confirmButtonColor: '#10b981'
+    });
+
+  } catch (err) {
+    hideLoader();
+    Swal.fire('Error', 'Gagal menerapkan koreksi otomatis: ' + err.message, 'error');
+  }
 }
 
 function toggleSelectAllSiswa(checked) {
@@ -1521,6 +1632,9 @@ async function runSingleRowAICheck(siswaId) {
     // Simpan ke state lokal
     s.status = finalStatus;
     s.koreksiAI = finalKoreksi;
+    s.tipeMasalah = result.tipeMasalah || null;
+    s.rekomendasiResmi = result.rekomendasiResmi || null;
+    s.suggestedFix = result.suggestedFix || null;
     try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
 
     // Simpan ke backend
@@ -1533,12 +1647,8 @@ async function runSingleRowAICheck(siswaId) {
 
     renderSiswaTable(siswaDataList);
 
-    Swal.fire({
-      icon: finalStatus === 'Sesuai' ? 'success' : 'warning',
-      title: finalStatus === 'Sesuai' ? '✅ Data Sesuai' : '⚠️ Ditemukan Ketidaksesuaian',
-      html: `<div style="text-align: left; font-size: 0.9rem; line-height: 1.5; white-space: pre-line; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-top: 8px;"><b>Nama:</b> ${s.nama}<br><br>${finalKoreksi}</div>`,
-      confirmButtonText: 'Tutup'
-    });
+    // Tampilkan popup terperinci lengkap dengan opsi Terapkan Koreksi / Rekomendasi
+    showAICheckPopup(s.id);
 
   } catch (err) {
     hideLoader();
@@ -1613,6 +1723,9 @@ async function runBatchAICheck() {
 
       s.status = finalStatus;
       s.koreksiAI = finalKoreksi;
+      s.tipeMasalah = result.tipeMasalah || null;
+      s.rekomendasiResmi = result.rekomendasiResmi || null;
+      s.suggestedFix = result.suggestedFix || null;
 
       // Update backend
       callAPI({

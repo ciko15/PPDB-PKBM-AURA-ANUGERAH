@@ -94,17 +94,31 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
                      `3. Tentukan status pemeriksaan secara tegas HANYA ada 2 pilihan:\n` +
                      `   - "Sesuai" (jika semua data cocok)\n` +
                      `   - "Tidak Sesuai" (jika terdapat ketidakcocokan / perbedaan data)\n` +
-                     `4. Jika status "Tidak Sesuai", buatkan deskripsi permasalahan secara rapi dan terstruktur dalam bentuk poin-poin bernomor: 1. ..., 2. ..., 3. ... Contoh:\n` +
-                     `   1. Tanggal Lahir tidak cocok: pada dokumen tertulis 2 Juli 1999, sedangkan pada data tertera 25 Juni 1999.\n` +
-                     `   2. Nama Ibu Kandung tidak cocok: pada dokumen tertera 'AGUSTINA KELAIMI', sedangkan pada data tertera '...'.\n` +
+                     `4. Jika status "Tidak Sesuai":\n` +
+                     `   a. Deskripsikan permasalahan dalam bentuk poin-poin bernomor (1. ..., 2. ...).\n` +
+                     `   b. KATEGORIKAN apakah kesalahan tersebut merupakan:\n` +
+                     `      - "KOREKSI_DATA": Data salah input / typo / belum lengkap yang nilainya jelas tertera benar di dokumen fisik yang terlampir. Berikan nilai yang benar pada properti 'suggestedFix'.\n` +
+                     `      - "REKOMENDASI_RESMI": Perbedaan data antar-dokumen resmi (misal ejaan nama atau tgl lahir di Ijazah berbeda dengan di KK). Berikan petunjuk pada properti 'rekomendasiResmi' (misal: "Disarankan meminta Surat Keterangan Beda Nama dari instansi terkait").\n` +
                      `5. Jika status "Sesuai", WAJIB buatkan rincian bukti verifikasi (evidence checklist) dalam bentuk poin-poin bernomor 1. ..., 2. ..., 3. ... yang merinci setiap data yang berhasil diverifikasi dan cocok dengan dokumen. Contoh:\n` +
                      `   1. Nama Lengkap: Cocok (Tertulis '${dataSiswa.nama || '-'}' pada dokumen).\n` +
                      `   2. NIK: Cocok (Tertera 16 digit sesuai pada dokumen).\n` +
                      `   3. Tempat Lahir: Cocok (Tertulis '${dataSiswa.tempatLahir || '-'}' pada dokumen).\n` +
                      `   4. Tanggal Lahir: Cocok (Tertulis sesuai pada dokumen).\n` +
                      `   5. Nama Ibu Kandung: Cocok (Tertera sesuai pada dokumen).\n\n` +
-                     `Kembalikan respons murni dalam format JSON (tanpa markdown), dengan properti:\n` +
-                     `{"status": "Sesuai" | "Tidak Sesuai", "koreksi": "Poin-poin bernomor 1. 2. 3. berisi rincian bukti verifikasi jika Sesuai, atau temuan perbedaan jika Tidak Sesuai"}`;
+                     `Kembalikan respons murni dalam format JSON (tanpa markdown), dengan struktur:\n` +
+                     `{\n` +
+                     `  "status": "Sesuai" | "Tidak Sesuai",\n` +
+                     `  "koreksi": "Poin-poin bernomor 1. 2. 3. berisi rincian bukti jika Sesuai, atau temuan perbedaan jika Tidak Sesuai",\n` +
+                     `  "tipeMasalah": "KOREKSI_DATA" | "REKOMENDASI_RESMI" | null,\n` +
+                     `  "rekomendasiResmi": "Catatan rekomendasi jika ada perbedaan dokumen resmi, atau kosong jika tidak ada",\n` +
+                     `  "suggestedFix": {\n` +
+                     `    "nama": "Nilai benar dari dokumen fisik jika nama perlu dikoreksi, atau null",\n` +
+                     `    "nik": "Nilai NIK 16 digit benar dari dokumen jika perlu dikoreksi, atau null",\n` +
+                     `    "tempatLahir": "Tempat lahir benar dari dokumen jika perlu dikoreksi, atau null",\n` +
+                     `    "tglLahir": "Tanggal lahir benar format YYYY-MM-DD dari dokumen jika perlu dikoreksi, atau null",\n` +
+                     `    "namaIbu": "Nama ibu kandung benar dari dokumen jika perlu dikoreksi, atau null"\n` +
+                     `  }\n` +
+                     `}`;
 
   const payload = {
     contents: [
