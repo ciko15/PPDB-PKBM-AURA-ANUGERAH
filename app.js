@@ -672,9 +672,10 @@ function handleClientRouting() {
   }
 
   // Jika belum login:
-  // Hanya rute rahasia '/portal-pkbm' yang akan membuka Form Login
+  // Rute rahasia '/portal-pkbm' (atau variasi query / hash) membuka Form Login
   // Rute root '/' atau '/pkbm' menampilkan Halaman Informasi Awal publik
-  if (path === '/portal-pkbm' || path === '/portal-pkbm/') {
+  const isPortalPkbm = path === '/portal-pkbm' || path === '/portal-pkbm/' || path.startsWith('/portal-pkbm');
+  if (isPortalPkbm) {
     pageLanding.classList.remove('hidden');
     pageDashboard.classList.add('hidden');
     if (modalLogin) {
@@ -3112,12 +3113,11 @@ if (btnCloseLogin) {
   });
 }
 
+// Overlay click modal login: jangan menutup form login jika diklik di luar (harus tetap di form login)
 if (loginModalOverlay) {
-  loginModalOverlay.addEventListener('click', () => {
-    modalLogin.classList.add('hidden');
-    if (window.location.pathname.includes('portal-pkbm')) {
-      try { window.history.pushState({}, '', '/pkbm'); } catch (e) {}
-    }
+  loginModalOverlay.addEventListener('click', (e) => {
+    // Mencegah form login tertutup saat klik di luar kotak modal
+    e.stopPropagation();
   });
 }
 
