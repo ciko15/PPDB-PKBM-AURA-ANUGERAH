@@ -716,31 +716,84 @@
             <div class="filter-toolbar-top">
               <div class="filter-search-box">
                 <i data-lucide="search"></i>
-                <input type="text" id="search-buku" placeholder="Cari judul buku pelajaran, modul, atau mata pelajaran..." oninput="filterBukuGrid()">
+                <input type="text" id="search-buku" placeholder="Cari judul buku pelajaran, modul, kelas, atau mapel..." oninput="filterBukuGrid()">
               </div>
               <div class="filter-controls-group">
-                <select id="filter-buku-jenjang" class="filter-select" onchange="filterBukuGrid()">
+                <select id="filter-buku-jenjang" class="filter-select" onchange="onJenjangFilterChange()">
                   <option value="">Semua Jenjang</option>
-                  <option value="Paket A">Paket A (SD)</option>
-                  <option value="Paket B">Paket B (SMP)</option>
-                  <option value="Paket C">Paket C (SMA)</option>
+                  <option value="Paket A">Paket A (Setara SD)</option>
+                  <option value="Paket B">Paket B (Setara SMP)</option>
+                  <option value="Paket C">Paket C (Setara SMA)</option>
+                </select>
+                <select id="filter-buku-kelas" class="filter-select" onchange="filterBukuGrid()">
+                  <option value="">Semua Kelas</option>
+                  <option value="Kelas IV">Kelas IV</option>
+                  <option value="Kelas V">Kelas V</option>
+                  <option value="Kelas VI">Kelas VI</option>
+                  <option value="Kelas VII">Kelas VII</option>
+                  <option value="Kelas VIII">Kelas VIII</option>
+                  <option value="Kelas IX">Kelas IX</option>
+                  <option value="Kelas X">Kelas X</option>
+                  <option value="Kelas XI">Kelas XI</option>
+                  <option value="Kelas XII">Kelas XII</option>
                 </select>
                 <select id="filter-buku-mapel" class="filter-select" onchange="filterBukuGrid()">
-                  <option value="">Semua Kategori</option>
+                  <option value="">Semua Mata Pelajaran</option>
                   <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+                  <option value="Bahasa Inggris">Bahasa Inggris</option>
                   <option value="Matematika">Matematika</option>
-                  <option value="IPA / Sains">IPA / Sains</option>
-                  <option value="IPS / Sejarah">IPS / Sejarah</option>
-                  <option value="Kewarganegaraan">PPKn / Kewarganegaraan</option>
-                  <option value="Keterampilan">Keterampilan Mandiri</option>
+                  <option value="IPA">IPA / Sains</option>
+                  <option value="IPS">IPS / Geografi / Sosiologi</option>
+                  <option value="PPKn">PPKn / Kewarganegaraan</option>
+                  <option value="Geografi">Geografi</option>
+                  <option value="Sosiologi">Sosiologi</option>
+                  <option value="Ekonomi">Ekonomi</option>
+                  <option value="Sejarah Indonesia">Sejarah Indonesia</option>
+                  <option value="Fisika">Fisika</option>
+                  <option value="Kimia">Kimia</option>
+                  <option value="Biologi">Biologi</option>
+                  <option value="Prakarya">Prakarya & Kewirausahaan</option>
+                  <option value="Seni Budaya">Seni Budaya</option>
+                  <option value="PJOK">PJOK</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <!-- Grid Daftar Buku Belajar ala MyAura -->
-          <div id="grid-buku-belajar" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 16px;">
-            <!-- Rendered by JavaScript -->
+          <!-- Seksi: Buku Paling Banyak Dibaca (Ala MyAura) -->
+          <div id="section-buku-populer-wrapper" style="margin-top: 24px; margin-bottom: 28px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: rgba(245, 158, 11, 0.15); color: #d97706;">
+                  <i data-lucide="trending-up" style="width: 17px; height: 17px;"></i>
+                </span>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color);">Buku Paling Banyak Dibaca</h3>
+                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; font-size: 11px; padding: 2px 8px; border-radius: 99px;">🔥 Terpopuler</span>
+              </div>
+              <small style="color: var(--text-muted); font-size: 12px;">Berdasarkan durasi & frekuensi baca siswa</small>
+            </div>
+            
+            <div id="grid-buku-populer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
+              <!-- Rendered by JavaScript (Top 4 buku dengan dibaca tertinggi) -->
+            </div>
+          </div>
+
+          <!-- Seksi: Semua Katalog Modul & Buku Pelajaran -->
+          <div style="margin-top: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: rgba(30, 64, 175, 0.1); color: var(--primary-color);">
+                  <i data-lucide="layers" style="width: 17px; height: 17px;"></i>
+                </span>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color);">Semua Buku & Modul Pelajaran</h3>
+                <span id="badge-total-katalog" class="badge" style="background: var(--surface-hover); color: var(--text-muted); font-size: 11px; padding: 2px 8px; border-radius: 99px;">50 Buku</span>
+              </div>
+            </div>
+
+            <!-- Grid Daftar Buku Belajar -->
+            <div id="grid-buku-belajar" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
+              <!-- Rendered by JavaScript -->
+            </div>
           </div>
         </div>
 
