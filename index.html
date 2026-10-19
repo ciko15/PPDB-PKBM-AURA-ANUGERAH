@@ -7,9 +7,8 @@
   <title>Sistem Informasi PPDB (Kejar Paket)</title>
   
   <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="tut_wuri.svg">
-  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="icon" type="image/png" href="logo_PKBM_Aura_Anugerah_transparan.png">
+  <link rel="shortcut icon" href="logo_PKBM_Aura_Anugerah_transparan.png" type="image/png">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,7 +26,7 @@
   <div id="page-landing" class="landing-page">
     <header class="landing-header">
       <div class="landing-brand" id="landing-brand-logo">
-        <div class="brand-icon">A</div>
+        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM Aura Anugerah" class="brand-logo-img">
         <div class="brand-text">
           <h1>PKBM Aura Anugerah</h1>
           <p>Pendidikan Kesetaraan Paket A · B · C</p>
@@ -401,9 +400,9 @@
     <div class="login-card modal-content">
       <button id="btn-close-login" class="btn-close-modal">&times;</button>
       <div style="text-align:center; margin-bottom: 2rem;">
-        <img src="tut_wuri.svg" alt="Logo Sekolah" class="school-logo-large">
+        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM Aura Anugerah" class="school-logo-large">
         <h2 style="color: var(--primary-color); margin-top: 1rem;">SIS PPDB Terpadu</h2>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">Pendidikan Non-Formal</p>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">PKBM Aura Anugerah · Sentani Jayapura</p>
       </div>
       <form id="form-login" onsubmit="event.preventDefault();">
         <div class="form-group">
@@ -414,6 +413,22 @@
           <label>Password</label>
           <input type="password" id="login-password" placeholder="Masukkan password" required>
         </div>
+
+        <!-- Captcha Keamanan (Gaya Rostering Teknik) -->
+        <div class="form-group" style="margin-top: 1rem;">
+          <label style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Kode Keamanan (Captcha)</span>
+            <span style="font-size: 0.75rem; color: #64748b; font-weight: normal;">Ketik persis huruf & angka</span>
+          </label>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+            <canvas id="login-captcha-canvas" width="120" height="40" style="border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);"></canvas>
+            <button type="button" id="btn-refresh-captcha" onclick="generateCaptchaLogin()" title="Ganti Captcha" style="height: 40px; padding: 0 12px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-size: 1rem; color: #1e3a8a; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+              🔄
+            </button>
+          </div>
+          <input type="text" id="login-captcha-input" placeholder="Masukkan kode di atas" required autocomplete="off" style="margin-top: 6px; letter-spacing: 1px; font-weight: 600;">
+        </div>
+
         <button id="btn-login" type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Masuk Aplikasi</button>
         <div style="margin-top: 1.2rem; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
           <a href="/pkbm" onclick="window.navigateToRoute ? window.navigateToRoute('/pkbm') : (modalLogin && modalLogin.classList.add('hidden')); return false;" style="color: #2563eb; font-size: 0.88rem; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
@@ -430,7 +445,7 @@
     <header class="navbar">
       <div class="brand">
         <button id="btn-menu-mobile" class="btn-hamburger">☰</button>
-        <img src="tut_wuri.svg" alt="Logo" class="school-logo-small">
+        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM Aura Anugerah" class="school-logo-small">
         <span>SIS PPDB Terpadu</span>
       </div>
       <div class="user-profile" id="user-profile-btn" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 5px; border-radius: 8px; transition: background 0.3s;">

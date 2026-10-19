@@ -558,7 +558,10 @@ function handleClientRouting() {
   if (path === '/portal-pkbm' || path === '/portal-pkbm/') {
     pageLanding.classList.remove('hidden');
     pageDashboard.classList.add('hidden');
-    if (modalLogin) modalLogin.classList.remove('hidden');
+    if (modalLogin) {
+      modalLogin.classList.remove('hidden');
+      setTimeout(generateCaptchaLogin, 60);
+    }
   } else {
     // Publik: '/' atau '/pkbm' atau halaman lainnya
     pageLanding.classList.remove('hidden');
@@ -566,6 +569,74 @@ function handleClientRouting() {
     if (modalLogin) modalLogin.classList.add('hidden');
   }
 }
+
+// ======================= CAPTCHA LOGIN (ROSTERING TEKNIK STYLE) =======================
+let currentCaptchaCode = '';
+
+function generateCaptchaLogin() {
+  const canvas = document.getElementById('login-captcha-canvas');
+  if (!canvas) return;
+
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let text = '';
+  for (let i = 0; i < 5; i++) {
+    text += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  currentCaptchaCode = text;
+
+  const captchaInput = document.getElementById('login-captcha-input');
+  if (captchaInput) captchaInput.value = '';
+
+  canvas.width = 120;
+  canvas.height = 40;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  // Reset & Clear
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Noise Dots
+  for (let i = 0; i < 25; i++) {
+    ctx.fillStyle = `rgba(${Math.floor(Math.random()*150)},${Math.floor(Math.random()*150)},${Math.floor(Math.random()*150)},0.25)`;
+    ctx.beginPath();
+    ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Noise Lines
+  for (let i = 0; i < 4; i++) {
+    ctx.strokeStyle = `rgba(${Math.floor(Math.random()*150)},${Math.floor(Math.random()*150)},${Math.floor(Math.random()*150)},0.35)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+    ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+    ctx.stroke();
+  }
+
+  // Draw characters with distinct colors & slight rotation
+  const colors = ['#0f172a', '#1e3a8a', '#0369a1', '#15803d', '#b91c1c', '#7c3aed'];
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const x = 16 + i * 20;
+    const y = 26 + (Math.random() * 4 - 2);
+    const angle = (Math.random() - 0.5) * 0.35;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.font = 'bold 22px monospace, "Courier New", sans-serif';
+    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+    ctx.textBaseline = 'middle';
+    ctx.fillText(char, 0, 0);
+    ctx.restore();
+  }
+}
+window.generateCaptchaLogin = generateCaptchaLogin;
 
 window.navigateToRoute = function(routePath) {
   try {
@@ -585,6 +656,26 @@ function checkLocalSession() {
 async function handleLogin(e) {
   const user = inputLoginUser.value;
   const pass = inputLoginPass.value;
+  const captchaInput = document.getElementById('login-captcha-input');
+  const userCaptcha = (captchaInput ? captchaInput.value : "").trim();
+
+  // Validasi Captcha sama seperti di aplikasi Rostering Teknik
+  if (!userCaptcha) {
+    Swal.fire('Peringatan', 'Harap isi kode keamanan (captcha)!', 'warning');
+    if (captchaInput) captchaInput.focus();
+    return;
+  }
+
+  if (userCaptcha !== currentCaptchaCode) {
+    Swal.fire('Captcha Salah', 'Kode keamanan (captcha) tidak cocok. Perhatikan huruf besar & kecil!', 'error');
+    if (captchaInput) {
+      captchaInput.value = '';
+      captchaInput.focus();
+    }
+    generateCaptchaLogin();
+    return;
+  }
+
   showLoader("Mencoba Masuk...");
 
   try {
@@ -596,6 +687,7 @@ async function handleLogin(e) {
     }
   } catch (err) {
     Swal.fire('Error', err.message, 'error');
+    generateCaptchaLogin();
   }
   hideLoader();
 }
