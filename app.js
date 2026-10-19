@@ -1351,12 +1351,11 @@ function renderSiswaTable(data) {
     const hasCorrection = s.koreksiAI && s.koreksiAI.trim() !== '';
 
     if (rawAiStatus === 'sesuai' || rawAiStatus === 'cocok' || (rawAiStatus === 'selesai' && !hasCorrection)) {
-      aiStatusBadge = `<span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">✅ Sesuai</span>`;
+      aiStatusBadge = `<span onclick="event.stopPropagation(); showAICheckPopup('${s.id}')" style="background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; border: 1px solid #bbf7d0;" title="Klik untuk lihat detail pemeriksaan">✅ Sesuai</span>`;
     } else if (rawAiStatus === 'tidak sesuai' || rawAiStatus === 'tidak_cocok' || rawAiStatus === 'perlu perbaikan' || (hasCorrection && !s.koreksiAI.includes('cocok'))) {
-      const tooltip = s.koreksiAI ? s.koreksiAI.replace(/"/g, '&quot;') : 'Ada ketidaksesuaian';
-      aiStatusBadge = `<span title="${tooltip}" style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; cursor: help;">⚠️ Tidak Sesuai</span>`;
+      aiStatusBadge = `<span onclick="event.stopPropagation(); showAICheckPopup('${s.id}')" style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; border: 1px solid #fecaca; box-shadow: 0 1px 2px rgba(220,38,38,0.1);" title="Klik untuk baca poin ketidaksesuaian">⚠️ Tidak Sesuai</span>`;
     } else if (rawAiStatus === 'pending') {
-      aiStatusBadge = `<span style="background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;">⏳ Pending</span>`;
+      aiStatusBadge = `<span style="background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;">⏳ Pending</span>`;
     }
 
     tr.style.cursor = 'pointer';
@@ -1395,6 +1394,58 @@ function renderSiswaTable(data) {
 }
 
 // ======================= BATCH & SINGLE ROW AI VERIFICATION =======================
+function showAICheckPopup(siswaId) {
+  const s = siswaDataList.find(x => String(x.id) === String(siswaId));
+  if (!s) return;
+
+  const isCocok = s.status === 'Sesuai' || s.status === 'Cocok';
+  const title = isCocok ? '✅ Hasil Pemeriksaan AI: Sesuai' : '⚠️ Hasil Pemeriksaan AI: Tidak Sesuai';
+  const icon = isCocok ? 'success' : 'warning';
+  const statusColor = isCocok ? '#15803d' : '#b91c1c';
+  const statusBg = isCocok ? '#dcfce7' : '#fee2e2';
+
+  const rawKoreksi = (s.koreksiAI && s.koreksiAI.trim() !== '') ? s.koreksiAI : (isCocok ? 'Semua data cocok dengan dokumen fisik.' : 'Terdapat ketidaksesuaian data pada dokumen.');
+
+  // Format poin-poin agar terbaca sangat jelas
+  let formattedContent = rawKoreksi;
+  // Jika poin-poin dipisahkan oleh angka seperti "1. " atau "2. "
+  formattedContent = formattedContent
+    .replace(/([0-9]+\.\s)/g, '<br><strong style="color: #0f172a;">$1</strong>')
+    .replace(/^<br>/, '');
+
+  Swal.fire({
+    title: `<span style="font-size: 1.2rem; color: ${statusColor}; font-weight: 700;">${title}</span>`,
+    html: `
+      <div style="text-align: left; font-size: 0.92rem; line-height: 1.6; color: #1e293b; margin-top: 10px;">
+        <div style="background: #f1f5f9; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; border: 1px solid #cbd5e1;">
+          <div style="font-size: 0.82rem; color: #64748b; font-weight: 600;">CALON PESERTA DIDIK:</div>
+          <div style="font-size: 1.05rem; font-weight: 700; color: #0f172a;">${s.nama || '-'}</div>
+          <div style="font-size: 0.85rem; color: #475569; margin-top: 2px;">
+            NIK: <b>${s.nik || '-'}</b> | Program: <b>${s.program || '-'}</b>
+          </div>
+        </div>
+
+        <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a; margin-bottom: 6px;">
+          Rincian Temuan AI:
+        </div>
+        <div style="background: ${statusBg}; border: 1px solid ${isCocok ? '#86efac' : '#fca5a5'}; border-radius: 8px; padding: 14px; font-size: 0.9rem; line-height: 1.65; max-height: 350px; overflow-y: auto;">
+          ${formattedContent}
+        </div>
+      </div>
+    `,
+    showCloseButton: true,
+    showCancelButton: true,
+    confirmButtonText: '✏️ Buka & Edit Siswa',
+    cancelButtonText: 'Tutup',
+    confirmButtonColor: '#0284c7',
+    width: '580px'
+  }).then((res) => {
+    if (res.isConfirmed) {
+      loadSiswaForEdit(s.id);
+    }
+  });
+}
+
 function toggleSelectAllSiswa(checked) {
   document.querySelectorAll('.siswa-select-cb').forEach(cb => {
     cb.checked = checked;
