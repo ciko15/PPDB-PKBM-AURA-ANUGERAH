@@ -1570,13 +1570,28 @@ async function loadAllSiswa(silent = false) {
 }
 
 function filterSiswaTable() {
-  const query = document.getElementById('search-siswa').value.toLowerCase();
+  const query = (document.getElementById('search-siswa')?.value || '').toLowerCase();
+  const programFilter = document.getElementById('filter-program-siswa')?.value || '';
+  const statusFilter = document.getElementById('filter-status-siswa')?.value || '';
+
   const filteredData = siswaDataList.filter(s => {
-    return (s.nama && String(s.nama).toLowerCase().includes(query)) ||
+    const matchQuery = !query ||
+      (s.nama && String(s.nama).toLowerCase().includes(query)) ||
       (s.nik && String(s.nik).toLowerCase().includes(query)) ||
       (s.nisn && String(s.nisn).toLowerCase().includes(query)) ||
       (s.program && String(s.program).toLowerCase().includes(query));
+
+    const matchProgram = !programFilter || (s.program && s.program.includes(programFilter));
+    const matchStatus = !statusFilter || (statusFilter === 'Aktif' ? s.statusAktif === 'Aktif' : s.statusAktif !== 'Aktif');
+
+    return matchQuery && matchProgram && matchStatus;
   });
+
+  const pageInfo = document.getElementById('pagination-info');
+  if (pageInfo) {
+    pageInfo.textContent = `Menampilkan ${filteredData.length} dari ${siswaDataList.length} peserta didik`;
+  }
+
   renderSiswaTable(filteredData);
 }
 
@@ -1584,7 +1599,7 @@ function renderSiswaTable(data) {
   tableSiswaBody.innerHTML = '';
 
   if (data.length === 0) {
-    tableSiswaBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Belum ada siswa yang cocok</td></tr>';
+    tableSiswaBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 32px; color: var(--text-muted);">Belum ada peserta didik yang cocok</td></tr>';
     return;
   }
 
@@ -1606,6 +1621,12 @@ function renderSiswaTable(data) {
       aiStatusBadge = `<span style="background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;">⏳ Pending</span>`;
     }
 
+    // Tag status persis Rostering Teknik
+    const statusTag = isAktif
+      ? `<span class="tag pusat" style="cursor: pointer;" onclick="toggleStatusSiswa('${s.id}', 'Tidak Aktif')" title="Klik untuk ubah status">Aktif</span>`
+      : `<span class="tag ess" style="cursor: pointer;" onclick="toggleStatusSiswa('${s.id}', 'Aktif')" title="Klik untuk ubah status">Tidak Aktif</span>`;
+
+    tr.className = "hoverable-row";
     tr.style.cursor = 'pointer';
     tr.onclick = (e) => {
       if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.type === 'checkbox') return;
@@ -1617,25 +1638,21 @@ function renderSiswaTable(data) {
         <input type="checkbox" class="siswa-select-cb" value="${s.id}" onchange="updateSelectedSiswaCount()">
       </td>
       <td>${idx + 1}</td>
-      <td><strong>${s.nama}</strong></td>
+      <td><b>${s.nama}</b></td>
       <td>${s.program || '-'}</td>
       <td>${aiStatusBadge}</td>
-      <td>${s.createdBy || 'N/A'}</td>
-      <td>
-        <button class="btn ${isAktif ? 'btn-success' : 'btn-danger'}" onclick="toggleStatusSiswa('${s.id}', '${isAktif ? 'Tidak Aktif' : 'Aktif'}')" style="padding:4px 8px; font-size:0.8rem;">
-          ${isAktif ? 'Aktif' : 'Tidak Aktif'}
-        </button>
-      </td>
-      <td style="text-align: center; white-space: nowrap; width: 1%;" onclick="event.stopPropagation();">
-        <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap;">
-          <button class="btn btn-icon" onclick="runSingleRowAICheck('${s.id}')" title="Periksa AI" style="width: 32px; height: 32px; padding: 0; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px;">
-            <i data-lucide="wand-2" style="width: 15px; height: 15px;"></i>
+      <td style="font-size: 12px; color: var(--text-muted);">${s.createdBy || 'N/A'}</td>
+      <td>${statusTag}</td>
+      <td style="vertical-align: middle;" onclick="event.stopPropagation();">
+        <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+          <button class="btn btn-icon" onclick="runSingleRowAICheck('${s.id}')" title="Periksa AI">
+            <i data-lucide="wand-2" style="width: 15px; height: 15px; color: var(--accent);"></i>
           </button>
-          <button class="btn btn-icon" onclick="loadSiswaForEdit('${s.id}')" title="Edit Data" style="width: 32px; height: 32px; padding: 0; background: #ffffff; border: 1px solid var(--border-color); color: #0f172a; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px;">
+          <button class="btn btn-icon" onclick="loadSiswaForEdit('${s.id}')" title="Edit Data">
             <i data-lucide="pencil" style="width: 15px; height: 15px;"></i>
           </button>
           ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin') ? `
-          <button class="btn btn-icon" onclick="deleteSiswaData('${s.id}')" title="Hapus Siswa" style="width: 32px; height: 32px; padding: 0; background: #ffffff; border: 1px solid #fecaca; color: #dc2626; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px;">
+          <button class="btn btn-icon btn-danger-text" onclick="deleteSiswaData('${s.id}')" title="Hapus Siswa">
             <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
           </button>` : ''}
         </div>

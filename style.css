@@ -1,47 +1,70 @@
-:root, :root[data-theme="light"] {
-  color-scheme: light;
-  --primary-color: #059669;       /* Emerald Green Utama */
-  --primary-hover: #047857;       /* Dark Emerald */
-  --primary-light: #ecfdf5;       /* Mint tint */
-  --secondary-color: #10b981;
-  --accent-color: #0d9488;
-  --success-color: #10b981;
-  --danger-color: #ef4444;
-  --warning-color: #f59e0b;
-  --bg-color: #f8fafc;            /* Clean light grey-white */
-  --surface-color: #ffffff;
-  --surface-hover: #f1f5f9;
-  --surface-2: #f1f5f9;
-  --text-color: #0f172a;          /* Dark slate */
-  --text-muted: #64748b;          /* Muted slate */
-  --border-color: #e2e8f0;
+:root, :root[data-theme="dark"] {
+  color-scheme: dark;
+  /* Permukaan Rostering Teknik */
+  --bg-color: #0B1A2B;
+  --surface-color: #12263A;
+  --surface-2: #182F47;
+  --surface-hover: #1b3550;
+  --border-color: #263F57;
+  /* Teks */
+  --text-color: #E8EEF4;
+  --text-muted: #9FB2C4;
+  /* Aksen */
+  --primary-color: #0E76A0;
+  --primary-hover: #0B6588;
+  --primary-light: rgba(14, 118, 160, 0.2);
+  --primary: #0E76A0;
+  --accent: #F2A900;
+  --accent-color: #F2A900;
+  /* Status */
+  --success-color: #4ADE9A;
+  --success-bg: rgba(74,222,154,.14);
+  --warning-color: #FFC857;
+  --warning-bg: rgba(255,200,87,.14);
+  --danger-color: #C7362F;
+  --danger-text: #FF8A8A;
+  --danger-bg: rgba(255,138,138,.12);
+  --info: #7FD8F7;
+  --info-bg: #17384F;
+  /* Bentuk */
+  --radius: 10px;
+  --radius-sm: 6px;
   --border-radius: 10px;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.18);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.25);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,.4);
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --primary-color: #10b981;       /* Brighter Emerald for Dark Mode */
-  --primary-hover: #059669;
-  --primary-light: rgba(16, 185, 129, 0.15); /* Translucent Mint */
-  --secondary-color: #34d399;
-  --accent-color: #2dd4bf;
-  --success-color: #34d399;
-  --danger-color: #f87171;
-  --warning-color: #fbbf24;
-  --bg-color: #0b192c;            /* Deep navy dark background */
-  --surface-color: #12263a;       /* Dark slate card */
-  --surface-hover: #1e3a5f;
-  --surface-2: #182f47;
-  --text-color: #e2e8f0;          /* Crisp light text */
-  --text-muted: #94a3b8;          /* Light muted text */
-  --border-color: #263f57;
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-color: #F3F6F9;
+  --surface-color: #FFFFFF;
+  --surface-2: #EAF0F5;
+  --surface-hover: #e0e9f1;
+  --border-color: #D5DFE8;
+  --text-color: #12263A;
+  --text-muted: #5A6C7D;
+  --primary-color: #0F5C7A;
+  --primary-hover: #0C4A63;
+  --primary-light: rgba(15, 92, 122, 0.12);
+  --primary: #0F5C7A;
+  --accent: #F2A900;
+  --accent-color: #F2A900;
+  --success-color: #13804F;
+  --success-bg: #E1F4EA;
+  --warning-color: #8A5A00;
+  --warning-bg: #FDF0D5;
+  --danger-color: #B42318;
+  --danger-text: #B42318;
+  --danger-bg: #FDE7E5;
+  --info: #0F5C7A;
+  --info-bg: #E0F0F6;
+  --radius: 10px;
+  --radius-sm: 6px;
   --border-radius: 10px;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 2px rgba(18,38,58,.08), 0 4px 14px rgba(18,38,58,.06);
+  --shadow-sm: 0 1px 2px rgba(18,38,58,.05);
+  --shadow-lg: 0 10px 25px rgba(18,38,58,.1);
 }
 
 * {
@@ -54,110 +77,205 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   height: 100vh;
-  overflow: hidden; /* Prevent body scroll, layout handles it */
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ==================== TYPOGRAPHY & LOGOS ==================== */
-h2, h3, h4 {
-  color: var(--text-color);
+/* ==================== TYPOGRAPHY & LOGOS (PERSIS ROSTERING TEKNIK) ==================== */
+h1, h2, h3, .brand span:first-child, .card b, .name {
+  font-family: "Montserrat", system-ui, -apple-system, sans-serif;
+}
+h1 {
+  font-size: 24px;
   font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text-color);
 }
-.school-logo-large {
-  width: 86px;
-  height: 86px;
-  object-fit: contain;
-  margin: 0 auto;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.12));
+h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--text-color);
 }
-.school-logo-small {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  margin-right: 12px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+.sub {
+  color: var(--text-muted);
+  margin: 0 0 16px;
+  font-size: 12px;
 }
 
-/* ==================== BUTTONS ==================== */
-.btn {
-  display: inline-block;
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  font-weight: 500;
+/* ==================== BUTTONS & CONTROLS (PERSIS ROSTERING TEKNIK) ==================== */
+button, select, input, .btn {
+  font: inherit;
+  color: inherit;
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  height: 36px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Inter', sans-serif;
+  transition: all 0.15s ease;
+  font-size: 13px;
+  font-weight: 500;
+}
+button:focus-visible, select:focus-visible, input:focus-visible, .btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  justify-content: center;
 }
 .btn:hover {
-  transform: translateY(-1px);
+  background: var(--surface-2);
+  color: var(--text-color);
 }
-.btn:active {
-  transform: translateY(0);
+.btn.p, .btn-primary {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
+  font-weight: 600;
 }
-.btn-primary { background-color: var(--primary-color); color: white; }
-.btn-primary:hover { background-color: var(--primary-hover); box-shadow: var(--shadow); }
-.btn-success { background-color: var(--success-color); color: white; }
-.btn-danger { background-color: var(--danger-color); color: white; }
-.btn-block { width: 100%; display: block; }
-.btn-sm { padding: 0.4rem 0.8rem; font-size: 0.85rem; }
+.btn.p:hover, .btn-primary:hover {
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+}
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+}
+.btn-danger-text {
+  color: var(--danger-text);
+}
+.btn-success {
+  background: var(--success-color);
+  color: #fff;
+  border-color: var(--success-color);
+}
+.btn-danger {
+  background: var(--danger-color);
+  color: #fff;
+  border-color: var(--danger-color);
+}
+.btn-block { width: 100%; display: flex; justify-content: center; }
 
-/* ==================== FORMS ==================== */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 1rem;
-}
-.form-group label {
-  font-size: 0.9rem;
+/* Tag Badges Persis Rostering Teknik */
+.tag {
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 12px;
   font-weight: 500;
-  margin-bottom: 0.4rem;
-  color: var(--text-color);
+  display: inline-block;
+  white-space: nowrap;
 }
-.form-group input, .form-group select {
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 1rem;
-  font-family: 'Inter', sans-serif;
-  background-color: var(--surface-2);
-  color: var(--text-color);
-  transition: border-color 0.2s, background-color 0.2s;
-}
-.form-group input:focus, .form-group select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  background-color: var(--surface-color);
-  box-shadow: 0 0 0 3px var(--primary-light);
-}
-.form-group input[readonly] {
-  background-color: var(--surface-2);
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-.form-group-row {
+.tag.ess { background: var(--warning-bg); color: var(--warning-color); border: 1px solid rgba(255,200,87,0.3); }
+.tag.pusat { background: var(--success-bg); color: var(--success-color); border: 1px solid rgba(74,222,154,0.3); }
+.tag.cnsa { background: var(--info-bg); color: var(--info); }
+.tag.def { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-color); }
+
+/* Bar Toolbar Persis Rostering Teknik */
+.bar {
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
 }
-.form-group.half {
-  flex: 1;
-  margin-bottom: 0; /* Let row handle margin */
+.bar .sp { flex: 1; }
+
+/* Wrap Table Persis Rostering Teknik */
+.wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--surface-color);
+  box-shadow: var(--shadow);
 }
-.divider {
-  margin: 2rem 0; 
-  border: 0;
-  border-top: 1px solid var(--border-color);
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13.5px;
+}
+th, td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+  white-space: nowrap;
+}
+th {
+  background: var(--surface-2);
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+[data-theme="light"] tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02);
+}
+tbody tr:hover {
+  background: var(--surface-2);
+}
+td.r, th.r { text-align: right; }
+
+/* Form Persis Rostering Teknik */
+.form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: 16px;
+}
+.form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 0;
+}
+.form input:not([type="checkbox"]):not([type="radio"]), .form select {
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  height: 36px;
+  padding: 0 12px;
+  width: 100%;
+  min-width: 0;
+  color: var(--text-color);
+}
+.form input:not([type="checkbox"]):not([type="radio"]):focus, .form select:focus {
+  border-color: var(--primary);
+  outline: none;
 }
 
-/* ==================== LAYOUT (DESKTOP FIRST) ==================== */
-.login-page {
-  display: none; /* Replaced by modal */
-}
-.login-card {
+/* Card Persis Rostering Teknik */
+.card {
   background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
   padding: 2.5rem;
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-lg);
@@ -165,96 +283,59 @@ h2, h3, h4 {
   max-width: 420px;
 }
 
+/* ==================== LAYOUT ASIDE & NAV (PERSIS ROSTERING TEKNIK) ==================== */
 .dashboard-page {
   display: flex;
   flex-direction: column;
   height: 100vh;
 }
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 1.5rem;
-  height: 64px;
-  background-color: var(--surface-color);
-  box-shadow: var(--shadow-sm);
-  z-index: 10;
-}
-.navbar .brand {
-  display: flex;
-  align-items: center;
-  font-weight: 700;
-  font-size: 1.2rem;
-  color: var(--primary-color);
-}
-.btn-hamburger {
-  display: none; /* Hidden on desktop */
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--text-color);
-  cursor: pointer;
-  margin-right: 1rem;
-}
-
 .layout-container {
   display: flex;
   flex: 1;
+  min-height: 100vh;
   overflow: hidden;
 }
-.sidebar {
-  width: 250px;
-  background-color: var(--surface-color);
-  border-right: 1px solid var(--border-color);
+
+aside {
+  width: 248px;
+  background: var(--surface-color);
+  color: var(--text-color);
+  padding: 16px 12px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  transition: transform 0.3s ease, background-color 0.2s ease;
-  flex-shrink: 0;
-  height: 100%;
+  gap: 4px;
+  border-right: 1px solid var(--border-color);
+  box-sizing: border-box;
+  z-index: 20;
 }
 
-.sidebar-brand-box {
-  padding: 16px 16px 12px 16px;
+aside .brand {
+  padding: 4px 8px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid var(--border-color);
-}
-.sidebar-brand-logo {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.06));
-}
-.sidebar-brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-.sidebar-title {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--primary-color);
-  letter-spacing: -0.2px;
-}
-.sidebar-subtitle {
-  font-size: 0.72rem;
-  color: var(--text-muted);
 }
 
 .sidebar-nav-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 2px;
 }
+
 .sidebar-section-label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-muted);
-  padding: 8px 10px 4px 10px;
+  padding: 8px 12px 2px 12px;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .siswa-list {
@@ -262,153 +343,127 @@ h2, h3, h4 {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
+
 .siswa-list li {
-  padding: 0.6rem 0.85rem;
-  cursor: pointer;
-  border-radius: 8px;
-  border-left: 3px solid transparent;
-  color: var(--text-color);
-  font-weight: 500;
-  font-size: 0.88rem;
-  transition: all 0.15s ease;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding: 0 12px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  font-weight: 400;
+  font-size: 13.5px;
+  transition: background 0.15s ease;
+  box-sizing: border-box;
 }
+
 .siswa-list li .menu-icon {
-  width: 17px;
-  height: 17px;
-  stroke-width: 1.8;
+  width: 20px;
+  height: 20px;
   color: var(--text-muted);
   flex-shrink: 0;
   transition: color 0.15s ease;
 }
+
 .siswa-list li:hover {
-  background-color: var(--surface-hover);
-  color: var(--text-color);
+  background: var(--surface-2);
 }
-.siswa-list li:hover .menu-icon {
-  color: var(--primary-color);
-}
+
 .siswa-list li.active {
-  background-color: var(--primary-light);
-  border-left-color: var(--primary-color);
-  color: var(--primary-color);
-  font-weight: 600;
-}
-.siswa-list li.active .menu-icon {
-  color: var(--primary-color);
-}
-.menu-ai-item {
-  background: var(--surface-2) !important;
-  color: var(--primary-color) !important;
+  background: var(--accent) !important;
+  color: #0B1A2B !important;
   font-weight: 600 !important;
 }
-.menu-ai-item .menu-icon {
-  color: var(--primary-color) !important;
-}
-.menu-api-item {
-  color: #d97706 !important;
-}
-.menu-api-item .menu-icon {
-  color: #d97706 !important;
+
+.siswa-list li.active .menu-icon {
+  color: #0B1A2B !important;
 }
 
-/* Box Profil Bawah (.who) ala Rostering Teknik */
+[data-theme="light"] .siswa-list li.active {
+  background: var(--accent) !important;
+  color: #12263A !important;
+}
+[data-theme="light"] .siswa-list li.active .menu-icon {
+  color: #12263A !important;
+}
+
 .who {
-  padding: 12px;
+  margin-top: auto;
+  padding: 12px 8px;
   border-top: 1px solid var(--border-color);
-  background-color: var(--surface-color);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.who-info {
-  display: flex;
-  flex-direction: column;
-}
-.who-sub {
-  font-size: 0.72rem;
+  font-size: 12px;
   color: var(--text-muted);
+  box-sizing: border-box;
 }
-.who-name-btn {
-  background: none;
-  border: none;
-  padding: 2px 0;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--text-color);
+.who .who-role-badge {
+  font-size: 11px;
+  padding: 2px 6px;
   border-radius: 4px;
-}
-.who-name-btn:hover {
-  color: var(--primary-color);
-}
-.who-role-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
   background: var(--primary-light);
   color: var(--primary-color);
-  padding: 2px 8px;
-  border-radius: 12px;
-  text-transform: capitalize;
-}
-.who-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-top: 4px;
-}
-.who-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px 10px;
-  border-radius: 6px;
-  font-size: 0.8rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid var(--border-color);
-  background: var(--surface-2);
-  color: var(--text-color);
-}
-.who-theme-btn:hover {
-  background: var(--surface-hover);
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-}
-.who-logout-btn {
-  color: var(--danger-color);
-  border-color: rgba(239, 68, 68, 0.2);
-  background: rgba(239, 68, 68, 0.05);
-}
-.who-logout-btn:hover {
-  background: var(--danger-color);
-  color: white;
-  border-color: var(--danger-color);
 }
 
-.main-content {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
-  background-color: var(--bg-color);
+/* Mobile Header (Sembunyi di Desktop) */
+.mobile-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--surface-color);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
+.btn-hamburger {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Main Area Persis Rostering Teknik */
+main.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 32px 40px;
+  overflow-y: auto;
+  background: var(--bg-color);
+}
+
+@media (max-width: 900px) {
+  .mobile-header { display: flex; }
+  aside {
+    position: fixed;
+    left: -260px;
+    top: 0;
+    bottom: 0;
+    transition: left 0.3s ease;
+    box-shadow: var(--shadow-lg);
+  }
+  aside.active { left: 0; }
+  main.main-content { padding: 16px; }
+}
+
+/* Card Panel Kompatibilitas */
 .card-panel {
   background: var(--surface-color);
-  padding: 2rem;
-  border-radius: var(--border-radius);
+  padding: 24px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
   box-shadow: var(--shadow);
   height: auto;
-  min-height: 100%;
 }
 
 /* ==================== DASHBOARD (HOME) ==================== */

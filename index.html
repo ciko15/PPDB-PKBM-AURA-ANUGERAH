@@ -449,35 +449,31 @@
 
   <!-- ==================== DASHBOARD PAGE ==================== -->
   <div id="page-dashboard" class="dashboard-page hidden">
-    <!-- Navbar -->
-    <header class="navbar">
-      <div class="brand">
+    <!-- Navbar Mobile Header -->
+    <header class="mobile-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
         <button id="btn-menu-mobile" class="btn-hamburger">☰</button>
-        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM Aura Anugerah" class="school-logo-small">
-        <span>SIS PPDB Terpadu</span>
+        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--surface-2); padding: 4px;">
+        <div style="display: flex; flex-direction: column;">
+          <span style="font-weight: 700; font-size: 15px; color: var(--text-color);">PKBM Aura Anugerah</span>
+          <span style="font-size: 11px; color: var(--text-muted);">Sistem Terpadu & PPDB</span>
+        </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <button id="btn-theme-nav" class="btn-icon-circle" title="Ganti Tema (Dark/Light)" onclick="toggleTheme()" style="background: var(--surface-2); border: 1px solid var(--border-color); color: var(--text-color); width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button id="btn-theme-nav" onclick="toggleTheme()" class="btn btn-icon" style="background: transparent; border: none; box-shadow: none; padding: 4px;" title="Ganti Tema">
           <i data-lucide="moon" id="icon-theme-nav" style="width: 18px; height: 18px;"></i>
         </button>
-        <div class="user-profile" id="user-profile-btn" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 8px; transition: background 0.3s; border: 1px solid transparent;">
-          <div style="text-align: right; line-height: 1.2;">
-            <span id="active-user-name" class="user-name" style="display: block; font-weight: 600; font-size: 0.92rem; color: var(--text-color);">Guru</span>
-            <span id="active-user-role" style="font-size: 0.75rem; color: var(--text-muted);">Role</span>
-          </div>
-          <img id="active-user-avatar" src="tut_wuri.svg" alt="Avatar" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
-        </div>
       </div>
     </header>
 
     <div class="layout-container">
-      <aside class="sidebar">
-        <!-- Brand Sidebar -->
-        <div class="sidebar-brand-box">
-          <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="sidebar-brand-logo">
-          <div class="sidebar-brand-text">
-            <span class="sidebar-title">PKBM Aura Anugerah</span>
-            <span class="sidebar-subtitle">Sistem Terpadu & PPDB</span>
+      <aside>
+        <!-- Brand Sidebar Persis Rostering Teknik -->
+        <div class="brand" style="display: flex; align-items: center; gap: 12px;">
+          <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" style="width: 42px; height: 42px; border-radius: 10px; object-fit: contain; flex-shrink: 0; background: var(--surface-2); padding: 4px;">
+          <div style="display: flex; flex-direction: column; justify-content: center;">
+            <span style="font-weight: 600; font-size: 16px; line-height: 1.2; color: var(--text-color);">PKBM Aura</span>
+            <span style="font-weight: 400; color: var(--text-muted); font-size: 11px; line-height: 1.2; margin-top: 2px;">Sistem Terpadu PPDB</span>
           </div>
         </div>
 
@@ -537,23 +533,18 @@
           </ul>
         </div>
 
-        <!-- Box Profil & Action Bawah (.who) ala Rostering Teknik -->
-        <div class="who">
-          <div class="who-info">
-            <span class="who-sub">Masuk sebagai</span>
-            <button class="who-name-btn" onclick="showUserProfileModal()" id="btn-who-profile" title="Klik untuk edit profil">
-              <span id="who-user-name">Pengguna</span>
-              <span id="who-user-role" class="who-role-badge">Role</span>
-            </button>
-          </div>
-          <div class="who-actions">
-            <button class="who-btn who-theme-btn" id="who-toggle-theme" onclick="toggleTheme()" title="Ganti Tema (Dark / Light)">
+        <!-- Box Profil Bawah (.who) Persis Rostering Teknik -->
+        <div class="who">Masuk sebagai
+          <button class="btn" style="width: 100%; justify-content: space-between; margin-top: 4px; background: var(--surface-2); border-color: var(--border-color); text-align: left;" onclick="showUserProfileModal()" id="btn-who-profile" title="Klik untuk lihat profil">
+            <span id="who-user-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 500;">Pengguna</span>
+            <span id="who-user-role" class="who-role-badge" style="font-size: 11px; margin-left: 4px;">Role</span>
+          </button>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button onclick="toggleTheme()" class="btn btn-icon" aria-label="Ganti Tema" title="Ganti Tema">
               <i data-lucide="moon" id="icon-theme-sidebar" style="width: 16px; height: 16px;"></i>
-              <span id="theme-text-sidebar">Mode Gelap</span>
             </button>
-            <button class="who-btn who-logout-btn" id="btn-sidebar-logout" onclick="handleLogout()" title="Keluar dari Aplikasi">
-              <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
-              <span>Keluar</span>
+            <button onclick="handleLogout()" class="btn" style="flex: 1; background: var(--danger-color); border-color: var(--danger-color); color: #fff; justify-content: center; font-weight: 600;" title="Keluar">
+              <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>Logout
             </button>
           </div>
         </div>
@@ -949,44 +940,49 @@
           </div>
         </div>
 
-        <!-- ==================== SECTION: DAFTAR SISWA ==================== -->
-        <div id="section-list" class="content-section hidden card-panel">
-          <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <h3 style="margin: 0;">Daftar Peserta Didik</h3>
-              <button class="btn btn-primary" onclick="resetAndOpenRegisterForm()" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 0 14px; height: 36px;">
-                <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                <span>Tambah Siswa Baru</span>
-              </button>
-              <button id="btn-batch-ai" class="btn" onclick="runBatchAICheck()" style="background: var(--surface-2); border: 1px solid var(--border-color); color: var(--text-color); display: inline-flex; align-items: center; gap: 6px; font-weight: 500; height: 36px;">
-                <i data-lucide="wand-2" style="width: 15px; height: 15px; color: #0284c7;"></i>
-                <span>Periksa AI (Terpilih)</span>
-              </button>
+        <!-- ==================== SECTION: DAFTAR SISWA (PERSIS ROSTERING TEKNIK) ==================== -->
+        <div id="section-list" class="content-section hidden">
+          <h1>Daftar Peserta Didik</h1>
+          <p class="sub">Data calon dan peserta didik aktif PKBM Aura Anugerah</p>
+
+          <div class="bar">
+            <!-- Search bar persis Rostering Teknik -->
+            <div style="position: relative; width: 260px;">
+              <i data-lucide="search" style="position: absolute; left: 10px; top: 10px; width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;"></i>
+              <input type="text" id="search-siswa" placeholder="Cari peserta didik / NIK..." style="width: 100%; padding-left: 32px;" oninput="filterSiswaTable()">
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="btn" onclick="exportDataToExcel()" style="display: inline-flex; align-items: center; gap: 6px; background: #ffffff; border: 1px solid var(--border-color); color: #0f172a; font-weight: 500;">
-                <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px; color: #059669;"></i>
-                <span>Excel</span>
-              </button>
-              <button class="btn btn-primary" onclick="exportDataToPDF()" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 500;">
-                <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
-                <span>PDF</span>
-              </button>
-              <label class="btn" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center; gap: 6px; background: #ffffff; border: 1px solid var(--border-color); color: #0f172a; font-weight: 500;">
-                <i data-lucide="upload" style="width: 16px; height: 16px; color: #0284c7;"></i>
-                <span>Import</span>
+
+            <!-- Filter Program -->
+            <select id="filter-program-siswa" class="btn" onchange="filterSiswaTable()" style="max-width: 180px;">
+              <option value="">Semua Program</option>
+              <option value="Paket A">Paket A (SD)</option>
+              <option value="Paket B">Paket B (SMP)</option>
+              <option value="Paket C">Paket C (SMA)</option>
+            </select>
+
+            <select id="filter-status-siswa" class="btn" onchange="filterSiswaTable()" style="max-width: 180px;">
+              <option value="">Semua Status</option>
+              <option value="Aktif">Aktif</option>
+              <option value="Tidak Aktif">Tidak Aktif</option>
+            </select>
+
+            <span class="sp"></span>
+
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <button class="btn btn-icon" onclick="loadAllSiswa()" title="Refresh Data"><i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i></button>
+              <button id="btn-batch-ai" class="btn" onclick="runBatchAICheck()" title="Periksa AI pada siswa yang dicentang"><i data-lucide="wand-2" style="width: 16px; height: 16px; color: var(--accent);"></i>Periksa AI</button>
+              <button class="btn" onclick="exportDataToExcel()" title="Export Data ke Excel"><i data-lucide="file-spreadsheet" style="width: 16px; height: 16px;"></i>Excel</button>
+              <button class="btn" onclick="exportDataToPDF()" title="Export Data ke PDF"><i data-lucide="file-text" style="width: 16px; height: 16px;"></i>PDF</button>
+              <label class="btn" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <i data-lucide="upload" style="width: 16px; height: 16px;"></i>Upload Data
                 <input type="file" id="import-data-file" accept=".csv, .xlsx, .xls" style="display: none;" onchange="importDataFromFile(event)">
               </label>
-              <button class="btn btn-icon" onclick="loadAllSiswa()" title="Refresh Data" style="background: #ffffff; border: 1px solid var(--border-color); color: #0f172a;">
-                <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
-              </button>
+              <button class="btn p" onclick="resetAndOpenRegisterForm()"><i data-lucide="plus" style="width: 16px; height: 16px;"></i>Tambah Siswa Baru</button>
             </div>
           </div>
-          <div style="margin-bottom: 15px; position: relative;">
-            <i data-lucide="search" style="position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; color: #94a3b8;"></i>
-            <input type="text" id="search-siswa" placeholder="Cari nama, NIK, NISN, atau program..." style="width: 100%; padding: 10px 10px 10px 38px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-size: 0.92rem; background: #ffffff;" oninput="filterSiswaTable()">
-          </div>
-          <div class="table-container">
+
+          <!-- Wrap Table persis Rostering Teknik -->
+          <div class="wrap">
             <table class="data-table">
               <thead>
                 <tr>
@@ -999,13 +995,18 @@
                   <th>Pemeriksaan AI</th>
                   <th>Petugas</th>
                   <th>Status</th>
-                  <th style="text-align: center;">Aksi</th>
+                  <th style="text-align: right;">Aksi</th>
                 </tr>
               </thead>
               <tbody id="table-siswa-body">
-                <tr><td colspan="8" style="text-align: center;">Memuat data...</td></tr>
+                <tr><td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">Memuat data peserta didik...</td></tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Bar persis Rostering Teknik -->
+          <div class="pagination-bar" id="siswa-pagination-bar" style="display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 16px;">
+            <span style="font-size: 13px; color: var(--text-muted);" id="pagination-info">Menampilkan data</span>
           </div>
         </div>
 
@@ -1236,25 +1237,33 @@
           </div>
         </div>
 
-        <!-- ==================== SECTION: ABSENSI & KEHADIRAN (ALA MYAURA) ==================== -->
-        <div id="section-absensi" class="content-section card-panel hidden">
-          <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
-            <div>
-              <h2 style="color: var(--primary-color); margin-bottom: 4px;">📅 Absensi & Kehadiran Belajar</h2>
-              <p style="color: var(--text-muted); font-size: 0.9rem;">Pencatatan dan rekap kehadiran tutor dan peserta didik PKBM.</p>
+        <!-- ==================== SECTION: ABSENSI & KEHADIRAN (PERSIS ROSTERING TEKNIK) ==================== -->
+        <div id="section-absensi" class="content-section hidden">
+          <h1>Absensi & Kehadiran Belajar</h1>
+          <p class="sub">Pencatatan dan rekap kehadiran tutor dan peserta didik PKBM</p>
+
+          <div class="bar">
+            <div style="position: relative; width: 260px;">
+              <i data-lucide="search" style="position: absolute; left: 10px; top: 10px; width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;"></i>
+              <input type="text" placeholder="Cari nama tutor/siswa..." style="width: 100%; padding-left: 32px;">
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-primary" onclick="catatAbsensiCepat()" style="display: inline-flex; align-items: center; gap: 6px;">
-                ✍️ Catat Absen Hari Ini
-              </button>
+            <select class="btn" style="max-width: 180px;">
+              <option value="">Semua Program</option>
+              <option value="Paket A">Paket A</option>
+              <option value="Paket B">Paket B</option>
+              <option value="Paket C">Paket C</option>
+            </select>
+            <span class="sp"></span>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <button class="btn p" onclick="catatAbsensiCepat()"><i data-lucide="plus" style="width: 16px; height: 16px;"></i>Catat Absen Hari Ini</button>
             </div>
           </div>
 
-          <div class="table-container">
+          <div class="wrap">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>No</th>
+                  <th style="width: 40px;">No</th>
                   <th>Tanggal</th>
                   <th>Nama Peserta Didik / Tutor</th>
                   <th>Program / Kelas</th>
@@ -1264,31 +1273,39 @@
                 </tr>
               </thead>
               <tbody id="table-absensi-body">
-                <tr><td colspan="7" style="text-align: center; color: #64748b; padding: 2rem;">Belum ada data absensi untuk hari ini. Klik "Catat Absen Hari Ini" untuk mengisi.</td></tr>
+                <tr><td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">Belum ada data absensi untuk hari ini. Klik "Catat Absen Hari Ini" untuk mengisi.</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- ==================== SECTION: SPP & TABUNGAN (ALA MYAURA) ==================== -->
-        <div id="section-bayar" class="content-section card-panel hidden">
-          <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
-            <div>
-              <h2 style="color: var(--primary-color); margin-bottom: 4px;">💰 Manajemen SPP & Tabungan Siswa</h2>
-              <p style="color: var(--text-muted); font-size: 0.9rem;">Pencatatan iuran SPP, kas modul, dan mutasi tabungan peserta didik.</p>
+        <!-- ==================== SECTION: SPP & TABUNGAN (PERSIS ROSTERING TEKNIK) ==================== -->
+        <div id="section-bayar" class="content-section hidden">
+          <h1>Manajemen SPP & Tabungan Siswa</h1>
+          <p class="sub">Pencatatan iuran SPP, kas modul, dan mutasi tabungan peserta didik</p>
+
+          <div class="bar">
+            <div style="position: relative; width: 260px;">
+              <i data-lucide="search" style="position: absolute; left: 10px; top: 10px; width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;"></i>
+              <input type="text" placeholder="Cari data transaksi siswa..." style="width: 100%; padding-left: 32px;">
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-success" onclick="catatTransaksiBaru()" style="display: inline-flex; align-items: center; gap: 6px; background: #059669;">
-                ➕ Catat Pembayaran / Tabungan
-              </button>
+            <select class="btn" style="max-width: 180px;">
+              <option value="">Semua Transaksi</option>
+              <option value="SPP">SPP Bulanan</option>
+              <option value="Modul">Biaya Modul</option>
+              <option value="Tabungan">Tabungan</option>
+            </select>
+            <span class="sp"></span>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <button class="btn p" onclick="catatTransaksiBaru()"><i data-lucide="plus" style="width: 16px; height: 16px;"></i>Catat Transaksi</button>
             </div>
           </div>
 
-          <div class="table-container">
+          <div class="wrap">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>No</th>
+                  <th style="width: 40px;">No</th>
                   <th>Tanggal Transaksi</th>
                   <th>Nama Siswa</th>
                   <th>Program</th>
@@ -1299,7 +1316,7 @@
                 </tr>
               </thead>
               <tbody id="table-bayar-body">
-                <tr><td colspan="8" style="text-align: center; color: #64748b; padding: 2rem;">Belum ada riwayat transaksi pembayaran atau tabungan.</td></tr>
+                <tr><td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">Belum ada riwayat transaksi pembayaran atau tabungan.</td></tr>
               </tbody>
             </table>
           </div>
