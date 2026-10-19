@@ -270,7 +270,80 @@ function updateThemeIcons(theme) {
   }
 }
 
-// ======================= INITIALIZATION =======================
+// ======================= MOBILE NAVIGATION TABS (PERSIS ROSTERING TEKNIK) =======================
+function switchMobileTab(targetId, btnEl) {
+  // Sembunyikan semua section
+  contentSections.forEach(sec => sec.classList.add('hidden'));
+  const targetEl = document.getElementById(targetId);
+  if (targetEl) targetEl.classList.remove('hidden');
+
+  // Update status aktif pada desktop sidebar li
+  document.querySelectorAll('#main-menu li').forEach(li => {
+    if (li.getAttribute('data-target') === targetId) {
+      li.classList.add('active');
+    } else {
+      li.classList.remove('active');
+    }
+  });
+
+  // Update status aktif pada mobile bottom tabs
+  document.querySelectorAll('.mobile-tab-btn').forEach(btn => btn.classList.remove('on'));
+  if (btnEl) {
+    btnEl.classList.add('on');
+  } else {
+    const matchingBtn = document.querySelector(`.mobile-tab-btn[data-target="${targetId}"]`);
+    if (matchingBtn) matchingBtn.classList.add('on');
+  }
+
+  try { localStorage.setItem('ppdb_last_section', targetId); } catch (e) {}
+
+  if (targetId === 'section-dashboard') loadDashboardData();
+  if (targetId === 'section-validasi') fetchSiswaData(true);
+  if (targetId === 'section-list') loadAllSiswa();
+  if (targetId === 'section-users') loadAllUsers();
+  if (targetId === 'section-api-keys') loadApiKeys();
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    setTimeout(window.lucide.createIcons, 50);
+  }
+}
+
+function toggleMobileMoreMenu(forceState) {
+  const sheet = document.getElementById('mobile-more-sheet');
+  if (!sheet) return;
+
+  const isHidden = sheet.classList.contains('hidden');
+  const shouldOpen = typeof forceState === 'boolean' ? forceState : isHidden;
+
+  if (shouldOpen) {
+    sheet.classList.remove('hidden');
+    const usernameEl = document.getElementById('mobile-sheet-username');
+    if (usernameEl && currentUser) {
+      usernameEl.textContent = `${currentUser.nama} (${currentUser.role})`;
+    }
+    const btnUsers = document.getElementById('mobile-sheet-btn-users');
+    const btnApi = document.getElementById('mobile-sheet-btn-api');
+    if (btnUsers) {
+      if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
+        btnUsers.classList.remove('hidden');
+      } else {
+        btnUsers.classList.add('hidden');
+      }
+    }
+    if (btnApi) {
+      if (currentUser && currentUser.role === 'Super Admin') {
+        btnApi.classList.remove('hidden');
+      } else {
+        btnApi.classList.add('hidden');
+      }
+    }
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  } else {
+    sheet.classList.add('hidden');
+  }
+}
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   setupEventListeners();
@@ -747,8 +820,8 @@ function handleLogout() {
     text: "Apakah Anda yakin ingin keluar dari aplikasi?",
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
+    confirmButtonColor: 'var(--danger-color)',
+    cancelButtonColor: '#64748b',
     confirmButtonText: 'Ya, Logout',
     cancelButtonText: 'Batal'
   }).then((result) => {
@@ -759,9 +832,21 @@ function handleLogout() {
       localStorage.removeItem('ppdb_last_section');
       siswaDataList = [];
       currentUser = null;
-      pageLanding.classList.remove('hidden');
+
+      // Sembunyikan halaman dashboard
       pageDashboard.classList.add('hidden');
-      if(modalLogin) modalLogin.classList.add('hidden');
+      pageLanding.classList.remove('hidden');
+
+      // Arahkan URL ke /portal-pkbm jika belum
+      if (window.location.pathname !== '/portal-pkbm') {
+        window.history.pushState({}, '', '/portal-pkbm');
+      }
+
+      // Otomatis buka form login
+      if (modalLogin) {
+        modalLogin.classList.remove('hidden');
+        setTimeout(generateCaptchaLogin, 60);
+      }
     }
   });
 }
@@ -770,7 +855,7 @@ function showDashboard() {
   pageLanding.classList.add('hidden');
   if(modalLogin) modalLogin.classList.add('hidden');
   pageDashboard.classList.remove('hidden');
-  activeUserName.textContent = currentUser.nama;
+  if (activeUserName) activeUserName.textContent = currentUser.nama;
   if (activeUserRole) activeUserRole.textContent = currentUser.role;
   if (activeUserAvatar) activeUserAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=0284c7&color=fff`;
 
@@ -822,15 +907,42 @@ function showDashboard() {
   if (menuPortalSiswa) menuPortalSiswa.classList.add('hidden');
   if (menuPengumumanSiswa) menuPengumumanSiswa.classList.add('hidden');
 
-  if (currentUser.role === 'Super Admin') {
-    menuUsers.classList.remove('hidden');
-    if (menuApiKeys) menuApiKeys.classList.remove('hidden');
-  } else if (currentUser.role === 'Admin') {
-    menuUsers.classList.remove('hidden');
-    if (menuApiKeys) menuApiKeys.classList.add('hidden');
+  const mobileTabDashboard = document.querySelector('.mobile-tab-btn[data-target="section-dashboard"]');
+  const mobileTabList = document.querySelector('.mobile-tab-btn[data-target="section-list"]');
+  const mobileTabAiReg = document.querySelector('.mobile-tab-btn[data-target="section-ai-reg"]');
+  const mobileSheetValidasi = document.querySelector('button[onclick*="section-validasi"]');
+  const mobileSheetUsers = document.getElementById('mobile-sheet-btn-users');
+  const mobileSheetApi = document.getElementById('mobile-sheet-btn-api');
+
+  if (currentUser.role === 'Siswa') {
+    if (mobileTabDashboard) mobileTabDashboard.style.display = 'none';
+    if (mobileTabList) mobileTabList.style.display = 'none';
+    if (mobileTabAiReg) mobileTabAiReg.style.display = 'none';
+    if (mobileSheetValidasi) mobileSheetValidasi.style.display = 'none';
+    if (mobileSheetUsers) mobileSheetUsers.style.display = 'none';
+    if (mobileSheetApi) mobileSheetApi.style.display = 'none';
   } else {
-    menuUsers.classList.add('hidden');
-    if (menuApiKeys) menuApiKeys.classList.add('hidden');
+    if (mobileTabDashboard) mobileTabDashboard.style.display = '';
+    if (mobileTabList) mobileTabList.style.display = '';
+    if (mobileTabAiReg) mobileTabAiReg.style.display = '';
+    if (mobileSheetValidasi) mobileSheetValidasi.style.display = '';
+    
+    if (currentUser.role === 'Super Admin') {
+      menuUsers.classList.remove('hidden');
+      if (menuApiKeys) menuApiKeys.classList.remove('hidden');
+      if (mobileSheetUsers) mobileSheetUsers.style.display = '';
+      if (mobileSheetApi) mobileSheetApi.style.display = '';
+    } else if (currentUser.role === 'Admin') {
+      menuUsers.classList.remove('hidden');
+      if (menuApiKeys) menuApiKeys.classList.add('hidden');
+      if (mobileSheetUsers) mobileSheetUsers.style.display = '';
+      if (mobileSheetApi) mobileSheetApi.style.display = 'none';
+    } else {
+      menuUsers.classList.add('hidden');
+      if (menuApiKeys) menuApiKeys.classList.add('hidden');
+      if (mobileSheetUsers) mobileSheetUsers.style.display = 'none';
+      if (mobileSheetApi) mobileSheetApi.style.display = 'none';
+    }
   }
 
   // Muat data dari cache lokal secara instan (0 detik)
@@ -2433,8 +2545,10 @@ function showUserProfileModal() {
         currentUser.nama = newNama;
         localStorage.setItem('ppdb_session', JSON.stringify(currentUser));
         // Update UI
-        activeUserName.textContent = currentUser.nama;
-        activeUserAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=0284c7&color=fff`;
+        if (activeUserName) activeUserName.textContent = currentUser.nama;
+        if (activeUserAvatar) activeUserAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=0284c7&color=fff`;
+        const whoNameEl = document.getElementById('who-user-name');
+        if (whoNameEl) whoNameEl.textContent = currentUser.nama;
         hideLoader();
         return true;
       } catch (err) {

@@ -403,7 +403,7 @@
       <button id="btn-close-login" class="btn-close-modal">&times;</button>
       <div style="text-align:center; margin-bottom: 2rem;">
         <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM Aura Anugerah" class="school-logo-large">
-        <h2 style="color: var(--primary-color); margin-top: 1rem;">SIS PPDB Terpadu</h2>
+        <h2 style="color: var(--text-color); margin-top: 1rem;">SIS PPDB Terpadu</h2>
         <p style="color: var(--text-muted); font-size: 0.9rem;">PKBM Aura Anugerah · Sentani Jayapura</p>
       </div>
       <form id="form-login" onsubmit="event.preventDefault();">
@@ -1255,6 +1255,64 @@
         </div>
 
       </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation Bar (Persis Rostering Teknik) -->
+    <nav class="tabs" id="mobile-bottom-tabs">
+      <button class="mobile-tab-btn on" data-target="section-dashboard" onclick="switchMobileTab('section-dashboard', this)">
+        <i data-lucide="layout-dashboard" style="width: 20px; height: 20px;"></i>
+        <span>Dashboard</span>
+      </button>
+      <button class="mobile-tab-btn" data-target="section-list" onclick="switchMobileTab('section-list', this)">
+        <i data-lucide="clipboard-list" style="width: 20px; height: 20px;"></i>
+        <span>Peserta Didik</span>
+      </button>
+      <button class="mobile-tab-btn" data-target="section-absensi" onclick="switchMobileTab('section-absensi', this)">
+        <i data-lucide="calendar-days" style="width: 20px; height: 20px;"></i>
+        <span>Absensi</span>
+      </button>
+      <button class="mobile-tab-btn" data-target="section-ai-reg" onclick="switchMobileTab('section-ai-reg', this)">
+        <i data-lucide="wand-2" style="width: 20px; height: 20px;"></i>
+        <span>AI Reg</span>
+      </button>
+      <button class="mobile-tab-btn" onclick="toggleMobileMoreMenu()">
+        <i data-lucide="more-horizontal" style="width: 20px; height: 20px;"></i>
+        <span>Lainnya</span>
+      </button>
+    </nav>
+
+    <!-- Mobile More Menu Bottom Sheet -->
+    <div id="mobile-more-sheet" class="mobile-sheet-backdrop hidden" onclick="toggleMobileMoreMenu(false)">
+      <div class="mobile-sheet-content" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="font-weight: 700; font-size: 14px; color: var(--text-color);" id="mobile-sheet-username">Pengguna</div>
+          </div>
+          <button class="btn btn-icon" onclick="toggleMobileMoreMenu(false)" style="background: transparent; border: none; font-size: 18px; color: var(--text-muted);">&times;</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-bayar'); toggleMobileMoreMenu(false);">
+            <i data-lucide="wallet" style="width: 18px; height: 18px;"></i> SPP & Tabungan
+          </button>
+          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-validasi'); toggleMobileMoreMenu(false);">
+            <i data-lucide="check-circle-2" style="width: 18px; height: 18px;"></i> Antrean Validasi AI
+          </button>
+          <button class="btn" id="mobile-sheet-btn-users" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-users'); toggleMobileMoreMenu(false);">
+            <i data-lucide="settings" style="width: 18px; height: 18px;"></i> Kelola Pengguna
+          </button>
+          <button class="btn" id="mobile-sheet-btn-api" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-api-keys'); toggleMobileMoreMenu(false);">
+            <i data-lucide="key" style="width: 18px; height: 18px;"></i> Kelola API Gemini
+          </button>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button class="btn" style="flex: 1;" onclick="toggleTheme();">
+              <i data-lucide="moon" style="width: 16px; height: 16px;"></i> Tema
+            </button>
+            <button class="btn" style="flex: 1; background: var(--danger-color); color: #fff; border-color: var(--danger-color);" onclick="toggleMobileMoreMenu(false); handleLogout();">
+              <i data-lucide="log-out" style="width: 16px; height: 16px;"></i> Logout
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Side Drawer Detail Siswa -->
