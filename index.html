@@ -458,12 +458,23 @@
     </header>
 
     <div class="layout-container">
+      <aside class="sidebar">
         <ul id="main-menu" class="siswa-list">
+          <!-- Menu Petugas / Admin / Guru -->
           <li class="active" data-target="section-dashboard" id="menu-dashboard">🏠 Beranda Dashboard</li>
           <li data-target="section-input" id="menu-input">📝 Pendaftaran Baru</li>
-          <li data-target="section-ai-reg" id="menu-ai-reg" style="background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%); color: #0284c7; font-weight: 600; border-left: 3px solid #0284c7;">🤖 Pendaftaran Cepat AI</li>
-          <li data-target="section-validasi">✅ Antrean Validasi AI</li>
-          <li data-target="section-list">📋 Daftar Peserta Didik</li>
+          <li data-target="section-ai-reg" id="menu-ai-reg" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); color: #047857; font-weight: 600; border-left: 3px solid #059669;">🤖 Pendaftaran Cepat AI</li>
+          <li data-target="section-validasi" id="menu-validasi">✅ Antrean Validasi AI</li>
+          <li data-target="section-list" id="menu-list">📋 Daftar Peserta Didik</li>
+
+          <!-- Menu Akademik Terpadu (ala MyAura) -->
+          <li data-target="section-absensi" id="menu-absensi">📅 Absensi & Kehadiran</li>
+          <li data-target="section-bayar" id="menu-bayar">💰 SPP & Tabungan</li>
+
+          <!-- Menu Khusus Siswa (Tampil jika login sebagai Siswa) -->
+          <li data-target="section-portal-siswa" id="menu-portal-siswa" class="hidden" style="background: #ecfdf5; color: #047857; font-weight: 600;">🎓 Profil & Status Saya</li>
+          <li data-target="section-pengumuman-siswa" id="menu-pengumuman-siswa" class="hidden">📢 Pengumuman & Jadwal</li>
+
           <li data-target="section-users" id="menu-users" class="hidden">⚙️ Kelola Pengguna</li>
           <li data-target="section-api-keys" id="menu-api-keys" class="hidden" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; font-weight: 700; border-left: 3px solid #d97706;">🔑 Kelola API Gemini (Super)</li>
           <li id="menu-logout" style="margin-top: 1.5rem; color: #dc2626; border-top: 1px solid #eee; padding-top: 15px;">🚪 Keluar</li>
@@ -1042,6 +1053,164 @@
               </thead>
               <tbody id="table-api-keys-body">
                 <tr><td colspan="8" style="text-align:center;">Memuat data kunci API...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: PORTAL SISWA (KHUSUS PESERTA DIDIK) ==================== -->
+        <div id="section-portal-siswa" class="content-section card-panel hidden">
+          <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h2 style="color: var(--primary-color); margin-bottom: 4px;">🎓 Portal Peserta Didik</h2>
+              <p style="color: var(--text-muted); font-size: 0.9rem;">Selamat datang di portal akademik PKBM Aura Anugerah.</p>
+            </div>
+            <button class="btn btn-outline" onclick="cetakKartuPendaftaranSiswa()" style="display: inline-flex; align-items: center; gap: 6px;">
+              🖨️ Cetak Kartu Siswa
+            </button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <!-- Kartu Status Berkas -->
+            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid var(--primary-color);">
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Status Verifikasi Berkas</div>
+              <div id="siswa-portal-status-badge" style="margin-top: 10px; font-size: 1.15rem; font-weight: 700; color: #059669;">
+                ✅ Terverifikasi & Diterima
+              </div>
+              <p id="siswa-portal-catatan" style="margin-top: 8px; font-size: 0.85rem; color: #475569;">
+                Semua dokumen pendaftaran telah sesuai dengan arsip kependudukan.
+              </p>
+            </div>
+
+            <!-- Kartu Jenjang Paket -->
+            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid #0284c7;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Program Pendidikan</div>
+              <div id="siswa-portal-program" style="margin-top: 10px; font-size: 1.25rem; font-weight: 700; color: #0284c7;">
+                Paket C (Setara SMA)
+              </div>
+              <div style="margin-top: 6px; font-size: 0.85rem; color: #64748b;">
+                Tahun Ajaran 2026/2027 · Sentani Jayapura
+              </div>
+            </div>
+
+            <!-- Kartu Administrasi -->
+            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid #10b981;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Status Administrasi / SPP</div>
+              <div id="siswa-portal-spp-badge" style="margin-top: 10px; font-size: 1.15rem; font-weight: 700; color: #10b981;">
+                Lunas Bulan Ini
+              </div>
+              <div style="margin-top: 6px; font-size: 0.85rem; color: #64748b;">
+                Tidak ada tunggakan iuran
+              </div>
+            </div>
+          </div>
+
+          <!-- Rincian Biodata Terdaftar -->
+          <div style="background: #f8fafc; border-radius: 12px; padding: 1.5rem; border: 1px solid #e2e8f0;">
+            <h3 style="font-size: 1.05rem; margin-bottom: 1rem; color: #1e293b;">📋 Informasi Biodata Terdaftar</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; font-size: 0.9rem;">
+              <div><strong>Nama Lengkap:</strong> <span id="siswa-portal-nama">-</span></div>
+              <div><strong>NIK:</strong> <span id="siswa-portal-nik">-</span></div>
+              <div><strong>NISN:</strong> <span id="siswa-portal-nisn">-</span></div>
+              <div><strong>Tempat, Tgl Lahir:</strong> <span id="siswa-portal-ttl">-</span></div>
+              <div><strong>Nama Ibu Kandung:</strong> <span id="siswa-portal-ibu">-</span></div>
+              <div><strong>Alamat Domisili:</strong> <span id="siswa-portal-alamat">-</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: PENGUMUMAN SISWA ==================== -->
+        <div id="section-pengumuman-siswa" class="content-section card-panel hidden">
+          <h2 style="color: var(--primary-color); margin-bottom: 0.5rem;">📢 Papan Pengumuman & Jadwal Belajar</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Informasi kegiatan akademik, ujian modul kesetaraan, dan jadwal tutorial tatap muka.</p>
+
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div style="background: #ffffff; border-left: 4px solid var(--primary-color); border-radius: 8px; padding: 1.25rem; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0; border-left-width: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <h3 style="font-size: 1rem; margin: 0; color: #0f172a;">Jadwal Pembelajaran Modul & Ujian Semester</h3>
+                <span style="font-size: 0.78rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Terbaru</span>
+              </div>
+              <p style="color: #475569; font-size: 0.88rem; line-height: 1.5; margin: 0;">
+                Diberitahukan kepada seluruh peserta didik Paket A, B, dan C bahwa jadwal pembelajaran modul tatap muka dan daring serta pengumpulan tugas portofolio dapat diakses melalui sekretariat PKBM Aura Anugerah.
+              </p>
+            </div>
+
+            <div style="background: #ffffff; border-left: 4px solid #0284c7; border-radius: 8px; padding: 1.25rem; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0; border-left-width: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <h3 style="font-size: 1rem; margin: 0; color: #0f172a;">Verifikasi Berkas Kependudukan & NISN</h3>
+                <span style="font-size: 0.78rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Penting</span>
+              </div>
+              <p style="color: #475569; font-size: 0.88rem; line-height: 1.5; margin: 0;">
+                Bagi calon peserta didik yang berkasnya masih berstatus "Perlu Cek" atau terdapat ketidaksesuaian data antara Ijazah dan Kartu Keluarga, dimohon untuk berkoordinasi dengan petugas admin.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: ABSENSI & KEHADIRAN (ALA MYAURA) ==================== -->
+        <div id="section-absensi" class="content-section card-panel hidden">
+          <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h2 style="color: var(--primary-color); margin-bottom: 4px;">📅 Absensi & Kehadiran Belajar</h2>
+              <p style="color: var(--text-muted); font-size: 0.9rem;">Pencatatan dan rekap kehadiran tutor dan peserta didik PKBM.</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary" onclick="catatAbsensiCepat()" style="display: inline-flex; align-items: center; gap: 6px;">
+                ✍️ Catat Absen Hari Ini
+              </button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Tanggal</th>
+                  <th>Nama Peserta Didik / Tutor</th>
+                  <th>Program / Kelas</th>
+                  <th>Waktu Hadir</th>
+                  <th>Status Kehadiran</th>
+                  <th>Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="table-absensi-body">
+                <tr><td colspan="7" style="text-align: center; color: #64748b; padding: 2rem;">Belum ada data absensi untuk hari ini. Klik "Catat Absen Hari Ini" untuk mengisi.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: SPP & TABUNGAN (ALA MYAURA) ==================== -->
+        <div id="section-bayar" class="content-section card-panel hidden">
+          <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h2 style="color: var(--primary-color); margin-bottom: 4px;">💰 Manajemen SPP & Tabungan Siswa</h2>
+              <p style="color: var(--text-muted); font-size: 0.9rem;">Pencatatan iuran SPP, kas modul, dan mutasi tabungan peserta didik.</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-success" onclick="catatTransaksiBaru()" style="display: inline-flex; align-items: center; gap: 6px; background: #059669;">
+                ➕ Catat Pembayaran / Tabungan
+              </button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Tanggal Transaksi</th>
+                  <th>Nama Siswa</th>
+                  <th>Program</th>
+                  <th>Jenis Transaksi</th>
+                  <th>Nominal (Rp)</th>
+                  <th>Metode Bayar</th>
+                  <th>Penerima</th>
+                </tr>
+              </thead>
+              <tbody id="table-bayar-body">
+                <tr><td colspan="8" style="text-align: center; color: #64748b; padding: 2rem;">Belum ada riwayat transaksi pembayaran atau tabungan.</td></tr>
               </tbody>
             </table>
           </div>

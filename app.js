@@ -729,6 +729,48 @@ function showDashboard() {
   if (activeUserAvatar) activeUserAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=0284c7&color=fff`;
 
   const menuApiKeys = document.getElementById('menu-api-keys');
+  const menuInput = document.getElementById('menu-input');
+  const menuAiReg = document.getElementById('menu-ai-reg');
+  const menuValidasi = document.getElementById('menu-validasi');
+  const menuList = document.getElementById('menu-list');
+  const menuAbsensi = document.getElementById('menu-absensi');
+  const menuBayar = document.getElementById('menu-bayar');
+  const menuPortalSiswa = document.getElementById('menu-portal-siswa');
+  const menuPengumumanSiswa = document.getElementById('menu-pengumuman-siswa');
+
+  if (currentUser.role === 'Siswa') {
+    // Pengguna adalah Peserta Didik
+    // Sembunyikan menu manajemen petugas
+    menuDashboard.classList.add('hidden');
+    if (menuInput) menuInput.classList.add('hidden');
+    if (menuAiReg) menuAiReg.classList.add('hidden');
+    if (menuValidasi) menuValidasi.classList.add('hidden');
+    if (menuList) menuList.classList.add('hidden');
+    if (menuUsers) menuUsers.classList.add('hidden');
+    if (menuApiKeys) menuApiKeys.classList.add('hidden');
+    if (menuAbsensi) menuAbsensi.classList.remove('hidden');
+    if (menuBayar) menuBayar.classList.remove('hidden');
+
+    // Tampilkan menu khusus siswa
+    if (menuPortalSiswa) menuPortalSiswa.classList.remove('hidden');
+    if (menuPengumumanSiswa) menuPengumumanSiswa.classList.remove('hidden');
+
+    renderPortalSiswaData(currentUser.dataSiswa);
+    if (menuPortalSiswa) menuPortalSiswa.click();
+    return;
+  }
+
+  // Jika Petugas (Admin, Guru, Super Admin):
+  menuDashboard.classList.remove('hidden');
+  if (menuInput) menuInput.classList.remove('hidden');
+  if (menuAiReg) menuAiReg.classList.remove('hidden');
+  if (menuValidasi) menuValidasi.classList.remove('hidden');
+  if (menuList) menuList.classList.remove('hidden');
+  if (menuAbsensi) menuAbsensi.classList.remove('hidden');
+  if (menuBayar) menuBayar.classList.remove('hidden');
+  if (menuPortalSiswa) menuPortalSiswa.classList.add('hidden');
+  if (menuPengumumanSiswa) menuPengumumanSiswa.classList.add('hidden');
+
   if (currentUser.role === 'Super Admin') {
     menuUsers.classList.remove('hidden');
     if (menuApiKeys) menuApiKeys.classList.remove('hidden');
@@ -746,7 +788,7 @@ function showDashboard() {
   // Buka view terakhir yang dibuka sebelum refresh/reload
   const lastSection = localStorage.getItem('ppdb_last_section') || 'section-dashboard';
   const targetMenuItem = document.querySelector(`#main-menu li[data-target="${lastSection}"]`) || document.querySelector('#main-menu li[data-target="section-dashboard"]');
-  if (targetMenuItem) {
+  if (targetMenuItem && !targetMenuItem.classList.contains('hidden')) {
     targetMenuItem.click();
   } else {
     document.querySelector('#main-menu li[data-target="section-dashboard"]').click();
@@ -3338,5 +3380,222 @@ function resetAIRegForm() {
 
   aiUploadedFiles = { kk: null, ijazah: null, foto: null };
   aiValidationResult = null;
+}
+
+// ======================= FITUR PORTAL SISWA & AKADEMIK (MYAURA) =======================
+function renderPortalSiswaData(siswa) {
+  if (!siswa) return;
+  const elNama = document.getElementById('siswa-portal-nama');
+  const elNik = document.getElementById('siswa-portal-nik');
+  const elNisn = document.getElementById('siswa-portal-nisn');
+  const elTtl = document.getElementById('siswa-portal-ttl');
+  const elIbu = document.getElementById('siswa-portal-ibu');
+  const elAlamat = document.getElementById('siswa-portal-alamat');
+  const elProgram = document.getElementById('siswa-portal-program');
+  const elStatus = document.getElementById('siswa-portal-status-badge');
+  const elCatatan = document.getElementById('siswa-portal-catatan');
+
+  if (elNama) elNama.textContent = siswa.nama || '-';
+  if (elNik) elNik.textContent = siswa.nik || '-';
+  if (elNisn) elNisn.textContent = siswa.nisn || '-';
+  if (elTtl) elTtl.textContent = `${siswa.tempatLahir ? siswa.tempatLahir + ', ' : ''}${siswa.tglLahir || '-'}`;
+  if (elIbu) elIbu.textContent = siswa.namaIbu || '-';
+  if (elAlamat) elAlamat.textContent = siswa.alamat || 'Sentani, Jayapura';
+  if (elProgram) elProgram.textContent = siswa.program || 'Paket C (Setara SMA)';
+
+  if (elStatus) {
+    const st = String(siswa.statusValidasi || '').toLowerCase();
+    if (st === 'sesuai' || st === 'cocok' || st === 'diterima' || st === 'selesai') {
+      elStatus.innerHTML = '<span style="color: #059669;">✅ Terverifikasi & Diterima</span>';
+      if (elCatatan) elCatatan.textContent = 'Semua dokumen pendaftaran telah sesuai dengan arsip kependudukan.';
+    } else if (st.includes('tidak') || st.includes('perlu')) {
+      elStatus.innerHTML = '<span style="color: #e11d48;">⚠️ Perlu Penyesuaian Dokumen</span>';
+      if (elCatatan) elCatatan.textContent = siswa.catatanAI || 'Silakan hubungi admin sekolah untuk verifikasi dokumen Ijazah / KK.';
+    } else {
+      elStatus.innerHTML = '<span style="color: #d97706;">⏳ Menunggu Verifikasi AI</span>';
+      if (elCatatan) elCatatan.textContent = 'Dokumen Anda sedang dalam antrean pemeriksaan oleh tim verifikator.';
+    }
+  }
+}
+
+function cetakKartuPendaftaranSiswa() {
+  if (!currentUser || currentUser.role !== 'Siswa') {
+    Swal.fire('Info', 'Fitur ini untuk mencetak kartu tanda bukti peserta didik.', 'info');
+    return;
+  }
+  const s = currentUser.dataSiswa || {};
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    window.print();
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+
+  // Kop Hijau Emerald ala Rostering & PKBM
+  doc.setFillColor(5, 150, 105);
+  doc.rect(0, 0, 148, 28, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('PKBM AURA ANUGERAH', 14, 12);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('KARTU TANDA PESERTA DIDIK KESETARAAN', 14, 18);
+  doc.text('Tahun Ajaran 2026/2027 · Sentani Jayapura', 14, 23);
+
+  // Body Kartu
+  doc.setTextColor(30, 41, 59);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('BIODATA PESERTA DIDIK', 14, 38);
+
+  const startY = 46;
+  const lineGap = 8;
+  const rows = [
+    ['Nama Lengkap', s.nama || '-'],
+    ['Nomor Induk Kependudukan (NIK)', s.nik || '-'],
+    ['NISN', s.nisn || '-'],
+    ['Program Belajar', s.program || 'Paket Kesetaraan'],
+    ['Tempat, Tanggal Lahir', `${s.tempatLahir ? s.tempatLahir + ', ' : ''}${s.tglLahir || '-'}`],
+    ['Nama Ibu Kandung', s.namaIbu || '-'],
+    ['Status Berkas', s.statusValidasi || 'Aktif Terdaftar']
+  ];
+
+  rows.forEach((r, idx) => {
+    doc.setFont('helvetica', 'normal');
+    doc.text(r[0], 14, startY + (idx * lineGap));
+    doc.text(':', 66, startY + (idx * lineGap));
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(r[1]), 70, startY + (idx * lineGap));
+  });
+
+  // Footer Kartu
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Simpan kartu ini sebagai bukti resmi pendaftaran & identitas belajar di PKBM Aura Anugerah.', 14, 120);
+
+  doc.save(`Kartu_Siswa_${s.nama || 'PKBM'}.pdf`);
+}
+
+function catatAbsensiCepat() {
+  Swal.fire({
+    title: 'Catat Kehadiran Belajar',
+    html: `
+      <div style="text-align: left; font-size: 0.9rem;">
+        <label style="display:block; margin-bottom: 4px; font-weight:600;">Pilih Peserta Didik / Tutor:</label>
+        <select id="swal-absen-nama" class="swal2-input" style="width: 100%; margin: 0 0 12px 0;">
+          ${siswaDataList.map(s => `<option value="${s.nama}">${s.nama} (${s.program || 'Paket'})</option>`).join('')}
+        </select>
+        <label style="display:block; margin-bottom: 4px; font-weight:600;">Status Kehadiran:</label>
+        <select id="swal-absen-status" class="swal2-input" style="width: 100%; margin: 0 0 12px 0;">
+          <option value="Hadir">Hadir Tatap Muka</option>
+          <option value="Daring">Hadir Daring (Online)</option>
+          <option value="Izin">Izin / Sakit</option>
+        </select>
+        <label style="display:block; margin-bottom: 4px; font-weight:600;">Keterangan Modul / Materi:</label>
+        <input id="swal-absen-ket" class="swal2-input" placeholder="Contoh: Modul 3 PPKn" style="width: 100%; margin: 0;">
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Simpan Kehadiran',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#059669',
+    preConfirm: () => {
+      const nama = document.getElementById('swal-absen-nama').value;
+      const status = document.getElementById('swal-absen-status').value;
+      const ket = document.getElementById('swal-absen-ket').value;
+      return { nama, status, ket };
+    }
+  }).then((res) => {
+    if (res.isConfirmed && res.value) {
+      const tbody = document.getElementById('table-absensi-body');
+      const now = new Date();
+      const tgl = now.toLocaleDateString('id-ID');
+      const waktu = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>1</td>
+        <td>${tgl}</td>
+        <td><strong>${res.value.nama}</strong></td>
+        <td>Paket Kesetaraan</td>
+        <td>${waktu} WIT</td>
+        <td><span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 6px; font-weight:600; font-size: 0.8rem;">${res.value.status}</span></td>
+        <td>${res.value.ket || 'Belajar Mandiri'}</td>
+      `;
+      if (tbody.children.length === 1 && tbody.children[0].innerText.includes('Belum ada')) {
+        tbody.innerHTML = '';
+      }
+      tbody.prepend(tr);
+      Swal.fire('Sukses', 'Data kehadiran berhasil dicatat.', 'success');
+    }
+  });
+}
+
+function catatTransaksiBaru() {
+  Swal.fire({
+    title: 'Catat SPP / Tabungan Siswa',
+    html: `
+      <div style="text-align: left; font-size: 0.9rem;">
+        <label style="display:block; margin-bottom: 4px; font-weight:600;">Nama Peserta Didik:</label>
+        <select id="swal-bayar-nama" class="swal2-input" style="width: 100%; margin: 0 0 12px 0;">
+          ${siswaDataList.map(s => `<option value="${s.nama}">${s.nama} (${s.program || 'Paket'})</option>`).join('')}
+        </select>
+        <label style="display:block; margin-bottom: 4px; font-weight:600;">Jenis Transaksi:</label>
+        <select id="swal-bayar-jenis" class="swal2-input" style="width: 100%; margin: 0 0 12px 0;">
+          <option value="SPP Bulanan">Pembayaran SPP Bulanan</option>
+          <option value="Kas Modul / Buku">Biaya Modul & Ujian</option>
+          <option value="Setor Tabungan">Setor Tabungan Siswa</option>
+          <option value="Tarik Tabungan">Tarik Tabungan Siswa</option>
+        </select>
+        <label style="display:block; margin-bottom: 4px; font-weight:600;">Nominal Pembayaran (Rp):</label>
+        <input id="swal-bayar-nominal" type="number" class="swal2-input" placeholder="Contoh: 150000" style="width: 100%; margin: 0 0 12px 0;">
+        <label style="display:block; margin-bottom: 4px; font-weight:600;">Metode Pembayaran:</label>
+        <select id="swal-bayar-metode" class="swal2-input" style="width: 100%; margin: 0;">
+          <option value="Tunai / Kasir">Tunai / Langsung di Sekolah</option>
+          <option value="Transfer Bank / QRIS">Transfer Bank / QRIS</option>
+        </select>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Simpan Pembayaran',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#059669',
+    preConfirm: () => {
+      const nama = document.getElementById('swal-bayar-nama').value;
+      const jenis = document.getElementById('swal-bayar-jenis').value;
+      const nominal = document.getElementById('swal-bayar-nominal').value;
+      const metode = document.getElementById('swal-bayar-metode').value;
+      if (!nominal) {
+        Swal.showValidationMessage('Harap isi nominal uang!');
+        return false;
+      }
+      return { nama, jenis, nominal, metode };
+    }
+  }).then((res) => {
+    if (res.isConfirmed && res.value) {
+      const tbody = document.getElementById('table-bayar-body');
+      const now = new Date();
+      const tgl = now.toLocaleDateString('id-ID');
+      const tr = document.createElement('tr');
+      const formattedUang = Number(res.value.nominal).toLocaleString('id-ID');
+      tr.innerHTML = `
+        <td>1</td>
+        <td>${tgl}</td>
+        <td><strong>${res.value.nama}</strong></td>
+        <td>Paket Kesetaraan</td>
+        <td><span style="background: #e0f2fe; color: #0284c7; padding: 3px 8px; border-radius: 6px; font-weight:600; font-size: 0.8rem;">${res.value.jenis}</span></td>
+        <td style="font-weight:700; color:#059669;">Rp ${formattedUang}</td>
+        <td>${res.value.metode}</td>
+        <td>${currentUser ? currentUser.nama : 'Admin'}</td>
+      `;
+      if (tbody.children.length === 1 && tbody.children[0].innerText.includes('Belum ada')) {
+        tbody.innerHTML = '';
+      }
+      tbody.prepend(tr);
+      Swal.fire('Sukses', 'Transaksi berhasil disimpan dan dicatat ke pembukuan.', 'success');
+    }
+  });
 }
 

@@ -11,21 +11,83 @@ function getDB(sheetName) {
 
 // =================== USER MANAGEMENT ===================
 function doLogin(username, password) {
+  const cleanUser = String(username || '').trim();
+  const cleanPass = String(password || '').trim();
+
   // Akses Super Admin Rahasia (Hardcoded & Aman, tidak muncul di daftar pengguna)
-  if (username === "super" && password === "ciko1234") {
+  if (cleanUser === "super" && cleanPass === "ciko1234") {
     return { username: "super", nama: "Super Admin", role: "Super Admin" };
   }
 
+  // 1. Cek dari sheet Users (Guru, Admin)
   const sheet = getDB('Users');
-  if (!sheet) throw new Error("Database belum disetup.");
-  
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === username && data[i][1] === password) {
-      return { username: data[i][0], nama: data[i][2], role: data[i][3] };
+  if (sheet) {
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === cleanUser && String(data[i][1]).trim() === cleanPass) {
+        return { username: data[i][0], nama: data[i][2], role: data[i][3] };
+      }
     }
   }
-  throw new Error("Username atau password salah.");
+
+  // 2. Cek dari sheet Data_Siswa (Peserta Didik)
+  try {
+    const sSheet = getDB('Data_Siswa');
+    if (sSheet) {
+      const sData = sSheet.getDataRange().getValues();
+      // Kolom: [0]=No, [1]=TglDaftar, [2]=NISN, [3]=NIK, [9]=Nama, [10]=TempatLahir, [11]=TglLahir
+      for (let i = 1; i < sData.length; i++) {
+        const row = sData[i];
+        const sNik = String(row[3] || '').trim();
+        const sNisn = String(row[2] || '').trim();
+        const sNama = String(row[9] || 'Peserta Didik');
+        let sTgl = '';
+        if (row[11] instanceof Date) {
+          sTgl = Utilities.formatDate(row[11], "GMT+7", "yyyy-MM-dd");
+        } else {
+          sTgl = String(row[11] || '').trim().split('T')[0];
+        }
+
+        const parts = sTgl.split('-');
+        const ddmmyyyy = parts.length === 3 ? `${parts[2]}${parts[1]}${parts[0]}` : '';
+        const yyyymmdd = parts.join('');
+        const last6Nik = sNik.length >= 6 ? sNik.slice(-6) : '';
+
+        const matchUser = (cleanUser === sNik || (sNisn && cleanUser === sNisn));
+        const matchPass = (
+          cleanPass === sTgl ||
+          (ddmmyyyy && cleanPass === ddmmyyyy) ||
+          (yyyymmdd && cleanPass === yyyymmdd) ||
+          (last6Nik && cleanPass === last6Nik)
+        );
+
+        if (matchUser && matchPass) {
+          return {
+            username: sNik || sNisn,
+            nama: sNama,
+            role: "Siswa",
+            dataSiswa: {
+              id: row[0] || '',
+              nik: sNik,
+              nisn: sNisn,
+              nama: sNama,
+              program: row[18] || '',
+              tempatLahir: row[10] || '',
+              tglLahir: sTgl,
+              namaIbu: row[15] || '',
+              statusValidasi: row[23] || 'Pending',
+              catatanAI: row[24] || '',
+              statusAktif: row[28] || 'Aktif'
+            }
+          };
+        }
+      }
+    }
+  } catch (err) {
+    Logger.log("doLogin siswa check error: " + err.toString());
+  }
+
+  throw new Error("Username atau password salah. Untuk Siswa, gunakan NIK/NISN dan Password: Tanggal Lahir.");
 }
 
 function getUsers() {

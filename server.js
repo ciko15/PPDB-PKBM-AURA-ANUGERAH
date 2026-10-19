@@ -77,14 +77,16 @@ async function getSheet(sheetTitle) {
   return sheet;
 }
 
-// =================== CONTROLLER HANDLERS ===================
-
 async function handleLogin(username, password) {
-  const sheet = await getSheet('Users');
-  const rows = await sheet.getRows();
-  for (const row of rows) {
+  const cleanUser = String(username || '').trim();
+  const cleanPass = String(password || '').trim();
+
+  // 1. Cek dari sheet Users (Guru, Admin, Super Admin)
+  const userSheet = await getSheet('Users');
+  const userRows = await userSheet.getRows();
+  for (const row of userRows) {
     const raw = row.toObject();
-    if (raw['Username'] === username && raw['Password'] === password) {
+    if (String(raw['Username'] || '').trim() === cleanUser && String(raw['Password'] || '').trim() === cleanPass) {
       return {
         username: raw['Username'],
         nama: raw['Nama Lengkap'],
@@ -92,7 +94,65 @@ async function handleLogin(username, password) {
       };
     }
   }
-  throw new Error('Username atau password salah.');
+
+  // 2. Cek dari sheet Data_Siswa (Login Peserta Didik)
+  // Username: NIK atau NISN
+  // Password: Tanggal Lahir (YYYY-MM-DD atau DDMMYYYY) atau 6 digit NIK terakhir
+  try {
+    const siswaSheet = await getSheet('Data_Siswa');
+    const siswaRows = await siswaSheet.getRows();
+
+    for (const r of siswaRows) {
+      const raw = r.toObject();
+      const sNik = String(raw['NIK'] || '').trim();
+      const sNisn = String(raw['NISN'] || '').trim();
+      const sNama = raw['Nama Lengkap'] || 'Peserta Didik';
+      const sTglLahir = String(raw['Tanggal Lahir'] || '').trim().split('T')[0]; // e.g. 2003-09-21
+
+      // Format password yang valid untuk siswa:
+      // a. Persis sama dengan tanggal lahir di database (e.g. 2003-09-21)
+      // b. Tanpa tanda hubung (e.g. 20030921 atau 21092003)
+      // c. 6 digit NIK terakhir
+      const parts = sTglLahir.split('-');
+      const ddmmyyyy = parts.length === 3 ? `${parts[2]}${parts[1]}${parts[0]}` : '';
+      const yyyymmdd = parts.join('');
+      const last6Nik = sNik.length >= 6 ? sNik.slice(-6) : '';
+
+      const matchUser = (cleanUser === sNik || (sNisn && cleanUser === sNisn));
+      const matchPass = (
+        cleanPass === sTglLahir ||
+        (ddmmyyyy && cleanPass === ddmmyyyy) ||
+        (yyyymmdd && cleanPass === yyyymmdd) ||
+        (last6Nik && cleanPass === last6Nik)
+      );
+
+      if (matchUser && matchPass) {
+        return {
+          username: sNik || sNisn,
+          nama: sNama,
+          role: 'Siswa',
+          dataSiswa: {
+            id: raw['No.'] || '',
+            nik: sNik,
+            nisn: sNisn,
+            nama: sNama,
+            program: raw['Jenjang'] || '',
+            tempatLahir: raw['Tempat Lahir'] || '',
+            tglLahir: sTglLahir,
+            namaIbu: raw['Nama Ibu Kandung'] || '',
+            alamat: `${raw['Desa Kelurahan'] || ''}, ${raw['Kecamatan'] || ''}, ${raw['Kabupaten/Kota'] || ''}`.replace(/^,\s*|,\s*$/g, ''),
+            statusValidasi: raw['Status Validasi'] || 'Pending',
+            catatanAI: raw['Catatan AI'] || '',
+            statusAktif: raw['Status Aktif'] || 'Aktif'
+          }
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Error saat verifikasi login siswa:', err.message);
+  }
+
+  throw new Error('Username atau password salah. Untuk Siswa, masukkan Username: NIK/NISN dan Password: Tanggal Lahir (contoh: 21092003 atau YYYY-MM-DD).');
 }
 
 async function handleGetUsers() {
