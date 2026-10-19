@@ -111,6 +111,21 @@ h3 {
   font-size: 12px;
 }
 
+/* Ukuran Logo PKBM */
+.school-logo-large {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  margin: 0 auto;
+  display: block;
+}
+.school-logo-small {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  display: block;
+}
+
 /* ==================== BUTTONS & CONTROLS (PERSIS ROSTERING TEKNIK) ==================== */
 button, select, input, .btn {
   font: inherit;
@@ -1156,8 +1171,8 @@ main.main-content {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -1166,6 +1181,8 @@ main.main-content {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .login-modal-overlay {
@@ -1174,21 +1191,39 @@ main.main-content {
   left: 0;
   width: 100%;
   height: 100%;
-  /* Lebih jernih, bayangan lembut dan blur minimal agar ruangan kelas terlihat nyata */
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.45) 0%, rgba(30, 58, 138, 0.45) 100%);
-  backdrop-filter: blur(1.5px);
-  -webkit-backdrop-filter: blur(1.5px);
+  background: rgba(11, 26, 43, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .login-modal .modal-content {
   position: relative;
   z-index: 1001;
-  background: rgba(255, 255, 255, 0.96);
-  padding: 2.2rem 2.5rem;
-  border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.6);
+  background: var(--surface-color);
+  color: var(--text-color);
+  padding: 32px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
   width: 100%;
-  max-width: 430px;
+  max-width: 420px;
+  box-sizing: border-box;
+}
+
+.login-modal .school-logo-large {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+  margin: 0 auto;
+  display: block;
+}
+
+.login-modal .form-group input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
 }
 
 .btn-close-modal {
