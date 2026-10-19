@@ -640,6 +640,32 @@ app.post('/api', async (req, res) => {
   }
 });
 
+// Proxy PDF dari Google Drive untuk Native PDF.js Reader (Bebas iframe & full kontrol UI)
+app.get('/api/proxy-pdf/:fileId', async (req, res) => {
+  try {
+    const fileId = req.params.fileId;
+    if (!fileId) return res.status(400).send('File ID required');
+
+    const gdriveUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download`;
+    const response = await fetch(gdriveUrl);
+    
+    if (!response.ok) {
+      return res.status(response.status).send('Gagal mengambil PDF dari Google Drive');
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    res.send(buffer);
+  } catch (err) {
+    console.error('Proxy PDF Error:', err.message);
+    res.status(500).send('Internal Server Error streaming PDF');
+  }
+});
+
 // Rute frontend
 app.get(['/', '/pkbm', '/portal-pkbm', '/login'], (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));

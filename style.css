@@ -688,6 +688,59 @@ aside .brand {
   100% { transform: scale(0.95); opacity: 0.8; }
 }
 
+/* Fullscreen Responsive Reader (HP, Tablet, Desktop) */
+.reader-fullscreen-modal {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+#reader-viewport-container {
+  touch-action: pan-x pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#pdf-page-canvas {
+  transition: transform 0.15s ease-out;
+  transform-origin: top center;
+}
+
+@media (max-width: 768px) {
+  .reader-header-bar {
+    padding: 8px 12px !important;
+  }
+  .reader-header-bar #reader-book-title {
+    max-width: 150px !important;
+    font-size: 12.5px !important;
+  }
+  .reader-zoom-controls {
+    display: none !important; /* Pada layar HP, otomatis fit-width dan pinch-zoom */
+  }
+  .btn-selesai-ujian {
+    font-size: 11px !important;
+    padding: 5px 8px !important;
+  }
+  .reader-footer-toolbar {
+    padding: 6px 12px !important;
+  }
+  .reader-footer-toolbar .btn-label-nav {
+    display: none;
+  }
+  .reader-student-label {
+    display: none;
+  }
+  #reader-active-student {
+    max-width: 90px !important;
+  }
+  #pdf-render-wrapper {
+    padding: 6px 4px !important;
+  }
+}
+
 .btn-hamburger {
   background: none;
   border: none;
