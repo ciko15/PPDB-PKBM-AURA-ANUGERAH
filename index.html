@@ -1967,18 +1967,18 @@
           <h3 id="kelola-butir-paket-title" style="margin: 0; color: var(--text-color);">Kelola Butir Pertanyaan CBT</h3>
           <p id="kelola-butir-paket-sub" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 13px;">Paket Soal CBT</p>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <button class="btn btn-sm" onclick="downloadTemplateExcelSoal()" style="background: #059669; color: #fff; border: none; font-size: 12px;">
-            <i data-lucide="download" style="width: 13px; height: 13px;"></i>Download Template Excel
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-sm" onclick="downloadTemplateExcelSoal()" style="background: #059669; color: #fff; border: none; font-size: 12px; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="download" style="width: 14px; height: 14px;"></i>Download Template
           </button>
-          <label class="btn btn-sm btn-outline" style="cursor: pointer; font-size: 12px; margin: 0; display: inline-flex; align-items: center; gap: 4px;">
-            <i data-lucide="file-spreadsheet" style="width: 13px; height: 13px;"></i>Import Excel
+          <label class="btn btn-sm btn-outline" style="cursor: pointer; font-size: 12px; margin: 0; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="file-spreadsheet" style="width: 14px; height: 14px;"></i>Import Excel
             <input type="file" id="input-import-excel-soal" accept=".xlsx, .xls" style="display: none;" onchange="handleImportExcelSoal(this)">
           </label>
-          <button class="btn btn-sm p" onclick="tambahButirSoalBaruUI()">
+          <button class="btn btn-sm p" onclick="tambahButirSoalBaruUI()" style="font-size: 12px; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="plus" style="width: 14px; height: 14px;"></i>Tambah Butir
           </button>
-          <button class="btn-close-modal" onclick="closeModalKelolaButirSoal()" style="position: static; margin-left: 8px;">&times;</button>
+          <button class="btn-close-modal" onclick="closeModalKelolaButirSoal()" style="position: static; margin-left: 4px;">&times;</button>
         </div>
       </div>
 

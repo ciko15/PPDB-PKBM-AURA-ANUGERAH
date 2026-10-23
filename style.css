@@ -178,6 +178,13 @@ button:focus-visible, select:focus-visible, input:focus-visible, .btn:focus-visi
   padding: 0;
   justify-content: center;
 }
+.btn-sm {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  line-height: 1;
+}
 .btn-danger-text {
   color: var(--danger-text);
 }
