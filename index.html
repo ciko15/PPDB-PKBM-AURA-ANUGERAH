@@ -448,7 +448,7 @@
     <header class="mobile-header">
       <div style="display: flex; align-items: center; gap: 10px;">
         <button id="btn-menu-mobile" class="btn-hamburger">☰</button>
-        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" style="width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--surface-2); padding: 4px;">
+        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="app-brand-logo" style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain; flex-shrink: 0; background: var(--primary-color); padding: 4px; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);">
         <div style="display: flex; flex-direction: column;">
           <span style="font-weight: 700; font-size: 15px; color: var(--text-color);">PKBM Aura Anugerah</span>
           <span style="font-size: 11px; color: var(--text-muted);">Sistem Terpadu & PPDB</span>
@@ -465,7 +465,7 @@
       <aside>
         <!-- Brand Sidebar Persis Rostering Teknik -->
         <div class="brand" style="display: flex; align-items: center; gap: 12px;">
-          <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" style="width: 42px; height: 42px; border-radius: 10px; object-fit: contain; flex-shrink: 0; background: var(--surface-2); padding: 4px;">
+          <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="app-brand-logo" style="width: 42px; height: 42px; border-radius: 10px; object-fit: contain; flex-shrink: 0; background: var(--primary-color); padding: 4px; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);">
           <div style="display: flex; flex-direction: column; justify-content: center;">
             <span style="font-weight: 600; font-size: 16px; line-height: 1.2; color: var(--text-color);">PKBM Aura</span>
             <span style="font-weight: 400; color: var(--text-muted); font-size: 11px; line-height: 1.2; margin-top: 2px;">Sistem Terpadu PPDB</span>
@@ -475,68 +475,110 @@
         <div class="sidebar-nav-scroll">
           <div class="sidebar-section-label">MENU UTAMA</div>
           <ul id="main-menu" class="siswa-list">
-            <!-- Menu Petugas / Admin / Guru -->
-            <li class="active" data-target="section-dashboard" id="menu-dashboard">
+            <!-- Menu Utama Petugas -->
+            <li class="nav-item active" data-target="section-dashboard" id="menu-dashboard">
               <i data-lucide="layout-dashboard" class="menu-icon"></i>
               <span>Dashboard</span>
             </li>
-            <li data-target="section-list" id="menu-list">
-              <i data-lucide="clipboard-list" class="menu-icon"></i>
-              <span>Daftar Peserta Didik</span>
-            </li>
-            <li data-target="section-ai-reg" id="menu-ai-reg" class="menu-ai-item">
-              <i data-lucide="wand-2" class="menu-icon"></i>
-              <span>Pendaftaran Cepat AI</span>
-            </li>
-            <!-- Menu Pembelajaran & Ujian (ala MyAura) -->
-            <li data-target="section-materi" id="menu-materi">
-              <i data-lucide="book-open" class="menu-icon"></i>
-              <span>Materi & Buku Belajar</span>
-            </li>
-            <li data-target="section-ujian" id="menu-ujian">
-              <i data-lucide="file-check" class="menu-icon"></i>
-              <span>Ujian & Nilai Siswa</span>
+
+            <!-- Dropdown: Data Siswa & Sekolah -->
+            <li class="menu-dropdown open" id="dropdown-sekolah">
+              <div class="dropdown-header" onclick="toggleDropdownMenu('dropdown-sekolah')">
+                <div class="dropdown-header-left">
+                  <i data-lucide="school" class="menu-icon"></i>
+                  <span>Data Siswa & Kelas</span>
+                </div>
+                <i data-lucide="chevron-right" class="dropdown-arrow"></i>
+              </div>
+              <ul class="dropdown-sublist">
+                <li class="nav-item" data-target="section-list" id="menu-list">
+                  <i data-lucide="users" class="menu-icon"></i>
+                  <span>Daftar Peserta Didik</span>
+                </li>
+                <li class="nav-item" data-target="section-ai-reg" id="menu-ai-reg">
+                  <i data-lucide="wand-2" class="menu-icon"></i>
+                  <span>Pendaftaran Cepat AI</span>
+                </li>
+                <li class="nav-item" data-target="section-absensi" id="menu-absensi">
+                  <i data-lucide="calendar-check" class="menu-icon"></i>
+                  <span>Absensi & Kehadiran</span>
+                </li>
+              </ul>
             </li>
 
-            <!-- Menu Akademik Terpadu (ala MyAura) -->
-            <div class="sidebar-section-label" style="margin-top: 12px;">AKADEMIK & KEUANGAN</div>
-            <li data-target="section-absensi" id="menu-absensi">
-              <i data-lucide="calendar-days" class="menu-icon"></i>
-              <span>Absensi & Kehadiran</span>
-            </li>
-            <li data-target="section-bayar" id="menu-bayar">
-              <i data-lucide="wallet" class="menu-icon"></i>
-              <span>SPP & Tabungan</span>
-            </li>
-
-            <!-- Menu Khusus Siswa (Tampil jika login sebagai Siswa) -->
-            <div class="sidebar-section-label label-siswa hidden" style="margin-top: 12px;">PORTAL SISWA</div>
-            <li data-target="section-portal-siswa" id="menu-portal-siswa" class="hidden menu-siswa-item">
-              <i data-lucide="graduation-cap" class="menu-icon"></i>
-              <span>Profil & Status Saya</span>
-            </li>
-            <li data-target="section-materi" id="menu-siswa-materi" class="hidden menu-siswa-item">
-              <i data-lucide="book-open" class="menu-icon"></i>
-              <span>Buku & Materi Belajar</span>
-            </li>
-            <li data-target="section-ujian" id="menu-siswa-ujian" class="hidden menu-siswa-item">
-              <i data-lucide="award" class="menu-icon"></i>
-              <span>Hasil Ujian & Nilai</span>
-            </li>
-            <li data-target="section-pengumuman-siswa" id="menu-pengumuman-siswa" class="hidden">
-              <i data-lucide="bell" class="menu-icon"></i>
-              <span>Pengumuman & Jadwal</span>
+            <!-- Dropdown: Akademik & CBT -->
+            <li class="menu-dropdown open" id="dropdown-akademik">
+              <div class="dropdown-header" onclick="toggleDropdownMenu('dropdown-akademik')">
+                <div class="dropdown-header-left">
+                  <i data-lucide="book-open" class="menu-icon"></i>
+                  <span>Materi & Ujian CBT</span>
+                </div>
+                <i data-lucide="chevron-right" class="dropdown-arrow"></i>
+              </div>
+              <ul class="dropdown-sublist">
+                <li class="nav-item" data-target="section-materi" id="menu-materi">
+                  <i data-lucide="library" class="menu-icon"></i>
+                  <span>Buku & Modul Belajar</span>
+                </li>
+                <li class="nav-item" data-target="section-ujian" id="menu-ujian">
+                  <i data-lucide="file-check-2" class="menu-icon"></i>
+                  <span>Bank Soal & Nilai</span>
+                </li>
+                <li class="nav-item" data-target="section-bayar" id="menu-bayar">
+                  <i data-lucide="wallet" class="menu-icon"></i>
+                  <span>SPP & Administrasi</span>
+                </li>
+              </ul>
             </li>
 
-            <!-- Menu Pengaturan Sistem -->
-            <div class="sidebar-section-label label-admin hidden" id="label-admin-section" style="margin-top: 12px;">PENGATURAN</div>
-            <li data-target="section-users" id="menu-users" class="hidden">
-              <i data-lucide="settings" class="menu-icon"></i>
-              <span>Kelola Pengguna</span>
+            <!-- Dropdown Khusus Siswa (Tampil jika login sebagai Siswa) -->
+            <li class="menu-dropdown open hidden" id="dropdown-portal-siswa">
+              <div class="dropdown-header" onclick="toggleDropdownMenu('dropdown-portal-siswa')">
+                <div class="dropdown-header-left">
+                  <i data-lucide="graduation-cap" class="menu-icon"></i>
+                  <span>Portal Siswa</span>
+                </div>
+                <i data-lucide="chevron-right" class="dropdown-arrow"></i>
+              </div>
+              <ul class="dropdown-sublist">
+                <li class="nav-item" data-target="section-portal-siswa" id="menu-portal-siswa">
+                  <i data-lucide="user" class="menu-icon"></i>
+                  <span>Profil & Status Saya</span>
+                </li>
+                <li class="nav-item" data-target="section-materi" id="menu-siswa-materi">
+                  <i data-lucide="book-open" class="menu-icon"></i>
+                  <span>Buku Belajar Saya</span>
+                </li>
+                <li class="nav-item" data-target="section-ujian" id="menu-siswa-ujian">
+                  <i data-lucide="award" class="menu-icon"></i>
+                  <span>Ujian CBT & Nilai</span>
+                </li>
+                <li class="nav-item" data-target="section-pengumuman-siswa" id="menu-pengumuman-siswa">
+                  <i data-lucide="bell" class="menu-icon"></i>
+                  <span>Pengumuman</span>
+                </li>
+              </ul>
             </li>
-            <li data-target="section-api-keys" id="menu-api-keys" class="hidden menu-api-item">
-              <i data-lucide="key" class="menu-icon"></i>
-              <span>Kelola API Gemini</span>
+
+            <!-- Dropdown Pengaturan Sistem (Admin / Super Admin) -->
+            <li class="menu-dropdown open hidden" id="dropdown-pengaturan">
+              <div class="dropdown-header" onclick="toggleDropdownMenu('dropdown-pengaturan')">
+                <div class="dropdown-header-left">
+                  <i data-lucide="settings" class="menu-icon"></i>
+                  <span>Pengaturan</span>
+                </div>
+                <i data-lucide="chevron-right" class="dropdown-arrow"></i>
+              </div>
+              <ul class="dropdown-sublist">
+                <li class="nav-item hidden" data-target="section-users" id="menu-users">
+                  <i data-lucide="user-cog" class="menu-icon"></i>
+                  <span>Kelola Pengguna</span>
+                </li>
+                <li class="nav-item hidden" data-target="section-api-keys" id="menu-api-keys">
+                  <i data-lucide="key" class="menu-icon"></i>
+                  <span>Kelola API Gemini</span>
+                </li>
+              </ul>
             </li>
           </ul>
         </div>
@@ -801,15 +843,94 @@
 
         <!-- ==================== SECTION: UJIAN & PENILAIAN SISWA ==================== -->
         <div id="section-ujian" class="content-section hidden">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
             <div>
-              <h1 style="margin: 0;">Ujian & Evaluasi Hasil Belajar</h1>
-              <p class="sub" style="margin: 4px 0 0 0;">Evaluasi hasil belajar siswa pasca membaca modul. Guru dan Admin dapat menginput & memverifikasi nilai ujian.</p>
+              <h1 style="margin: 0;">Ujian CBT & Evaluasi Hasil Belajar</h1>
+              <p class="sub" style="margin: 4px 0 0 0;">Pembuatan paket soal CBT, aktivasi token ujian siswa, dan rekapitulasi penilaian hasil belajar.</p>
             </div>
-            <div id="btn-tambah-ujian-wrapper">
-              <button class="btn p" onclick="showInputNilaiModal()"><i data-lucide="plus" style="width: 16px; height: 16px;"></i>Input Nilai Ujian Siswa</button>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <button id="btn-buat-paket-soal" class="btn p" onclick="showModalTambahSoal()">
+                <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>Buat Paket Soal Baru
+              </button>
+              <button id="btn-mulai-cbt-dialog" class="btn" onclick="bukaModalPilihUjianCBT()" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
+                <i data-lucide="play-circle" style="width: 16px; height: 16px;"></i>Mulai Ujian CBT (Siswa)
+              </button>
+              <button class="btn btn-outline" onclick="showInputNilaiModal()">
+                <i data-lucide="edit-3" style="width: 15px; height: 15px;"></i>Input Nilai Manual
+              </button>
             </div>
           </div>
+
+          <!-- Navigation Sub-tabs: Bank Paket Soal vs Rekap Nilai vs Ujian Siswa -->
+          <div style="display: flex; gap: 12px; border-bottom: 1px solid var(--border-color); margin-bottom: 1.25rem;">
+            <button id="tab-btn-bank-soal" class="btn" style="background: none; border: none; border-bottom: 2px solid var(--primary-color); border-radius: 0; color: var(--primary-color); font-weight: 700; padding: 10px 14px;" onclick="switchUjianSubTab('bank-soal')">
+              <i data-lucide="layers" style="width: 16px; height: 16px;"></i>Bank Paket Soal CBT (<span id="count-paket-soal">0</span>)
+            </button>
+            <button id="tab-btn-siswa-cbt" class="btn hidden" style="background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-muted); font-weight: 600; padding: 10px 14px;" onclick="switchUjianSubTab('siswa-cbt')">
+              <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i>Daftar Ujian Aktif Saya
+            </button>
+            <button id="tab-btn-hasil-ujian" class="btn" style="background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-muted); font-weight: 600; padding: 10px 14px;" onclick="switchUjianSubTab('hasil-ujian')">
+              <i data-lucide="award" style="width: 16px; height: 16px;"></i>Hasil & Rapor Nilai Ujian
+            </button>
+          </div>
+
+          <!-- ==================== SUB-TAB 1: BANK PAKET SOAL CBT ==================== -->
+          <div id="subtab-bank-soal">
+            <!-- Filter Toolbar Bank Soal -->
+            <div class="filter-toolbar" style="margin-bottom: 1rem;">
+              <div class="filter-toolbar-top">
+                <div class="filter-search-box">
+                  <i data-lucide="search"></i>
+                  <input type="text" id="search-bank-soal" placeholder="Cari kode modul, judul paket soal, atau nama pengajar..." oninput="renderBankSoalTable()">
+                </div>
+                <div class="filter-controls-group">
+                  <select id="filter-soal-jenjang" class="filter-select" onchange="renderBankSoalTable()">
+                    <option value="">Semua Jenjang</option>
+                    <option value="Paket A">Paket A (Setara SD)</option>
+                    <option value="Paket B">Paket B (Setara SMP)</option>
+                    <option value="Paket C">Paket C (Setara SMA)</option>
+                  </select>
+                  <button class="btn btn-icon" onclick="renderBankSoalTable()" title="Refresh"><i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabel Bank Paket Soal CBT -->
+            <div class="wrap" style="overflow-x: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 40px;">No</th>
+                    <th>Kode / Token</th>
+                    <th>Judul Paket Soal CBT</th>
+                    <th>Jenjang / Mapel</th>
+                    <th>Alokasi Waktu</th>
+                    <th>Jumlah Butir Soal</th>
+                    <th>Status Ujian</th>
+                    <th>Tutor Pembuat</th>
+                    <th style="text-align: right;">Aksi & Butir</th>
+                  </tr>
+                </thead>
+                <tbody id="table-bank-soal-body">
+                  <tr><td colspan="9" style="text-align: center; padding: 32px; color: var(--text-muted);">Memuat bank soal...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ==================== SUB-TAB 2: DAFTAR UJIAN AKTIF KHUSUS SISWA ==================== -->
+          <div id="subtab-siswa-cbt" class="hidden">
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 14px 18px; margin-bottom: 1.25rem;">
+              <h3 style="margin: 0 0 4px 0; color: #10b981; font-size: 15px;">Jadwal & Paket Ujian CBT Tersedia</h3>
+              <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Di bawah ini adalah daftar ujian yang statusnya telah diaktifkan oleh pengajar sesuai jenjang Anda. Klik <b>Ikuti Ujian</b> dan masukkan token.</p>
+            </div>
+            <div id="container-ujian-khusus-siswa" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+              <!-- Rendered by renderUjianKhususSiswa() -->
+            </div>
+          </div>
+
+          <!-- ==================== SUB-TAB 3: REKAP HASIL & RAPOR NILAI UJIAN ==================== -->
+          <div id="subtab-hasil-ujian" class="hidden">
 
           <!-- Ujian Filter Bar -->
           <div class="filter-toolbar">
@@ -858,7 +979,8 @@
               </tbody>
             </table>
           </div>
-        </div>
+        </div> <!-- End of subtab-hasil-ujian -->
+      </div> <!-- End of section-ujian -->
 
         <!-- ==================== SECTION: PENDAFTARAN CEPAT AI (PERSIS ROSTERING TEKNIK) ==================== -->
         <div id="section-ai-reg" class="content-section hidden">
@@ -1757,12 +1879,306 @@
     </div>
   </div>
 
+  <!-- ==================== MODAL BUAT / EDIT PAKET SOAL CBT (BEESMART) ==================== -->
+  <div id="modal-form-paket-soal" class="login-modal hidden" style="z-index: 99998;">
+    <div class="login-modal-overlay" onclick="closeModalFormPaketSoal()"></div>
+    <div class="login-card modal-content" style="max-width: 600px; text-align: left;">
+      <button class="btn-close-modal" onclick="closeModalFormPaketSoal()">&times;</button>
+      <h3 id="modal-paket-soal-title" style="margin-top: 0; margin-bottom: 6px;">Buat Paket Soal CBT Baru</h3>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Tentukan kode ujian, jenjang rombel, alokasi durasi, dan token akses.</p>
+
+      <form id="form-paket-soal" onsubmit="event.preventDefault(); simpanPaketSoal();">
+        <input type="hidden" id="paket-soal-id" value="">
+
+        <div class="form-group-row">
+          <div class="form-group half">
+            <label>Kode Paket / Modul <span style="color:red">*</span></label>
+            <input type="text" id="paket-kode-token" required placeholder="Contoh: CBT-PKC-01" style="font-weight: 700; letter-spacing: 1px;">
+          </div>
+          <div class="form-group half">
+            <label>Jenis Ujian <span style="color:red">*</span></label>
+            <select id="paket-jenis-ujian" class="form-control" required onchange="onJenisUjianChange(this.value)">
+              <option value="Evaluasi Modul">Evaluasi Bab / Modul</option>
+              <option value="UTS">Penilaian Tengah Semester (PTS/UTS)</option>
+              <option value="UAS">Penilaian Akhir Semester (PAS/UAS)</option>
+              <option value="Ujian Sekolah">Ujian Satuan Pendidikan (USP)</option>
+              <option value="Placement Test">Tes Penempatan / Diagnostik</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 12px;">
+          <label>Judul Ujian CBT <span style="color:red">*</span></label>
+          <input type="text" id="paket-judul" required placeholder="Contoh: Evaluasi Akhir Modul 1 Bahasa Indonesia">
+        </div>
+
+        <div class="form-group-row" style="margin-top: 12px;">
+          <div class="form-group half">
+            <label>Jenjang Pendidikan <span style="color:red">*</span></label>
+            <select id="paket-jenjang" class="form-control" required onchange="filterBukuSelectForPaket(this.value)">
+              <option value="Paket A">Paket A (Setara SD)</option>
+              <option value="Paket B">Paket B (Setara SMP)</option>
+              <option value="Paket C" selected>Paket C (Setara SMA)</option>
+            </select>
+          </div>
+          <div class="form-group half">
+            <label>Rombel / Kelas Target</label>
+            <select id="paket-kelas" class="form-control">
+              <option value="Semua Kelas">Semua Kelas</option>
+              <option value="Kelas X" selected>Kelas X</option>
+              <option value="Kelas XI">Kelas XI</option>
+              <option value="Kelas XII">Kelas XII</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" id="group-paket-buku" style="margin-top: 12px;">
+          <label>Tautkan Modul Pembelajaran (Opsional)</label>
+          <select id="paket-buku-id" class="form-control" onchange="isiJudulOtomatisDariBuku(this.value)">
+            <option value="">-- Pilih Buku / Modul Pelajaran --</option>
+          </select>
+        </div>
+
+        <div class="form-group-row" style="margin-top: 12px;">
+          <div class="form-group half">
+            <label>Alokasi Waktu (Menit) <span style="color:red">*</span></label>
+            <input type="number" id="paket-durasi-menit" value="15" min="5" max="180" required>
+          </div>
+          <div class="form-group half">
+            <label>Nilai Standar KKM <span style="color:red">*</span></label>
+            <input type="number" id="paket-kkm" value="70" min="50" max="100" required>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModalFormPaketSoal()">Batal</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="save" style="width: 15px; height: 15px;"></i>Simpan Paket Soal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL KELOLA BUTIR SOAL PILIHAN GANDA (BEESMART) ==================== -->
+  <div id="modal-kelola-butir-soal" class="login-modal hidden" style="z-index: 99998;">
+    <div class="login-modal-overlay" onclick="closeModalKelolaButirSoal()"></div>
+    <div class="login-card modal-content" style="max-width: 960px; width: 95vw; max-height: 92vh; display: flex; flex-direction: column; text-align: left; padding: 22px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+        <div>
+          <h3 id="kelola-butir-paket-title" style="margin: 0; color: var(--text-color);">Kelola Butir Pertanyaan CBT</h3>
+          <p id="kelola-butir-paket-sub" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 13px;">Paket Soal CBT</p>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-sm" onclick="downloadTemplateExcelSoal()" style="background: #059669; color: #fff; border: none; font-size: 12px;">
+            <i data-lucide="download" style="width: 13px; height: 13px;"></i>Download Template Excel
+          </button>
+          <label class="btn btn-sm btn-outline" style="cursor: pointer; font-size: 12px; margin: 0; display: inline-flex; align-items: center; gap: 4px;">
+            <i data-lucide="file-spreadsheet" style="width: 13px; height: 13px;"></i>Import Excel
+            <input type="file" id="input-import-excel-soal" accept=".xlsx, .xls" style="display: none;" onchange="handleImportExcelSoal(this)">
+          </label>
+          <button class="btn btn-sm p" onclick="tambahButirSoalBaruUI()">
+            <i data-lucide="plus" style="width: 14px; height: 14px;"></i>Tambah Butir
+          </button>
+          <button class="btn-close-modal" onclick="closeModalKelolaButirSoal()" style="position: static; margin-left: 8px;">&times;</button>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span id="kelola-butir-total-label" style="font-weight: 700; font-size: 13px; color: var(--text-color);">Total: 0 Butir Soal</span>
+        <small style="color: var(--text-muted);">Pilihan Ganda (Opsi A, B, C, D) & Tentukan Kunci Jawaban</small>
+      </div>
+
+      <div id="container-list-butir-soal" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px;">
+        <!-- Rendered by renderDaftarButirSoalEditor() -->
+      </div>
+
+      <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="btn btn-outline" onclick="closeModalKelolaButirSoal()">Tutup</button>
+        <button type="button" class="btn btn-primary" onclick="simpanSemuaButirSoal()"><i data-lucide="check" style="width: 15px; height: 15px;"></i>Simpan Semua Butir Soal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL PILIH UJIAN CBT SISWA (TOKEN DIALOG) ==================== -->
+  <div id="modal-pilih-cbt" class="login-modal hidden" style="z-index: 99998;">
+    <div class="login-modal-overlay" onclick="closeModalPilihUjianCBT()"></div>
+    <div class="login-card modal-content" style="max-width: 520px; text-align: left;">
+      <button class="btn-close-modal" onclick="closeModalPilihUjianCBT()">&times;</button>
+      <h3 style="margin-top: 0; margin-bottom: 6px;">Konfirmasi Mengikuti Ujian CBT</h3>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Masukkan Token Ujian yang diberikan tutor untuk memulai ujian.</p>
+
+      <form id="form-pilih-cbt" onsubmit="event.preventDefault(); prosesMulaiCBT();">
+        <div class="form-group">
+          <label>Peserta Ujian <span style="color:red">*</span></label>
+          <select id="cbt-pilih-siswa" class="form-control" required>
+            <option value="">-- Pilih Siswa --</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-top: 12px;">
+          <label>Pilih Paket Ujian / Modul CBT <span style="color:red">*</span></label>
+          <select id="cbt-pilih-buku" class="form-control" required onchange="updateCbtInfoPaket(this.value)">
+            <option value="">-- Pilih Paket Ujian --</option>
+          </select>
+        </div>
+
+        <!-- Info Box Paket -->
+        <div id="box-info-cbt-paket" style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-top: 12px; font-size: 13px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Alokasi Waktu:</span>
+            <strong id="cbt-dialog-durasi" style="color: var(--primary-color);">15 Menit</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+            <span style="color: var(--text-muted);">Jumlah Butir Soal:</span>
+            <strong id="cbt-dialog-jumlah-soal">5 Soal Pilihan Ganda</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+            <span style="color: var(--text-muted);">Status Ujian:</span>
+            <span id="cbt-dialog-status-badge" class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700;">AKTIF</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label>Token Ujian (Diberikan oleh Tutor) <span style="color:red">*</span></label>
+          <input type="text" id="cbt-input-token" required placeholder="Masukkan Token (Contoh: BEESMART)" style="text-transform: uppercase; font-family: monospace; font-size: 16px; font-weight: 800; letter-spacing: 2px;">
+        </div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModalPilihUjianCBT()">Batal</button>
+          <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #059669, #10b981); border: none;">
+            <i data-lucide="play" style="width: 15px; height: 15px;"></i>Mulai Ujian Sekarang
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL CBT UJIAN INTERAKTIF (BEESMART V3 FULL ENGINE) ==================== -->
+  <div id="modal-cbt-ujian" class="login-modal hidden" style="z-index: 99999; padding: 0;">
+    <div style="width: 100vw; height: 100vh; background: var(--bg-color); display: flex; flex-direction: column; overflow: hidden; position: relative;">
+      <!-- CBT Topbar / Header -->
+      <header style="background: var(--surface-color); border-bottom: 2px solid var(--primary-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.15); z-index: 10;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-color), #0284c7); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px;">
+            CBT
+          </div>
+          <div>
+            <h2 id="cbt-header-mapel" style="margin: 0; font-size: 15px; font-weight: 800; color: var(--text-color);">Ujian Evaluasi Belajar</h2>
+            <div id="cbt-header-siswa" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Peserta: Siswa · Token: BEESMART</div>
+          </div>
+        </div>
+
+        <!-- Controls: Font Size, Sisa Waktu & Finish -->
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <!-- Font Size Controls -->
+          <div style="display: flex; align-items: center; gap: 4px; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); padding-right: 4px;">Ukuran Font:</span>
+            <button type="button" class="btn btn-sm" onclick="adjustCbtFontSize(-1)" style="padding: 2px 8px; font-weight: 800; height: 26px;" title="Perkecil Font">A-</button>
+            <button type="button" class="btn btn-sm" onclick="adjustCbtFontSize(1)" style="padding: 2px 8px; font-weight: 800; height: 26px;" title="Perbesar Font">A+</button>
+          </div>
+
+          <!-- Timer Box -->
+          <div style="background: #0f172a; color: #38bdf8; border: 1.5px solid #0284c7; padding: 6px 14px; border-radius: 8px; display: flex; align-items: center; gap: 8px; font-family: monospace; font-weight: 900; font-size: 18px; letter-spacing: 1px;">
+            <i data-lucide="clock" style="width: 18px; height: 18px; color: #38bdf8;"></i>
+            <span id="cbt-countdown-timer">00:00</span>
+          </div>
+
+          <!-- Selesaikan Ujian -->
+          <button type="button" class="btn" onclick="konfirmasiSelesaiCBT()" style="background: #dc2626; color: #fff; border: none; font-weight: 700; font-size: 13px; padding: 8px 14px;">
+            <i data-lucide="check-circle" style="width: 15px; height: 15px;"></i>Selesai Ujian
+          </button>
+        </div>
+      </header>
+
+      <!-- CBT Body: Layout 2 Kolom (Kiri: Soal & Media & Pilihan, Kanan: Navigasi Nomor Soal) -->
+      <div style="flex: 1; display: flex; overflow: hidden; position: relative;">
+        <!-- Area Soal (Kiri) -->
+        <main style="flex: 1; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 18px;">
+          <!-- Badge Nomor Soal & Status Ragu -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-color); padding-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="background: var(--primary-color); color: #fff; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 14px;">
+                SOAL NO. <span id="cbt-current-no">1</span>
+              </span>
+              <span id="cbt-ragu-badge" style="display: none; background: #eab308; color: #000; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 800;">
+                ⚠️ RAGU-RAGU
+              </span>
+            </div>
+            <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 700; color: #ca8a04; user-select: none;">
+              <input type="checkbox" id="cbt-check-ragu" onchange="toggleRaguRagu(this.checked)" style="width: 16px; height: 16px; accent-color: #eab308;">
+              Tandai Ragu-Ragu
+            </label>
+          </div>
+
+          <!-- Teks Pertanyaan -->
+          <div id="cbt-soal-text" style="font-size: 16px; line-height: 1.7; color: var(--text-color); font-weight: 500; word-break: break-word;">
+            Memuat butir pertanyaan...
+          </div>
+
+          <!-- Media Soal (Gambar / Video jika ada) -->
+          <div id="cbt-media-soal-container" style="display: none; margin: 4px 0 12px 0;"></div>
+
+          <!-- Opsi Jawaban (A, B, C, D) -->
+          <div id="cbt-opsi-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+            <!-- Rendered by tampilkanSoalCBT() -->
+          </div>
+
+          <!-- Bottom Navigation (Sebelumnya / Selanjutnya / Selesai) -->
+          <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <button id="btn-cbt-prev" type="button" class="btn btn-outline" onclick="navigasiSoalCBT(-1)" style="font-weight: 700; gap: 8px;">
+              <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>Soal Sebelumnya
+            </button>
+            <div style="display: flex; gap: 10px;">
+              <button id="btn-cbt-next" type="button" class="btn btn-primary" onclick="navigasiSoalCBT(1)" style="font-weight: 700; gap: 8px;">
+                Soal Berikutnya<i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+              </button>
+              <button id="btn-cbt-finish" type="button" class="btn" onclick="konfirmasiSelesaiCBT()" style="display: none; background: #059669; color: #fff; font-weight: 800; gap: 8px;">
+                <i data-lucide="check" style="width: 16px; height: 16px;"></i>Selesaikan Ujian Sekarang
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <!-- Sidebar Panel Navigasi Nomor Soal (Kanan) -->
+        <aside style="width: 290px; background: var(--surface-color); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 18px; box-sizing: border-box;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            <h4 style="margin: 0; font-size: 13.5px; font-weight: 800; color: var(--text-color);">Nomor Soal</h4>
+            <span id="cbt-progress-count" style="font-size: 12px; font-weight: 700; color: var(--primary-color);">0 Terjawab</span>
+          </div>
+
+          <!-- Grid Nomor Soal -->
+          <div id="cbt-grid-nomor" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-y: auto; flex: 1; align-content: start; padding-right: 4px;">
+            <!-- Rendered by renderCbtGridNomor() -->
+          </div>
+
+          <!-- Legend Keterangan Warna Grid -->
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border-color); display: flex; flex-direction: column; gap: 6px; font-size: 11.5px; color: var(--text-muted);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="width: 14px; height: 14px; border-radius: 4px; background: #10b981;"></span>
+              <span>Sudah Dijawab</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="width: 14px; height: 14px; border-radius: 4px; background: #eab308;"></span>
+              <span>Ragu-Ragu</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="width: 14px; height: 14px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border-color);"></span>
+              <span>Belum Dijawab</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
   <!-- Loading Overlay -->
   <div id="global-loader" class="global-loader hidden">
     <div class="spinner"></div>
     <p id="loader-text">Memproses...</p>
   </div>
 
+  <!-- SheetJS Library for Excel Import / Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="app.js"></script>
+  <script src="cbt-engine.js"></script>
 </body>
 </html>

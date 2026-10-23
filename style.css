@@ -7,10 +7,10 @@
   --border-color: #D5DFE8;
   --text-color: #12263A;
   --text-muted: #5A6C7D;
-  --primary-color: #0F5C7A;
-  --primary-hover: #0C4A63;
-  --primary-light: rgba(15, 92, 122, 0.12);
-  --primary: #0F5C7A;
+  --primary-color: #16a34a;
+  --primary-hover: #15803d;
+  --primary-light: rgba(22, 163, 74, 0.12);
+  --primary: #16a34a;
   --accent: #F2A900;
   --accent-color: #F2A900;
   --success-color: #13804F;
@@ -32,39 +32,39 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  /* Permukaan Rostering Teknik */
-  --bg-color: #0B1A2B;
-  --surface-color: #12263A;
-  --surface-2: #182F47;
-  --surface-hover: #1b3550;
-  --border-color: #263F57;
+  /* Permukaan Tema Hijau Dark Mode */
+  --bg-color: #0a1a13;
+  --surface-color: #10261c;
+  --surface-2: #10261c;
+  --surface-hover: #173626;
+  --border-color: #1c3a2b;
   /* Teks */
-  --text-color: #E8EEF4;
-  --text-muted: #9FB2C4;
-  /* Aksen */
-  --primary-color: #0E76A0;
-  --primary-hover: #0B6588;
-  --primary-light: rgba(14, 118, 160, 0.2);
-  --primary: #0E76A0;
+  --text-color: #ecfdf5;
+  --text-muted: #8fb5a2;
+  /* Aksen Utama */
+  --primary-color: #16a34a;
+  --primary-hover: #22c55e;
+  --primary-light: rgba(34, 197, 94, 0.15);
+  --primary: #16a34a;
   --accent: #F2A900;
   --accent-color: #F2A900;
   /* Status */
-  --success-color: #4ADE9A;
-  --success-bg: rgba(74,222,154,.14);
+  --success-color: #4ade80;
+  --success-bg: rgba(34, 197, 94, 0.15);
   --warning-color: #FFC857;
-  --warning-bg: rgba(255,200,87,.14);
+  --warning-bg: rgba(255, 200, 87, 0.14);
   --danger-color: #C7362F;
   --danger-text: #FF8A8A;
-  --danger-bg: rgba(255,138,138,.12);
-  --info: #7FD8F7;
-  --info-bg: #17384F;
+  --danger-bg: rgba(255, 138, 138, 0.12);
+  --info: #4ade80;
+  --info-bg: #173626;
   /* Bentuk */
   --radius: 10px;
   --radius-sm: 6px;
   --border-radius: 10px;
-  --shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.18);
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.25);
-  --shadow-lg: 0 10px 25px rgba(0,0,0,.4);
+  --shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.3);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,.5);
 }
 
 * {
@@ -118,6 +118,10 @@ h3 {
   object-fit: contain;
   margin: 0 auto;
   display: block;
+  background: var(--primary-color);
+  padding: 8px;
+  border-radius: 18px;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25);
 }
 .school-logo-small {
   width: 36px;
@@ -466,7 +470,7 @@ td.r, th.r { text-align: right; }
 }
 
 aside {
-  width: 248px;
+  width: 260px;
   background: var(--surface-color);
   color: var(--text-color);
   padding: 16px 12px;
@@ -510,12 +514,14 @@ aside .brand {
 .siswa-list {
   list-style: none;
   padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
-.siswa-list li {
+/* Menu Item Biasa */
+.siswa-list > li.nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -532,36 +538,148 @@ aside .brand {
   font-size: 13.5px;
   transition: background 0.15s ease;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .siswa-list li .menu-icon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   color: var(--text-muted);
   flex-shrink: 0;
   transition: color 0.15s ease;
 }
 
-.siswa-list li:hover {
+.siswa-list > li.nav-item:hover {
   background: var(--surface-2);
 }
 
-.siswa-list li.active {
+.siswa-list > li.nav-item.active {
   background: var(--accent) !important;
-  color: #0B1A2B !important;
+  color: #0a1a13 !important;
   font-weight: 600 !important;
 }
 
-.siswa-list li.active .menu-icon {
-  color: #0B1A2B !important;
+.siswa-list > li.nav-item.active .menu-icon {
+  color: #0a1a13 !important;
 }
 
-[data-theme="light"] .siswa-list li.active {
+[data-theme="light"] .siswa-list > li.nav-item.active {
   background: var(--accent) !important;
   color: #12263A !important;
 }
-[data-theme="light"] .siswa-list li.active .menu-icon {
+[data-theme="light"] .siswa-list > li.nav-item.active .menu-icon {
   color: #12263A !important;
+}
+
+/* ==================== SUBMENU DROPDOWN ==================== */
+.siswa-list > li.menu-dropdown {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 12px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: 0;
+  color: var(--text-color);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s ease;
+  user-select: none;
+}
+
+.dropdown-header:hover {
+  background: var(--surface-2);
+}
+
+.dropdown-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.dropdown-arrow {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.menu-dropdown.open > .dropdown-header .dropdown-arrow {
+  transform: rotate(90deg);
+  color: var(--accent);
+}
+
+.menu-dropdown.open > .dropdown-header {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.dropdown-sublist {
+  list-style: none;
+  padding: 4px 0 6px 12px;
+  margin: 2px 0 4px 18px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 2px solid var(--border-color);
+  box-sizing: border-box;
+}
+
+.menu-dropdown.open > .dropdown-sublist {
+  display: flex;
+}
+
+.dropdown-sublist > li.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+  background: none;
+  border: 0;
+  width: 100%;
+}
+
+.dropdown-sublist > li.nav-item:hover {
+  background: var(--surface-2);
+  color: var(--text-color);
+}
+
+.dropdown-sublist > li.nav-item.active {
+  background: var(--surface-2) !important;
+  color: var(--accent) !important;
+  font-weight: 600 !important;
+  border-left: 3px solid var(--accent);
+}
+
+.dropdown-sublist > li.nav-item.active .menu-icon {
+  color: var(--accent) !important;
+}
+
+.dropdown-sublist > li.nav-item .menu-icon {
+  width: 15px;
+  height: 15px;
 }
 
 .who {
@@ -579,6 +697,10 @@ aside .brand {
   background: var(--primary-light);
   color: var(--primary-color);
   font-weight: 600;
+}
+:root[data-theme="dark"] .who .who-role-badge {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
 }
 
 /* Mobile Header (Sembunyi di Desktop) */
@@ -603,6 +725,7 @@ aside .brand {
   flex-direction: column;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   box-shadow: var(--shadow-sm);
+  height: 390px;
 }
 
 .book-card:hover {
@@ -612,7 +735,7 @@ aside .brand {
 }
 
 .book-cover {
-  height: 140px;
+  height: 150px;
   background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface-hover) 100%);
   display: flex;
   align-items: center;
@@ -620,6 +743,7 @@ aside .brand {
   position: relative;
   overflow: hidden;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .book-cover-icon {
@@ -648,27 +772,36 @@ aside .brand {
   flex: 1;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 
 .book-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--text-color);
   margin-bottom: 6px;
   line-height: 1.35;
+  height: 38px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .book-desc {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.45;
-  margin-bottom: 12px;
-  flex: 1;
+  margin-bottom: 10px;
+  height: 35px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .book-meta {
@@ -1580,7 +1713,7 @@ main.main-content {
   box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
 }
 
-/* Modal Login */
+/* Modal Generic (App Modals & Popups) */
 .login-modal {
   position: fixed;
   top: 0;
@@ -1591,12 +1724,17 @@ main.main-content {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* Hanya Modal Login yang menggunakan gambar latar belakang lab/kelas */
+#modal-login {
   background-image: url('bg-login.jpeg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  padding: 16px;
-  box-sizing: border-box;
 }
 
 .login-modal-overlay {
@@ -1605,7 +1743,7 @@ main.main-content {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(11, 26, 43, 0.65);
+  background: rgba(11, 26, 43, 0.7);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
@@ -1818,5 +1956,124 @@ main.main-content {
   max-width: 60%;
   word-break: break-word;
 }
+
+/* ==========================================================================
+   CBT EXAM & QUESTION BUILDER STYLES (NO TEXT CUTOFF + MEDIA PREVIEW)
+   ========================================================================== */
+
+/* CBT Student Exam Options (A, B, C, D) */
+.cbt-opsi-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.cbt-opsi-item:hover {
+  border-color: var(--primary-color);
+  background: var(--surface-hover);
+  transform: translateY(-1px);
+}
+
+.cbt-opsi-item.selected {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+  box-shadow: 0 0 0 1px #10b981;
+}
+
+.cbt-opsi-radio {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--text-color);
+  background: var(--surface-2);
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.cbt-opsi-item.selected .cbt-opsi-radio {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.cbt-opsi-text {
+  flex: 1;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-color);
+  word-break: break-word;
+}
+
+/* CBT Question Number Buttons */
+.cbt-btn-no {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-2);
+  color: var(--text-color);
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.cbt-btn-no:hover {
+  border-color: var(--primary-color);
+  transform: scale(1.04);
+}
+
+.cbt-btn-no.active {
+  border: 2px solid var(--primary-color) !important;
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.cbt-btn-no.answered {
+  background: #10b981 !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.cbt-btn-no.ragu {
+  background: #eab308 !important;
+  border-color: #ca8a04 !important;
+  color: #000000 !important;
+}
+
+/* Butir Soal Editor Media & Textarea Helpers */
+.media-preview-box {
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--surface-2);
+  display: inline-block;
+  max-width: 100%;
+}
+
+.media-preview-box img,
+.media-preview-box video {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 6px;
+  display: block;
+}
+
 
 

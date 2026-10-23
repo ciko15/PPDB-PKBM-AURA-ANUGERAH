@@ -345,6 +345,15 @@ function toggleMobileMoreMenu(forceState) {
     sheet.classList.add('hidden');
   }
 }
+function toggleDropdownMenu(dropdownId) {
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown) return;
+  dropdown.classList.toggle('open');
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    setTimeout(window.lucide.createIcons, 20);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   setupEventListeners();
@@ -359,10 +368,17 @@ function setupEventListeners() {
   if (btnLogout) btnLogout.addEventListener('click', handleLogout);
   if (btnProfile) btnProfile.addEventListener('click', showUserProfileModal);
 
-  document.querySelectorAll('#main-menu li').forEach(item => {
+  document.querySelectorAll('#main-menu li.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      document.querySelectorAll('#main-menu li').forEach(li => li.classList.remove('active'));
+      document.querySelectorAll('#main-menu li.nav-item').forEach(li => li.classList.remove('active'));
       item.classList.add('active');
+
+      // Pastikan parent dropdown tetap terbuka
+      const parentDropdown = item.closest('.menu-dropdown');
+      if (parentDropdown) {
+        parentDropdown.classList.add('open');
+      }
+
       const targetId = item.getAttribute('data-target');
 
       if (targetId === 'section-input') {
@@ -678,11 +694,11 @@ function handleClientRouting() {
     return;
   }
 
-  // Jika belum login:
-  // Rute rahasia '/portal-pkbm' (atau variasi query / hash) membuka Form Login
+  // Rute rahasia '/portal' (atau '/portal-pkbm') membuka Form Login
   // Rute root '/' atau '/pkbm' menampilkan Halaman Informasi Awal publik
-  const isPortalPkbm = path === '/portal-pkbm' || path === '/portal-pkbm/' || path.startsWith('/portal-pkbm');
-  if (isPortalPkbm) {
+  const isPortal = path === '/portal' || path === '/portal/' || path.startsWith('/portal/') ||
+                   path === '/portal-pkbm' || path === '/portal-pkbm/' || path.startsWith('/portal-pkbm');
+  if (isPortal) {
     pageLanding.classList.remove('hidden');
     pageDashboard.classList.add('hidden');
     if (modalLogin) {
@@ -845,9 +861,9 @@ function handleLogout() {
       pageDashboard.classList.add('hidden');
       pageLanding.classList.remove('hidden');
 
-      // Arahkan URL ke /portal-pkbm jika belum
-      if (window.location.pathname !== '/portal-pkbm') {
-        window.history.pushState({}, '', '/portal-pkbm');
+      // Arahkan URL ke /portal jika belum
+      if (window.location.pathname !== '/portal') {
+        window.history.pushState({}, '', '/portal');
       }
 
       // Otomatis buka form login
@@ -887,25 +903,21 @@ function showDashboard() {
   const menuSiswaMateri = document.getElementById('menu-siswa-materi');
   const menuSiswaUjian = document.getElementById('menu-siswa-ujian');
 
-  if (currentUser.role === 'Siswa') {
-    // Sembunyikan menu manajemen petugas
-    menuDashboard.classList.add('hidden');
-    if (menuInput) menuInput.classList.add('hidden');
-    if (menuAiReg) menuAiReg.classList.add('hidden');
-    if (menuValidasi) menuValidasi.classList.add('hidden');
-    if (menuList) menuList.classList.add('hidden');
-    if (menuUsers) menuUsers.classList.add('hidden');
-    if (menuApiKeys) menuApiKeys.classList.add('hidden');
-    if (menuMateri) menuMateri.classList.add('hidden');
-    if (menuUjian) menuUjian.classList.add('hidden');
-    if (menuAbsensi) menuAbsensi.classList.remove('hidden');
-    if (menuBayar) menuBayar.classList.remove('hidden');
+  const dropSekolah = document.getElementById('dropdown-sekolah');
+  const dropAkademik = document.getElementById('dropdown-akademik');
+  const dropPortalSiswa = document.getElementById('dropdown-portal-siswa');
+  const dropPengaturan = document.getElementById('dropdown-pengaturan');
 
-    // Tampilkan menu khusus siswa (termasuk Buku Belajar & Hasil Ujian)
+  if (currentUser.role === 'Siswa') {
+    // Sembunyikan menu petugas
+    menuDashboard.classList.add('hidden');
+    if (dropSekolah) dropSekolah.classList.add('hidden');
+    if (dropAkademik) dropAkademik.classList.add('hidden');
+    if (dropPengaturan) dropPengaturan.classList.add('hidden');
+
+    // Tampilkan portal siswa
+    if (dropPortalSiswa) dropPortalSiswa.classList.remove('hidden');
     if (menuPortalSiswa) menuPortalSiswa.classList.remove('hidden');
-    if (menuSiswaMateri) menuSiswaMateri.classList.remove('hidden');
-    if (menuSiswaUjian) menuSiswaUjian.classList.remove('hidden');
-    if (menuPengumumanSiswa) menuPengumumanSiswa.classList.remove('hidden');
 
     renderPortalSiswaData(currentUser.dataSiswa);
     loadBukuData();
@@ -916,18 +928,9 @@ function showDashboard() {
 
   // Jika Petugas (Admin, Guru, Super Admin):
   menuDashboard.classList.remove('hidden');
-  if (menuInput) menuInput.classList.remove('hidden');
-  if (menuAiReg) menuAiReg.classList.remove('hidden');
-  if (menuValidasi) menuValidasi.classList.add('hidden'); // Menu Antrean Validasi AI dihilangkan
-  if (menuList) menuList.classList.remove('hidden');
-  if (menuMateri) menuMateri.classList.remove('hidden');
-  if (menuUjian) menuUjian.classList.remove('hidden');
-  if (menuAbsensi) menuAbsensi.classList.remove('hidden');
-  if (menuBayar) menuBayar.classList.remove('hidden');
-  if (menuPortalSiswa) menuPortalSiswa.classList.add('hidden');
-  if (menuSiswaMateri) menuSiswaMateri.classList.add('hidden');
-  if (menuSiswaUjian) menuSiswaUjian.classList.add('hidden');
-  if (menuPengumumanSiswa) menuPengumumanSiswa.classList.add('hidden');
+  if (dropSekolah) dropSekolah.classList.remove('hidden');
+  if (dropAkademik) dropAkademik.classList.remove('hidden');
+  if (dropPortalSiswa) dropPortalSiswa.classList.add('hidden');
 
   loadBukuData();
   loadUjianData();
@@ -953,16 +956,19 @@ function showDashboard() {
     if (mobileSheetValidasi) mobileSheetValidasi.style.display = '';
 
     if (currentUser.role === 'Super Admin') {
+      if (dropPengaturan) dropPengaturan.classList.remove('hidden');
       menuUsers.classList.remove('hidden');
       if (menuApiKeys) menuApiKeys.classList.remove('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = '';
       if (mobileSheetApi) mobileSheetApi.style.display = '';
     } else if (currentUser.role === 'Admin') {
+      if (dropPengaturan) dropPengaturan.classList.remove('hidden');
       menuUsers.classList.remove('hidden');
       if (menuApiKeys) menuApiKeys.classList.add('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = '';
       if (mobileSheetApi) mobileSheetApi.style.display = 'none';
     } else {
+      if (dropPengaturan) dropPengaturan.classList.add('hidden');
       menuUsers.classList.add('hidden');
       if (menuApiKeys) menuApiKeys.classList.add('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = 'none';
@@ -3234,7 +3240,7 @@ function importDataFromFile(event) {
 if (btnCloseLogin) {
   btnCloseLogin.addEventListener('click', () => {
     modalLogin.classList.add('hidden');
-    if (window.location.pathname.includes('portal-pkbm')) {
+    if (window.location.pathname.includes('portal')) {
       try { window.history.pushState({}, '', '/pkbm'); } catch (e) { }
     }
   });
@@ -4148,7 +4154,7 @@ let bukuList = [
   {
     "id": "1Gdy8_1Q3t_mA3FcCqZCjNOTFTFZHc5s0",
     "kode": "BK-016",
-    "nama": "cb)>> 375 0 376 62 377 149 378 274 <</Cou",
+    "nama": "Matematika Peminatan Paket C",
     "mapel": "Matematika",
     "jenjang": "Paket C",
     "kelas": "Kelas XII",
@@ -4683,10 +4689,21 @@ function loadBukuData() {
   try {
     const saved = localStorage.getItem('ppdb_buku_list');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      // Jika data tersimpan masih dummy 5 buku lama, perbarui dengan 50 buku gdrive seed
+      let parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 10) {
+        // Perbaiki jika ada item dengan judul corrupted dari versi lama
+        let hasCorrupted = false;
+        parsed = parsed.map(item => {
+          if (item.kode === 'BK-016' || (item.nama && item.nama.includes('cb)>>'))) {
+            hasCorrupted = true;
+            return { ...item, nama: 'Matematika Peminatan Paket C' };
+          }
+          return item;
+        });
         bukuList = parsed;
+        if (hasCorrupted) {
+          localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList));
+        }
       } else {
         localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList));
       }
