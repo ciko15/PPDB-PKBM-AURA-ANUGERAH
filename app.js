@@ -1305,6 +1305,11 @@ function showDashboard() {
     document.querySelector('#main-menu li[data-target="section-dashboard"]').click();
   }
 
+  // Jika sebelum reload pengguna sedang dalam sesi membaca modul, pulihkan langsung ke posisi terakhir
+  setTimeout(() => {
+    restoreActiveBelajarSessionIfAny();
+  }, 400);
+
   if (syncInterval) clearInterval(syncInterval);
   // Interval sync 30 detik agar Google Apps Script tidak terkena rate limit / concurrency throttle
   syncInterval = setInterval(backgroundSync, 30000);
@@ -5416,33 +5421,53 @@ let currentPdfScale = 1.0;
 let isPdfRendering = false;
 let pendingPdfPage = null;
 
-function launchReaderSession(book, studentName) {
-  // Update view count
-  book.dibaca = (book.dibaca || 0) + 1;
-  saveBukuListToStorage();
-  renderBukuPopuler();
-  renderBukuGrid();
+function saveActiveBelajarSessionToStorage() {
+  if (activeBelajarSession) {
+    try { localStorage.setItem('ppdb_active_belajar', JSON.stringify(activeBelajarSession)); } catch (e) { }
+  } else {
+    try { localStorage.removeItem('ppdb_active_belajar'); } catch (e) { }
+  }
+}
 
-  // Inisialisasi Sesi Belajar
-  activeBelajarSession = {
-    sessionId: 'SES-' + Date.now(),
-    bukuId: book.id,
-    bukuJudul: book.nama,
-    namaSiswa: studentName,
-    tanggal: new Date().toLocaleDateString('id-ID'),
-    jamMulai: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-    halamanAwal: 1,
-    halamanSekarang: 1,
-    totalHalaman: book.totalHal || 28,
-    detikMulai: Date.now(),
-    durasiDetik: 0,
-    status: 'Aktif Belajar'
-  };
+function launchReaderSession(book, studentName, initialPage = null, isResumed = false) {
+  // Update view count hanya jika sesi baru
+  if (!isResumed) {
+    book.dibaca = (book.dibaca || 0) + 1;
+    saveBukuListToStorage();
+    renderBukuPopuler();
+    renderBukuGrid();
+  }
+
+  const startPage = initialPage ? parseInt(initialPage, 10) : 1;
+
+  // Inisialisasi Sesi Belajar (atau lanjutkan jika restore)
+  if (!activeBelajarSession || !isResumed) {
+    activeBelajarSession = {
+      sessionId: 'SES-' + Date.now(),
+      bukuId: book.id,
+      bukuJudul: book.nama,
+      namaSiswa: studentName,
+      tanggal: new Date().toLocaleDateString('id-ID'),
+      jamMulai: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+      halamanAwal: startPage,
+      halamanSekarang: startPage,
+      totalHalaman: book.totalHal || 28,
+      detikMulai: Date.now(),
+      durasiDetik: 0,
+      status: 'Aktif Belajar'
+    };
+  } else {
+    // Sesi dilanjutkan (sesudah reload / error browser)
+    activeBelajarSession.halamanSekarang = startPage;
+    activeBelajarSession.detikMulai = Date.now() - ((activeBelajarSession.durasiDetik || 0) * 1000);
+  }
+
+  saveActiveBelajarSessionToStorage();
 
   // Setup UI Modal Reader
   document.getElementById('reader-book-title').textContent = book.nama;
   document.getElementById('reader-book-info').textContent = `${book.jenjang} · ${book.kelas || ''} · ${book.mapel || book.kategori || ''}`;
-  document.getElementById('reader-page-input').value = '1';
+  document.getElementById('reader-page-input').value = String(startPage);
   document.getElementById('reader-total-page').textContent = book.totalHal || 28;
   document.getElementById('reader-active-student').textContent = studentName;
   updateZoomDisplay(1.0);
@@ -5451,30 +5476,34 @@ function launchReaderSession(book, studentName) {
   const modalReader = document.getElementById('modal-reader');
   if (modalReader) modalReader.classList.remove('hidden');
 
-  // Load PDF file via Native PDF.js Engine
-  loadPdfDocument(book);
+  // Load PDF file via Native PDF.js Engine pada halaman startPage
+  loadPdfDocument(book, startPage);
 
   // Start Live Timer
   startLiveTimer();
 
-  // Rekam status awal ke log aktivitas presensi belajar
-  catatLogBelajarBaru(activeBelajarSession);
+  // Rekam status awal ke log aktivitas presensi belajar jika bukan resume
+  if (!isResumed) {
+    catatLogBelajarBaru(activeBelajarSession);
 
-  // 🔔 Kirim Notifikasi Push ke Admin & Super Admin saat siswa mulai belajar
-  if (typeof sendAppPushNotification === 'function') {
-    sendAppPushNotification({
-      title: 'Aktivitas Belajar Dimulai 📖',
-      body: `Siswa "${studentName}" baru saja mulai membaca materi: ${book.nama} (${book.jenjang} - ${book.kategori}).`,
-      url: '/portal',
-      targetRole: 'Admin',
-      tag: 'mulai-belajar-' + book.id
-    });
+    // 🔔 Kirim Notifikasi Push ke Admin & Super Admin saat siswa mulai belajar
+    if (typeof sendAppPushNotification === 'function') {
+      sendAppPushNotification({
+        title: 'Aktivitas Belajar Dimulai 📖',
+        body: `Siswa "${studentName}" baru saja mulai membaca materi: ${book.nama} (${book.jenjang} - ${book.kategori}).`,
+        url: '/portal',
+        targetRole: 'Admin',
+        tag: 'mulai-belajar-' + book.id
+      });
+    }
+  } else {
+    updateLogBelajarSession(activeBelajarSession);
   }
 }
 
 // ==================== ENGINE PDF.JS NATIVE VIEWER ====================
 
-async function loadPdfDocument(book) {
+async function loadPdfDocument(book, startPage = 1) {
   const spinner = document.getElementById('reader-loading-spinner');
   const canvas = document.getElementById('pdf-page-canvas');
   const textViewerEl = document.getElementById('reader-text-viewer');
@@ -5504,7 +5533,7 @@ async function loadPdfDocument(book) {
     if (canvas) canvas.style.display = 'none';
     if (textViewerEl) {
       textViewerEl.style.display = 'block';
-      renderBookChapterContent(document.getElementById('reader-chapter-content'), book, 1);
+      renderBookChapterContent(document.getElementById('reader-chapter-content'), book, startPage);
     }
     return;
   }
@@ -5529,17 +5558,19 @@ async function loadPdfDocument(book) {
 
       loadingTask.promise.then(pdf => {
         currentPdfDoc = pdf;
-        currentPdfPage = 1;
         const total = pdf.numPages;
+        const safePage = Math.max(1, Math.min(total, startPage));
+        currentPdfPage = safePage;
 
         if (activeBelajarSession) {
           activeBelajarSession.totalHalaman = total;
-          activeBelajarSession.halamanSekarang = 1;
+          activeBelajarSession.halamanSekarang = safePage;
+          saveActiveBelajarSessionToStorage();
         }
 
         document.getElementById('reader-total-page').textContent = total;
         document.getElementById('reader-page-input').max = total;
-        document.getElementById('reader-page-input').value = 1;
+        document.getElementById('reader-page-input').value = safePage;
 
         // Auto scale: sesuaikan lebar layar (HP = fit width)
         calculateInitialScale();
@@ -5673,8 +5704,9 @@ function navigasiHalamanBuku(step) {
     }
   }
 
-  // Update Log Belajar
+  // Update Log Belajar & Auto-save Session
   updateLogBelajarSession(activeBelajarSession);
+  saveActiveBelajarSessionToStorage();
 }
 
 // Lompat ke Halaman tertentu melalui input
@@ -5701,6 +5733,7 @@ function lompatHalamanBuku(val) {
     }
   }
   updateLogBelajarSession(activeBelajarSession);
+  saveActiveBelajarSessionToStorage();
 }
 
 // Zoom In / Out Handlers
@@ -5770,9 +5803,10 @@ function startLiveTimer() {
 
     if (timerEl) timerEl.textContent = `${hours}:${minutes}:${seconds}`;
 
-    // Sinkronkan ke log setiap 15 detik
-    if (elapsedSeconds % 15 === 0) {
+    // Sinkronkan ke log dan storage setiap 10 detik
+    if (elapsedSeconds % 10 === 0) {
       updateLogBelajarSession(activeBelajarSession);
+      saveActiveBelajarSessionToStorage();
     }
   }, 1000);
 }
@@ -5802,6 +5836,7 @@ function closeReaderModal(triggerConfirm = true) {
     if (liveTimerInterval) clearInterval(liveTimerInterval);
     activeBelajarSession = null;
     currentPdfDoc = null;
+    saveActiveBelajarSessionToStorage(); // Menghapus key session dari storage
 
     const modalReader = document.getElementById('modal-reader');
     if (modalReader) modalReader.classList.add('hidden');
@@ -5818,6 +5853,7 @@ function closeReaderModal(triggerConfirm = true) {
   if (liveTimerInterval) clearInterval(liveTimerInterval);
   activeBelajarSession = null;
   currentPdfDoc = null;
+  saveActiveBelajarSessionToStorage();
   const modalReader = document.getElementById('modal-reader');
   if (modalReader) modalReader.classList.add('hidden');
   renderBelajarLogTable();
@@ -6063,6 +6099,28 @@ function hapusBuku(id) {
       Swal.fire('Dihapus', 'Buku telah berhasil dihapus.', 'success');
     }
   });
+}
+
+// ==================== RESTORE BELAJAR STATE ON REFRESH / RELOAD ====================
+function restoreActiveBelajarSessionIfAny() {
+  try {
+    const raw = localStorage.getItem('ppdb_active_belajar');
+    if (!raw) return;
+    const session = JSON.parse(raw);
+    if (!session || !session.bukuId) return;
+
+    // Pastikan buku ada dalam list
+    const book = bukuList.find(b => b.id === session.bukuId);
+    if (!book) return;
+
+    activeBelajarSession = session;
+    console.log('[Auto-Restore] Melanjutkan sesi belajar modul:', session.bukuJudul, 'Halaman:', session.halamanSekarang);
+
+    // Buka kembali modal reader langsung ke halaman dan durasi terakhir
+    launchReaderSession(book, session.namaSiswa || 'Siswa', session.halamanSekarang || 1, true);
+  } catch (err) {
+    console.warn('Gagal memulihkan sesi belajar:', err);
+  }
 }
 
 // ==================== SISTEM UJIAN & PENILAIAN HASIL BELAJAR ====================

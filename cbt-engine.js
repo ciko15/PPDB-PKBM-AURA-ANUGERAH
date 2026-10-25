@@ -270,6 +270,18 @@ let cbtActiveSession = null;
 let cbtTimerInterval = null;
 let cbtFontSizeLevel = 16;
 
+function saveCbtActiveSessionToStorage() {
+  if (cbtActiveSession) {
+    try {
+      // Catat timestamp waktu saat disimpan agar durasi countdown presisi
+      cbtActiveSession.lastSavedTime = Date.now();
+      localStorage.setItem('ppdb_cbt_active_session', JSON.stringify(cbtActiveSession));
+    } catch (e) { }
+  } else {
+    try { localStorage.removeItem('ppdb_cbt_active_session'); } catch (e) { }
+  }
+}
+
 // Template Generator Soal Ujian Otomatis berdasarkan Modul / Mata Pelajaran
 function generateSoalPaketModul(buku) {
   const mapel = (buku && buku.mapel) ? buku.mapel : 'Umum';
@@ -535,7 +547,8 @@ function launchCbtDariPaketSoal(pkt, student) {
 
   renderCbtGridNomor();
   tampilkanSoalCBT(1);
-  startCbtTimer();
+  saveCbtActiveSessionToStorage();
+  startCbtCountdown();
 
   const modal = document.getElementById('modal-cbt-ujian');
   if (modal) modal.classList.remove('hidden');
@@ -588,6 +601,9 @@ function launchCbtBeesmart(book, student) {
   const modalCbt = document.getElementById('modal-cbt-ujian');
   if (modalCbt) modalCbt.classList.remove('hidden');
 
+  // Simpan state awal CBT ke storage
+  saveCbtActiveSessionToStorage();
+
   // Jalankan Countdown Timer ala Beesmart
   startCbtCountdown();
 
@@ -617,8 +633,14 @@ function startCbtCountdown() {
       }
     }
 
+    // Auto-save sisa waktu ujian setiap 5 detik agar jika browser error/mati lampu, waktu tetap akurat
+    if (cbtActiveSession.sisaDetik % 5 === 0) {
+      saveCbtActiveSessionToStorage();
+    }
+
     if (cbtActiveSession.sisaDetik <= 0) {
       clearInterval(cbtTimerInterval);
+      saveCbtActiveSessionToStorage();
       Swal.fire({
         title: 'Waktu Ujian Habis!',
         text: 'Waktu pengerjaan telah berakhir. Jawaban Anda akan diproses secara otomatis.',
@@ -741,6 +763,7 @@ function tampilkanSoalCBT(no) {
 function pilihJawabanCBT(no, opsiKey) {
   if (!cbtActiveSession) return;
   cbtActiveSession.jawabanSiswa[no] = opsiKey;
+  saveCbtActiveSessionToStorage();
   tampilkanSoalCBT(no);
 }
 
@@ -748,6 +771,7 @@ function toggleRaguRagu(isRagu) {
   if (!cbtActiveSession) return;
   const no = cbtActiveSession.currentNo;
   cbtActiveSession.raguSiswa[no] = isRagu;
+  saveCbtActiveSessionToStorage();
   const raguBadge = document.getElementById('cbt-ragu-badge');
   if (raguBadge) raguBadge.style.display = isRagu ? 'inline-block' : 'none';
   renderCbtGridNomor();
@@ -757,6 +781,8 @@ function navigasiSoalCBT(step) {
   if (!cbtActiveSession) return;
   const nextNo = cbtActiveSession.currentNo + step;
   if (nextNo >= 1 && nextNo <= cbtActiveSession.soalList.length) {
+    cbtActiveSession.currentNo = nextNo;
+    saveCbtActiveSessionToStorage();
     tampilkanSoalCBT(nextNo);
   }
 }
@@ -928,10 +954,12 @@ function selesaikanDanHitungNilaiCBT(isTimeUp) {
     }
   }
 
-  // Tutup Modal CBT
+  // Tutup Modal CBT & Bersihkan State Sesi Ujian
   const modalCbt = document.getElementById('modal-cbt-ujian');
   if (modalCbt) modalCbt.classList.add('hidden');
+  if (cbtTimerInterval) clearInterval(cbtTimerInterval);
   cbtActiveSession = null;
+  saveCbtActiveSessionToStorage(); // Menghapus key ppdb_cbt_active_session dari localStorage
 
   // Dialog Skor Hasil CBT
   Swal.fire({
@@ -2120,9 +2148,79 @@ function handleImportExcelSoal(input) {
   reader.readAsArrayBuffer(file);
 }
 
+// ==================== RESTORE CBT STATE ON REFRESH / RELOAD / CRASH ====================
+function restoreActiveCbtSessionIfAny() {
+  try {
+    const raw = localStorage.getItem('ppdb_cbt_active_session');
+    if (!raw) return;
+    const session = JSON.parse(raw);
+    if (!session || !session.soalList || session.soalList.length === 0) return;
+
+    // Hitung penyesuaian waktu: jika mati lampu atau tertutup, kurangi selisih waktu mati
+    if (session.lastSavedTime) {
+      const elapsedSeconds = Math.floor((Date.now() - session.lastSavedTime) / 1000);
+      // Hanya kurangi jika jeda wajar (maksimal sisa detiknya habis)
+      session.sisaDetik = Math.max(0, (session.sisaDetik || 0) - elapsedSeconds);
+    }
+
+    if (session.sisaDetik <= 0) {
+      // Waktu sudah habis saat offline
+      cbtActiveSession = session;
+      selesaikanDanHitungNilaiCBT(true);
+      return;
+    }
+
+    cbtActiveSession = session;
+    console.log('[Auto-Restore] Melanjutkan sesi ujian CBT:', session.bukuJudul, 'Soal No:', session.currentNo, 'Sisa Waktu:', session.sisaDetik, 'detik');
+
+    // Setup Header CBT UI
+    const headerMapel = document.getElementById('cbt-header-mapel');
+    const headerSiswa = document.getElementById('cbt-header-siswa');
+    if (headerMapel) headerMapel.textContent = `${session.bukuJudul} (${session.program || 'Paket C'})`;
+    if (headerSiswa) headerSiswa.textContent = `Peserta: ${session.namaSiswa} · Token: BEESMART`;
+
+    // Render Grid Nomor Soal dengan status jawaban yang tersimpan
+    renderCbtGridNomor();
+
+    // Tampilkan nomor soal terakhir yang sedang dikerjakan
+    tampilkanSoalCBT(session.currentNo || 1);
+
+    // Buka Modal CBT
+    const modalCbt = document.getElementById('modal-cbt-ujian');
+    if (modalCbt) modalCbt.classList.remove('hidden');
+
+    // Lanjutkan Countdown Timer dari posisi sisaDetik terakhir
+    startCbtCountdown();
+
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+
+    // Tampilkan toast pemberitahuan ramah bahwa ujian dipulihkan
+    if (typeof Swal !== 'undefined') {
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true
+      });
+      Toast.fire({
+        icon: 'info',
+        title: 'Sesi Ujian Dipulihkan',
+        text: 'Jawaban dan sisa waktu pengerjaan Anda tetap aman tersimpan.'
+      });
+    }
+  } catch (err) {
+    console.warn('Gagal memulihkan sesi ujian CBT:', err);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     initBankSoalData();
     renderBankSoalTable();
+    // Pulihkan sesi ujian jika reload halaman
+    restoreActiveCbtSessionIfAny();
   }, 600);
 });
