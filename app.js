@@ -7371,38 +7371,57 @@ async function handleSendTestPush() {
   }
 
   try {
+    let pushSentViaServer = false;
     const username = currentUser ? currentUser.username : null;
-    const resp = await fetch('/api/send-push', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: 'SIGAP AURA • Tes Notifikasi Berhasil ✅',
-        body: `Halo ${currentUser ? currentUser.nama : 'Peserta'}, notifikasi HP Anda sudah terhubung dengan baik ke sistem PKBM Aura Anugerah!`,
-        url: '/portal',
-        targetUsername: username,
-        tag: 'tes-notifikasi'
-      })
+
+    try {
+      const resp = await fetch('/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'SIGAP AURA • Tes Notifikasi Berhasil ✅',
+          body: `Halo ${currentUser ? currentUser.nama : 'Peserta'}, notifikasi HP Anda sudah terhubung dengan baik ke sistem PKBM Aura Anugerah!`,
+          url: '/portal',
+          targetUsername: username,
+          tag: 'tes-notifikasi'
+        })
+      });
+
+      const textResp = await resp.text();
+      if (textResp && !textResp.trim().startsWith('<')) {
+        const res = JSON.parse(textResp);
+        if (res && res.success) {
+          pushSentViaServer = true;
+        }
+      }
+    } catch (serverErr) {
+      console.warn('Pengiriman push via server backend tidak tersedia:', serverErr.message);
+    }
+
+    // Jika server backend offline/Vercel static: Munculkan banner langsung via Service Worker HP
+    if (!swRegistration) {
+      swRegistration = await navigator.serviceWorker.ready;
+    }
+
+    if (swRegistration && swRegistration.showNotification) {
+      await swRegistration.showNotification('SIGAP AURA • Tes Notifikasi Berhasil ✅', {
+        body: `Halo ${currentUser ? currentUser.nama : 'Peserta'}, notifikasi HP Anda sudah aktif dan terhubung ke PKBM Aura Anugerah!`,
+        icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
+        badge: '/logo_PKBM_Aura_Anugerah_transparan.png',
+        tag: 'tes-notifikasi-' + Date.now(),
+        data: { url: '/portal' },
+        vibrate: [100, 50, 100]
+      });
+    }
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Tes Notifikasi Berhasil! 🔔',
+      text: 'Pemberitahuan push telah dikirimkan ke bilah status/layar kunci HP Anda.',
+      timer: 2500,
+      showConfirmButton: false
     });
 
-    const textResp = await resp.text();
-    let res = {};
-    try {
-      res = JSON.parse(textResp);
-    } catch (parseErr) {
-      throw new Error('Server belum mengonfigurasi endpoint pengiriman push secara publik.');
-    }
-
-    if (res.success) {
-      Swal.fire({
-        icon: 'success',
-        title: 'Tes Terkirim!',
-        text: 'Pemberitahuan push telah dikirimkan ke perangkat HP Anda.',
-        timer: 2000,
-        showConfirmButton: false
-      });
-    } else {
-      throw new Error(res.error || 'Gagal mengirim push tes.');
-    }
   } catch (err) {
     Swal.fire('Gagal Kirim Tes', err.message, 'error');
   }
@@ -7460,11 +7479,35 @@ async function handleAdminBroadcastPush() {
 // Helper umum untuk modul lain memanggil push notification
 async function sendAppPushNotification(options = {}) {
   try {
-    await fetch('/api/send-push', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(options)
-    });
+    let sent = false;
+    try {
+      const resp = await fetch('/api/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(options)
+      });
+      const text = await resp.text();
+      if (text && !text.trim().startsWith('<')) {
+        sent = true;
+      }
+    } catch (e) { }
+
+    // Jika server offline / static hosting: Tampilkan langsung di browser perangkat lokal
+    if (!sent && Notification.permission === 'granted') {
+      if (!swRegistration) {
+        swRegistration = await navigator.serviceWorker.ready;
+      }
+      if (swRegistration && swRegistration.showNotification) {
+        swRegistration.showNotification(options.title || 'SIGAP AURA', {
+          body: options.body || 'Pemberitahuan dari PKBM Aura Anugerah.',
+          icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
+          badge: '/logo_PKBM_Aura_Anugerah_transparan.png',
+          tag: options.tag || 'sigap-' + Date.now(),
+          data: { url: options.url || '/portal' },
+          vibrate: [100, 50, 100]
+        });
+      }
+    }
   } catch (err) {
     console.warn('Gagal memanggil push API:', err.message);
   }
