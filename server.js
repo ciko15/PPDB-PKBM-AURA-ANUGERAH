@@ -11,11 +11,15 @@ import webpush from 'web-push';
 dotenv.config();
 
 // Konfigurasi VAPID Keys Web Push Notifications (iPhone & Android)
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BP7KCUfLkQMqYnzgQRwTBmOHxMcip_JXkNiACCoAdrg_wOTED9Awpb6nrY5x8tm9A2hAXmQbvOIzmxA3F-uylwE';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'SUAo6_xSoEN-wJYH4P6Tc1jCnpkWN3LTnAQej9R6Fus';
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_MAILTO = process.env.VAPID_MAILTO || 'mailto:admin.pkbm@aura-anugerah.sch.id';
 
-webpush.setVapidDetails(VAPID_MAILTO, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_MAILTO, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+} else {
+  console.warn('⚠️ Peringatan: VAPID_PUBLIC_KEY atau VAPID_PRIVATE_KEY belum disetel di .env');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
