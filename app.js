@@ -7270,14 +7270,24 @@ async function handleSubscribePush() {
       return;
     }
 
-    // 2. Ambil VAPID Public Key dari backend
-    const keyResp = await fetch('/api/push-public-key');
-    const keyData = await keyResp.json();
-    if (!keyData.success || !keyData.publicKey) {
-      throw new Error('Gagal mengambil public key push dari server.');
+    // 2. Ambil VAPID Public Key (dengan Fallback Default jika server hosting/Vercel mengembalikan index.html)
+    const DEFAULT_VAPID_PUBLIC_KEY = 'BP7KCUfLkQMqYnzgQRwTBmOHxMcip_JXkNiACCoAdrg_wOTED9Awpb6nrY5x8tm9A2hAXmQbvOIzmxA3F-uylwE';
+    let publicKey = DEFAULT_VAPID_PUBLIC_KEY;
+
+    try {
+      const keyResp = await fetch('/api/push-public-key');
+      const textResp = await keyResp.text();
+      if (textResp && !textResp.trim().startsWith('<')) {
+        const keyData = JSON.parse(textResp);
+        if (keyData && keyData.success && keyData.publicKey) {
+          publicKey = keyData.publicKey;
+        }
+      }
+    } catch (fetchKeyErr) {
+      console.warn('Gagal fetch /api/push-public-key dari server, menggunakan static fallback key:', fetchKeyErr.message);
     }
 
-    const applicationServerKey = urlBase64ToUint8Array(keyData.publicKey);
+    const applicationServerKey = urlBase64ToUint8Array(publicKey);
 
     // 3. Pastikan Service Worker siap
     if (!swRegistration) {
@@ -7374,7 +7384,14 @@ async function handleSendTestPush() {
       })
     });
 
-    const res = await resp.json();
+    const textResp = await resp.text();
+    let res = {};
+    try {
+      res = JSON.parse(textResp);
+    } catch (parseErr) {
+      throw new Error('Server belum mengonfigurasi endpoint pengiriman push secara publik.');
+    }
+
     if (res.success) {
       Swal.fire({
         icon: 'success',
@@ -7415,7 +7432,14 @@ async function handleAdminBroadcastPush() {
       })
     });
 
-    const res = await resp.json();
+    const textResp = await resp.text();
+    let res = {};
+    try {
+      res = JSON.parse(textResp);
+    } catch (parseErr) {
+      throw new Error('Server belum mengonfigurasi endpoint pengiriman push secara publik.');
+    }
+
     if (res.success) {
       Swal.fire({
         icon: 'success',
