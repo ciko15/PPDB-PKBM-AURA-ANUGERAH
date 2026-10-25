@@ -687,15 +687,115 @@ function setupDatabase() {
       'Kabupaten/Kota', 'Kecamatan', 'Desa Kelurahan', 'Nama Lengkap', 
       'Tempat Lahir', 'Tanggal Lahir', 'Nama Ayah Kandung', 'Tahun Lahir Ayah', 
       'NIK Ayah', 'Nama Ibu Kandung', 'Tahun Lahir Ibu', 'NIK Ibu', 
-      'Jenjang', 'Syarat', 'Dok Berkas', 'Kelas', 'Foto',
+      'Jenjang', 'Syarat', 'Dok Berkas', 'Kelas', 'Foto', 
       'Status Validasi', 'Catatan AI', 'URL Ijazah', 'URL KK',
       'Bukti Pembayaran', 'Status Aktif', 'Didaftarkan Oleh', 
       'Jenis Kelamin', 'Tahun Lulus', 'Nama Wali'
     ]);
+  }
+
+  let sheetPush = ss.getSheetByName('Push_Subscriptions');
+  if (!sheetPush) {
+    sheetPush = ss.insertSheet('Push_Subscriptions');
+    sheetPush.appendRow(['Endpoint', 'Subscription_JSON', 'Username', 'Nama', 'Role', 'Updated_At']);
   }
   
   const sheet1 = ss.getSheetByName('Sheet1');
   if (sheet1 && ss.getSheets().length > 1) {
     ss.deleteSheet(sheet1);
   }
+}
+
+// =================== PUSH NOTIFICATION STORAGE ===================
+function savePushSubscriptionToDB(subObj, userObj) {
+  const sheet = getDB('Push_Subscriptions');
+  if (!sheet) throw new Error("Sheet Push_Subscriptions belum disetup.");
+
+  const endpoint = subObj.endpoint || '';
+  if (!endpoint) throw new Error("Endpoint diperlukan.");
+
+  const subJson = JSON.stringify(subObj);
+  const username = (userObj && userObj.username) ? userObj.username : 'guest';
+  const nama = (userObj && userObj.nama) ? userObj.nama : 'Tamu';
+  const role = (userObj && userObj.role) ? userObj.role : 'Umum';
+  const updatedAt = new Date().toISOString();
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === endpoint) {
+      // Update baris yang sudah ada
+      sheet.getRange(i + 1, 2).setValue(subJson);
+      sheet.getRange(i + 1, 3).setValue(username);
+      sheet.getRange(i + 1, 4).setValue(nama);
+      sheet.getRange(i + 1, 5).setValue(role);
+      sheet.getRange(i + 1, 6).setValue(updatedAt);
+      return { success: true, message: "Subscription updated" };
+    }
+  }
+
+  // Baris baru
+  sheet.appendRow([endpoint, subJson, username, nama, role, updatedAt]);
+  return { success: true, message: "Subscription added" };
+}
+
+function deletePushSubscriptionFromDB(endpoint) {
+  const sheet = getDB('Push_Subscriptions');
+  if (!sheet) return { success: true };
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === endpoint) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: "Subscription removed" };
+    }
+  }
+  return { success: true };
+}
+
+// Ambil daftar perangkat langganan push (bisa difilter berdasarkan role)
+function getPushSubscriptionsFromDB(targetRole, targetUsername) {
+  const sheet = getDB('Push_Subscriptions');
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    try {
+      const endpoint = data[i][0];
+      const subJson = data[i][1];
+      const username = data[i][2];
+      const nama = data[i][3];
+      const role = data[i][4];
+      if (targetUsername && username !== targetUsername) continue;
+      if (targetRole && targetRole.toLowerCase() === 'admin') {
+        const rLower = String(role || '').toLowerCase();
+        if (rLower !== 'admin' && rLower !== 'super admin') continue;
+      } else if (targetRole && String(role || '').toLowerCase() !== targetRole.toLowerCase()) {
+        continue;
+      }
+      list.push({
+        endpoint: endpoint,
+        subscription: JSON.parse(subJson),
+        user: { username: username, nama: nama, role: role }
+      });
+    } catch (e) { }
+  }
+  return list;
+}
+
+// Catat riwayat setiap notifikasi aktivitas baru (fleksibel untuk fitur apa pun di masa depan)
+function logNotificationActivity(title, body, url, targetRole, tag) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheetNotif = ss.getSheetByName('Log_Notifikasi');
+  if (!sheetNotif) {
+    sheetNotif = ss.insertSheet('Log_Notifikasi');
+    sheetNotif.appendRow(['Timestamp', 'Judul', 'Pesan', 'URL_Tujuan', 'Target_Role', 'Tag']);
+  }
+  sheetNotif.appendRow([
+    new Date().toISOString(),
+    title || 'Pemberitahuan',
+    body || '',
+    url || '/portal',
+    targetRole || 'Semua',
+    tag || 'umum'
+  ]);
+  return { success: true, message: "Log notifikasi berhasil dicatat" };
 }

@@ -5826,39 +5826,72 @@ function closeReaderModal(triggerConfirm = true) {
 
 // Modal dialog resume hasil belajar siswa
 function tampilkanResumeSelesaiBelajar(session, durasiMnt, halTerbaca, totalHal, persenSelesai) {
+  const jenjangInfo = session.jenjang || 'Paket Kesetaraan';
+  const kategoriInfo = session.kategori || 'Modul Belajar Mandiri';
+  const waktuMulai = session.jamMulai || '-';
+  const waktuSelesai = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+  // Kesimpulan cerdas berdasarkan progress materi yang dibaca
+  let statusBadge = '<span style="color: #10b981; font-weight: 700;">● TUNTAS BAIK</span>';
+  let rekomendasiText = 'Telah membaca materi dengan sangat baik dan siap mengikuti Ujian CBT untuk evaluasi nilai rapor.';
+  if (persenSelesai < 30) {
+    statusBadge = '<span style="color: #f59e0b; font-weight: 700;">● TAHAP AWAL</span>';
+    rekomendasiText = 'Baru membaca bab awal modul. Disarankan melanjutkan membaca bab berikutnya sebelum menempuh ujian evaluasi.';
+  } else if (persenSelesai < 70) {
+    statusBadge = '<span style="color: #0284c7; font-weight: 700;">● SEDANG BERJALAN</span>';
+    rekomendasiText = 'Telah membaca lebih dari separuh modul. Pemahaman konsep sudah cukup baik untuk latihan soal mandiri.';
+  }
+
   Swal.fire({
-    title: 'Resume Selesai Belajar 📖',
+    title: 'Resume Hasil Belajar Siswa 🎓',
     html: `
       <div style="text-align: left; font-size: 13.5px; color: var(--text-color);">
-        <p style="margin-top: 0;">Kerja bagus <b>${session.namaSiswa}</b>! Kehadiran dan aktivitas belajar Anda telah tercatat otomatis di sistem PKBM Aura Anugerah.</p>
+        <p style="margin-top: 0; line-height: 1.5;">
+          Selamat <b>${session.namaSiswa}</b>, aktivitas belajar Anda telah selesai dan kehadiran belajar otomatis terekam ke sistem database PKBM Aura Anugerah.
+        </p>
         
-        <!-- Kartu Rangkuman Detail -->
-        <div style="background: var(--surface-2); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin: 14px 0;">
-          <div style="font-weight: 700; font-size: 14.5px; color: var(--primary-color); margin-bottom: 8px;">
-            📚 ${session.bukuJudul}
+        <!-- Kartu Rangkuman Detail Modul & Materi -->
+        <div style="background: var(--surface-2); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin: 12px 0;">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--text-muted); margin-bottom: 2px;">
+            MODUL & MATERI YANG DIPELAJARI:
+          </div>
+          <div style="font-weight: 800; font-size: 15px; color: var(--primary-color);">
+            📖 ${session.bukuJudul}
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+            Program: <b>${jenjangInfo}</b> · Kategori: <b>${kategoriInfo}</b>
           </div>
           
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-            <div style="background: var(--surface-color); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color);">
-              <span style="font-size: 11px; color: var(--text-muted); display: block;">Halaman Dipelajari</span>
-              <b style="font-size: 14px; color: var(--text-color);">Hal. 1 - ${halTerbaca}</b>
-              <span style="font-size: 11px; color: var(--primary-color);"> (${persenSelesai}%)</span>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;">
+            <div style="background: var(--surface-color); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <span style="font-size: 11px; color: var(--text-muted); display: block;">Halaman Terbaca</span>
+              <b style="font-size: 14.5px; color: var(--text-color);">Hal. 1 s/d ${halTerbaca}</b>
+              <div style="font-size: 11px; color: var(--primary-color); margin-top: 2px; font-weight: 600;">
+                Tuntas ${persenSelesai}% (${halTerbaca} dari ${totalHal} Hal)
+              </div>
             </div>
 
-            <div style="background: var(--surface-color); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <div style="background: var(--surface-color); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
               <span style="font-size: 11px; color: var(--text-muted); display: block;">Durasi Belajar</span>
-              <b style="font-size: 14px; color: var(--text-color);">${durasiMnt} Menit</b>
-              <span style="font-size: 11px; color: #16a34a;"> (${session.jamMulai} - ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })})</span>
+              <b style="font-size: 14.5px; color: var(--text-color);">${durasiMnt} Menit</b>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                ⏱️ ${waktuMulai} - ${waktuSelesai} WIT
+              </div>
             </div>
           </div>
 
-          <div style="margin-top: 10px; font-size: 12px; line-height: 1.45; color: var(--text-muted); padding-top: 8px; border-top: 1px dashed var(--border-color);">
-            💡 <b>Kesimpulan:</b> Peserta telah mempelajari materi modul sebanyak <b>${halTerbaca} dari ${totalHal} halaman</b> dan siap melanjutkan ke evaluasi pemahaman (Ujian CBT).
+          <!-- Bagian Kesimpulan & Rekomendasi Guru -->
+          <div style="margin-top: 12px; font-size: 12px; line-height: 1.5; color: var(--text-color); padding: 10px; border-radius: 8px; background: rgba(22, 163, 74, 0.08); border-left: 3.5px solid var(--primary-color);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+              <b>💡 KESIMPULAN BELAJAR:</b>
+              ${statusBadge}
+            </div>
+            <div>${rekomendasiText}</div>
           </div>
         </div>
 
-        <p style="margin-bottom: 0; font-size: 12.5px; color: var(--text-muted);">
-          Laporan sesi ini telah otomatis terkirim ke pengelola & guru. Apakah Anda ingin langsung melaksanakan ujian kompetensi sekarang?
+        <p style="margin-bottom: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45;">
+          Notifikasi ringkasan ini telah otomatis dikirimkan ke HP Admin & Tutor. Apakah Anda ingin langsung memulai sesi Ujian CBT untuk materi ini?
         </p>
       </div>
     `,
@@ -7268,15 +7301,16 @@ function updatePushUIStatus(isActive, message) {
   }
 }
 
-// Sinkronkan data subscription ke backend
+// Sinkronkan data subscription ke backend (baik server lokal maupun Google Apps Script online)
 async function syncPushSubscriptionWithServer(subscription) {
-  try {
-    const userPayload = currentUser ? {
-      username: currentUser.username,
-      nama: currentUser.nama,
-      role: currentUser.role
-    } : { username: 'guest', role: 'Umum' };
+  const userPayload = currentUser ? {
+    username: currentUser.username,
+    nama: currentUser.nama,
+    role: currentUser.role
+  } : { username: 'guest', role: 'Umum' };
 
+  // 1. Kirim ke Node.js server (jika online/tersedia)
+  try {
     await fetch('/api/push-subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -7285,8 +7319,18 @@ async function syncPushSubscriptionWithServer(subscription) {
         user: userPayload
       })
     });
+  } catch (e) { }
+
+  // 2. Simpan juga ke Google Sheets online via callAPI (Database Utama yang selalu online)
+  try {
+    await callAPI({
+      action: 'savePushSubscription',
+      subscription: subscription,
+      user: userPayload
+    });
+    console.log('✅ Subscription tersimpan aman ke database utama.');
   } catch (e) {
-    console.warn('Gagal sinkron push subscription ke server:', e.message);
+    console.warn('Sync subscription ke database utama:', e.message);
   }
 }
 

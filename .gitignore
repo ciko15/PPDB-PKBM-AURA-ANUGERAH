@@ -3,4 +3,4 @@ issue.md
 node_modules/
 credentials.json
 .env
-
+server/config/

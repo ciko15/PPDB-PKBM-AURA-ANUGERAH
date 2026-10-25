@@ -53,6 +53,14 @@ function doPost(e) {
       result = deleteApiKeyFromDB(params.idKey);
     } else if (action === "resetKeyUsage") {
       result = resetKeyUsageInDB(params.idKey);
+    } else if (action === "savePushSubscription") {
+      result = savePushSubscriptionToDB(params.subscription, params.user);
+    } else if (action === "deletePushSubscription") {
+      result = deletePushSubscriptionFromDB(params.endpoint);
+    } else if (action === "getPushSubscriptions") {
+      result = getPushSubscriptionsFromDB(params.targetRole, params.targetUsername);
+    } else if (action === "logNotification") {
+      result = logNotificationActivity(params.title, params.body, params.url, params.targetRole, params.tag);
     } else {
       result = { error: "Action not found" };
     }
