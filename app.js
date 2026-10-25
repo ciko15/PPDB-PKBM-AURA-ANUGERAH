@@ -1316,9 +1316,14 @@ function showDashboard() {
     restoreActiveBelajarSessionIfAny();
   }, 400);
 
+  // Langsung cek notifikasi lintas perangkat saat pertama kali dashboard terbuka
+  if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
+    setTimeout(cekNotifikasiBaruLintasPerangkat, 1500);
+  }
+
   if (syncInterval) clearInterval(syncInterval);
-  // Interval sync 30 detik agar Google Apps Script tidak terkena rate limit / concurrency throttle
-  syncInterval = setInterval(backgroundSync, 30000);
+  // Interval sync 15 detik agar pemberitahuan siswa belajar/ujian di perangkat lain segera masuk
+  syncInterval = setInterval(backgroundSync, 15000);
 }
 
 async function backgroundSync() {
@@ -1342,12 +1347,57 @@ async function backgroundSync() {
         else if (target === 'section-validasi') fetchSiswaData(false, true); // Update sidebar list silently
       }
     }
+
+    // Auto-sync log notifikasi aktivitas belajar/ujian untuk Admin & Super Admin setiap interval sync
+    if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
+      cekNotifikasiBaruLintasPerangkat();
+    }
   } catch (e) {
-    // Abaikan error background sync secara hening (agar console tidak dipenuhi pesan error)
+    // Abaikan error background sync secara hening
     console.debug("Background auto-sync skip:", e.message);
   } finally {
     isSyncing = false;
   }
+}
+
+// Cek notifikasi baru yang dicatat di database Google Sheets dari HP/Siswa lain
+let lastKnownNotifTimestamp = localStorage.getItem('ppdb_last_notif_time') || '';
+
+async function cekNotifikasiBaruLintasPerangkat() {
+  try {
+    const logs = await callAPI({ action: 'getNotificationLogs', limit: 10 });
+    if (!logs || !Array.isArray(logs) || logs.length === 0) return;
+
+    // Simpan ke log lokal dan update panel dashboard
+    simpanDaftarNotifikasiOnline(logs);
+    renderLogNotifikasiDashboard(logs);
+    updateNotifikasiBadgeUI();
+
+    const latest = logs[0];
+    if (latest && latest.timestamp && latest.timestamp !== lastKnownNotifTimestamp) {
+      if (lastKnownNotifTimestamp !== '') {
+        // Ada aktivitas belajar / ujian baru dari siswa di perangkat lain!
+        // Munculkan notifikasi banner langsung di HP Admin
+        if (Notification.permission === 'granted' && swRegistration && swRegistration.showNotification) {
+          swRegistration.showNotification(latest.title || 'SIGAP AURA', {
+            body: latest.body || 'Aktivitas belajar baru terdeteksi.',
+            icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
+            tag: latest.tag || 'notif-' + Date.now(),
+            data: { url: latest.url || '/portal' },
+            vibrate: [100, 50, 100]
+          });
+        }
+      }
+      lastKnownNotifTimestamp = latest.timestamp;
+      try { localStorage.setItem('ppdb_last_notif_time', lastKnownNotifTimestamp); } catch (e) { }
+    }
+  } catch (err) { }
+}
+
+function simpanDaftarNotifikasiOnline(onlineLogs) {
+  try {
+    localStorage.setItem('ppdb_notif_logs', JSON.stringify(onlineLogs));
+  } catch (e) { }
 }
 
 // Helper untuk menampilkan data ke tampilan Dashboard
@@ -5514,35 +5564,56 @@ async function loadPdfDocument(book, startPage = 1) {
   const canvas = document.getElementById('pdf-page-canvas');
   const textViewerEl = document.getElementById('reader-text-viewer');
   const renderWrapper = document.getElementById('pdf-render-wrapper');
+  const iframeWrapper = document.getElementById('reader-iframe-wrapper');
+  const driveIframe = document.getElementById('reader-drive-iframe');
 
-  if (spinner) spinner.style.display = 'flex';
-  if (canvas) canvas.style.display = 'block';
-  if (textViewerEl) textViewerEl.style.display = 'none';
-
-  // Tentukan URL PDF: gunakan proxy internal jika ada ID Google Drive
-  let pdfUrl = '';
-  if (book.id && (book.id.length > 20 || !book.id.startsWith('BK-'))) {
-    pdfUrl = `/api/proxy-pdf/${book.id}`;
-  } else if (book.file && book.file.startsWith('http')) {
-    // Ekstrak ID jika file berupa link Drive
+  // Cari link preview Google Drive resmi
+  let drivePreviewUrl = '';
+  if (book.file && book.file.includes('drive.google.com')) {
     const driveMatch = book.file.match(/\/d\/([a-zA-Z0-9_-]+)/) || book.file.match(/id=([a-zA-Z0-9_-]+)/);
     if (driveMatch) {
-      pdfUrl = `/api/proxy-pdf/${driveMatch[1]}`;
+      drivePreviewUrl = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
     } else {
-      pdfUrl = book.file;
+      drivePreviewUrl = book.file;
     }
+  } else if (book.id && (book.id.length > 20 || !book.id.startsWith('BK-'))) {
+    drivePreviewUrl = `https://drive.google.com/file/d/${book.id}/preview`;
+  }
+
+  // Jika ada link Google Drive (seperti buku modul PKBM), langsung buka Iframe Preview (100% cepat & langsung tampil di HP)
+  if (drivePreviewUrl && iframeWrapper && driveIframe) {
+    if (spinner) spinner.style.display = 'none';
+    if (canvas) canvas.style.display = 'none';
+    if (textViewerEl) textViewerEl.style.display = 'none';
+    iframeWrapper.style.display = 'block';
+    if (driveIframe.src !== drivePreviewUrl) {
+      driveIframe.src = drivePreviewUrl;
+    }
+    return;
+  }
+
+  // Tentukan URL PDF untuk mode PDF.js (jika file lokal)
+  let pdfUrl = '';
+  if (book.file && book.file.startsWith('http') && !book.file.includes('drive.google.com')) {
+    pdfUrl = book.file;
   }
 
   // Jika tidak ada URL PDF, gunakan Fallback Chapter Text
   if (!pdfUrl) {
     if (spinner) spinner.style.display = 'none';
     if (canvas) canvas.style.display = 'none';
+    if (iframeWrapper) iframeWrapper.style.display = 'none';
     if (textViewerEl) {
       textViewerEl.style.display = 'block';
       renderBookChapterContent(document.getElementById('reader-chapter-content'), book, startPage);
     }
     return;
   }
+
+  if (spinner) spinner.style.display = 'flex';
+  if (canvas) canvas.style.display = 'block';
+  if (textViewerEl) textViewerEl.style.display = 'none';
+  if (iframeWrapper) iframeWrapper.style.display = 'none';
 
   // Pastikan PDF.js library tersedia
   if (typeof pdfjsLib === 'undefined') {
@@ -7616,7 +7687,6 @@ async function handleSendTestPush() {
       await swRegistration.showNotification('SIGAP AURA • Tes Notifikasi Berhasil ✅', {
         body: `Halo ${currentUser ? currentUser.nama : 'Peserta'}, notifikasi HP Anda sudah aktif dan terhubung ke PKBM Aura Anugerah!`,
         icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
-        badge: '/logo_PKBM_Aura_Anugerah_transparan.png',
         tag: 'tes-notifikasi-' + Date.now(),
         data: { url: '/portal' },
         vibrate: [100, 50, 100]
@@ -7738,7 +7808,6 @@ async function sendAppPushNotification(options = {}) {
           swRegistration.showNotification(notifItem.title, {
             body: notifItem.body,
             icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
-            badge: '/logo_PKBM_Aura_Anugerah_transparan.png',
             tag: notifItem.tag,
             data: { url: notifItem.url },
             vibrate: [100, 50, 100]

@@ -32,7 +32,6 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body,
     icon: data.icon || '/logo_PKBM_Aura_Anugerah_transparan.png',
-    badge: data.badge || '/logo_PKBM_Aura_Anugerah_transparan.png',
     tag: data.tag || 'sigap-' + Date.now(),
     data: {
       url: data.url || '/portal',
@@ -56,13 +55,18 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // 1. Jika ada tab / window SIGAP AURA yang sedang terbuka di browser / PWA HP
+      // 1. Jika ada tab / window SIGAP AURA yang sedang terbuka di browser / PWA HP, bawa ke depan
       for (const client of clientList) {
         if ('focus' in client) {
-          if ('navigate' in client && client.url !== fullTargetUrl) {
-            client.navigate(fullTargetUrl);
-          }
-          return client.focus();
+          return client.focus().then((focusedClient) => {
+            if (focusedClient && 'navigate' in focusedClient && focusedClient.url !== fullTargetUrl) {
+              return focusedClient.navigate(fullTargetUrl);
+            }
+            return focusedClient;
+          }).catch(() => {
+            // Jika focus dicegah oleh OS, buka window baru
+            if (self.clients.openWindow) return self.clients.openWindow(fullTargetUrl);
+          });
         }
       }
       // 2. Jika belum ada jendela aktif, buka window baru ke target URL
