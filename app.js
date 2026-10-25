@@ -1379,9 +1379,11 @@ async function cekNotifikasiBaruLintasPerangkat() {
         // Ada aktivitas belajar / ujian baru dari siswa di perangkat lain!
         // Munculkan notifikasi banner langsung di HP Admin
         if (Notification.permission === 'granted' && swRegistration && swRegistration.showNotification) {
+          const iconFull = window.location.origin + '/icon-192.png';
           swRegistration.showNotification(latest.title || 'SIGAP AURA', {
             body: latest.body || 'Aktivitas belajar baru terdeteksi.',
-            icon: '/icon-192.png',
+            icon: iconFull,
+            badge: iconFull,
             tag: latest.tag || 'notif-' + Date.now(),
             data: { url: latest.url || '/portal' },
             vibrate: [100, 50, 100]
@@ -5596,6 +5598,7 @@ async function loadPdfDocument(book, startPage = 1) {
   if (drivePreviewUrl && iframeWrapper && driveIframe) {
     if (spinner) spinner.style.display = 'none';
     if (canvas) canvas.style.display = 'none';
+    if (renderWrapper) renderWrapper.style.display = 'none';
     if (textViewerEl) textViewerEl.style.display = 'none';
     if (iframeTip) iframeTip.style.display = 'inline';
     iframeWrapper.style.display = 'block';
@@ -5605,6 +5608,7 @@ async function loadPdfDocument(book, startPage = 1) {
     return;
   }
   if (iframeTip) iframeTip.style.display = 'none';
+  if (renderWrapper) renderWrapper.style.display = 'flex';
 
   // Tentukan URL PDF untuk mode PDF.js (jika file lokal)
   let pdfUrl = '';
@@ -5801,6 +5805,9 @@ function queueRenderPage(num) {
 function navigasiHalamanBuku(step) {
   if (!activeBelajarSession) return;
 
+  const iframeWrapper = document.getElementById('reader-iframe-wrapper');
+  const isIframeMode = iframeWrapper && iframeWrapper.style.display !== 'none';
+
   if (currentPdfDoc) {
     const total = currentPdfDoc.numPages;
     const nextPg = currentPdfPage + step;
@@ -5811,6 +5818,13 @@ function navigasiHalamanBuku(step) {
 
     document.getElementById('reader-page-input').value = currentPdfPage;
     queueRenderPage(currentPdfPage);
+  } else if (isIframeMode) {
+    // Mode Google Drive Iframe: Perbarui progress membaca siswa di input & log belajar
+    const total = activeBelajarSession.totalHalaman || 48;
+    const current = activeBelajarSession.halamanSekarang || 1;
+    const nextPg = Math.max(1, Math.min(total, current + step));
+    activeBelajarSession.halamanSekarang = nextPg;
+    document.getElementById('reader-page-input').value = nextPg;
   } else {
     // Fallback jika mode teks
     const newPage = activeBelajarSession.halamanSekarang + step;
@@ -5836,7 +5850,7 @@ function lompatHalamanBuku(val) {
   const target = parseInt(val, 10);
   if (isNaN(target)) return;
 
-  const total = currentPdfDoc ? currentPdfDoc.numPages : (activeBelajarSession?.totalHalaman || 28);
+  const total = currentPdfDoc ? currentPdfDoc.numPages : (activeBelajarSession?.totalHalaman || 48);
   const clamped = Math.max(1, Math.min(total, target));
 
   if (activeBelajarSession) {
@@ -5848,7 +5862,7 @@ function lompatHalamanBuku(val) {
     currentPdfPage = clamped;
     queueRenderPage(clamped);
   } else {
-    const book = bukuList.find(b => b.id === activeBelajarSession.bukuId);
+    const book = bukuList.find(b => b.id === activeBelajarSession?.bukuId);
     const chapterContentEl = document.getElementById('reader-chapter-content');
     if (book && chapterContentEl) {
       renderBookChapterContent(chapterContentEl, book, clamped);
@@ -7698,9 +7712,11 @@ async function handleSendTestPush() {
     }
 
     if (swRegistration && swRegistration.showNotification) {
+      const iconFull = window.location.origin + '/icon-192.png';
       await swRegistration.showNotification('SIGAP AURA • Tes Notifikasi Berhasil ✅', {
         body: `Halo ${currentUser ? currentUser.nama : 'Peserta'}, notifikasi HP Anda sudah aktif dan terhubung ke PKBM Aura Anugerah!`,
-        icon: '/icon-192.png',
+        icon: iconFull,
+        badge: iconFull,
         tag: 'tes-notifikasi-' + Date.now(),
         data: { url: '/portal' },
         vibrate: [100, 50, 100]
@@ -7819,9 +7835,11 @@ async function sendAppPushNotification(options = {}) {
           swRegistration = await navigator.serviceWorker.ready;
         }
         if (swRegistration && swRegistration.showNotification) {
+          const iconFull = window.location.origin + '/icon-192.png';
           swRegistration.showNotification(notifItem.title, {
             body: notifItem.body,
-            icon: '/icon-192.png',
+            icon: iconFull,
+            badge: iconFull,
             tag: notifItem.tag,
             data: { url: notifItem.url },
             vibrate: [100, 50, 100]

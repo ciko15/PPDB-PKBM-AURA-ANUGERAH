@@ -9,12 +9,13 @@ self.addEventListener('activate', (event) => {
 
 // Menangani event PUSH dari Server
 self.addEventListener('push', (event) => {
+  const defaultIcon = new URL('/icon-192.png', self.location.origin).href;
   let data = {
     title: 'SIGAP AURA',
     body: 'Anda memiliki pemberitahuan baru dari PKBM Aura Anugerah.',
     url: '/portal',
-    icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
-    badge: '/logo_PKBM_Aura_Anugerah_transparan.png',
+    icon: defaultIcon,
+    badge: defaultIcon,
     tag: 'sigap-notification'
   };
 
@@ -29,9 +30,13 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  const iconUrl = (data.icon && data.icon.startsWith('http')) ? data.icon : new URL(data.icon || '/icon-192.png', self.location.origin).href;
+  const badgeUrl = (data.badge && data.badge.startsWith('http')) ? data.badge : new URL(data.badge || '/icon-192.png', self.location.origin).href;
+
   const options = {
     body: data.body,
-    icon: data.icon || '/icon-192.png',
+    icon: iconUrl,
+    badge: badgeUrl,
     tag: data.tag || 'sigap-' + Date.now(),
     data: {
       url: data.url || '/portal',
