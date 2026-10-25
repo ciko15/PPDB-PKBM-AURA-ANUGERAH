@@ -1381,7 +1381,7 @@ async function cekNotifikasiBaruLintasPerangkat() {
         if (Notification.permission === 'granted' && swRegistration && swRegistration.showNotification) {
           swRegistration.showNotification(latest.title || 'SIGAP AURA', {
             body: latest.body || 'Aktivitas belajar baru terdeteksi.',
-            icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
+            icon: '/icon-192.png',
             tag: latest.tag || 'notif-' + Date.now(),
             data: { url: latest.url || '/portal' },
             vibrate: [100, 50, 100]
@@ -5580,17 +5580,31 @@ async function loadPdfDocument(book, startPage = 1) {
     drivePreviewUrl = `https://drive.google.com/file/d/${book.id}/preview`;
   }
 
+  // Tautkan tombol eksternal Google Drive di header jika siswa ingin membuka di tab/aplikasi Google Drive langsung
+  const btnExternal = document.getElementById('btn-reader-external');
+  const iframeTip = document.getElementById('reader-iframe-tip');
+  if (btnExternal) {
+    if (drivePreviewUrl) {
+      btnExternal.href = drivePreviewUrl.replace('/preview', '/view');
+      btnExternal.style.display = 'inline-flex';
+    } else {
+      btnExternal.style.display = 'none';
+    }
+  }
+
   // Jika ada link Google Drive (seperti buku modul PKBM), langsung buka Iframe Preview (100% cepat & langsung tampil di HP)
   if (drivePreviewUrl && iframeWrapper && driveIframe) {
     if (spinner) spinner.style.display = 'none';
     if (canvas) canvas.style.display = 'none';
     if (textViewerEl) textViewerEl.style.display = 'none';
+    if (iframeTip) iframeTip.style.display = 'inline';
     iframeWrapper.style.display = 'block';
     if (driveIframe.src !== drivePreviewUrl) {
       driveIframe.src = drivePreviewUrl;
     }
     return;
   }
+  if (iframeTip) iframeTip.style.display = 'none';
 
   // Tentukan URL PDF untuk mode PDF.js (jika file lokal)
   let pdfUrl = '';
@@ -7686,7 +7700,7 @@ async function handleSendTestPush() {
     if (swRegistration && swRegistration.showNotification) {
       await swRegistration.showNotification('SIGAP AURA • Tes Notifikasi Berhasil ✅', {
         body: `Halo ${currentUser ? currentUser.nama : 'Peserta'}, notifikasi HP Anda sudah aktif dan terhubung ke PKBM Aura Anugerah!`,
-        icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
+        icon: '/icon-192.png',
         tag: 'tes-notifikasi-' + Date.now(),
         data: { url: '/portal' },
         vibrate: [100, 50, 100]
@@ -7807,7 +7821,7 @@ async function sendAppPushNotification(options = {}) {
         if (swRegistration && swRegistration.showNotification) {
           swRegistration.showNotification(notifItem.title, {
             body: notifItem.body,
-            icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
+            icon: '/icon-192.png',
             tag: notifItem.tag,
             data: { url: notifItem.url },
             vibrate: [100, 50, 100]

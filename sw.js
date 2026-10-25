@@ -31,7 +31,7 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: data.icon || '/logo_PKBM_Aura_Anugerah_transparan.png',
+    icon: data.icon || '/icon-192.png',
     tag: data.tag || 'sigap-' + Date.now(),
     data: {
       url: data.url || '/portal',
