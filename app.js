@@ -385,47 +385,43 @@ function switchMobileTab(targetId, btnEl, recordHistory = true) {
   if (targetId === 'section-kegiatan') loadKegiatanData();
   if (targetId === 'section-info-tk') loadTKData();
   if (targetId === 'section-notifikasi') loadPushNotificationSection();
+  if (targetId === 'section-more-menu') loadMoreMenuSection();
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     setTimeout(window.lucide.createIcons, 50);
   }
 }
 
-function toggleMobileMoreMenu(forceState) {
-  const sheet = document.getElementById('mobile-more-sheet');
-  if (!sheet) return;
-
-  const isHidden = sheet.classList.contains('hidden');
-  const shouldOpen = typeof forceState === 'boolean' ? forceState : isHidden;
-
-  if (shouldOpen) {
-    sheet.classList.remove('hidden');
-    const usernameEl = document.getElementById('mobile-sheet-username');
-    if (usernameEl && currentUser) {
-      usernameEl.textContent = `${currentUser.nama} (${currentUser.role})`;
-    }
-    const btnUsers = document.getElementById('mobile-sheet-btn-users');
-    const btnApi = document.getElementById('mobile-sheet-btn-api');
-    if (btnUsers) {
-      if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
-        btnUsers.classList.remove('hidden');
-      } else {
-        btnUsers.classList.add('hidden');
-      }
-    }
-    if (btnApi) {
-      if (currentUser && currentUser.role === 'Super Admin') {
-        btnApi.classList.remove('hidden');
-      } else {
-        btnApi.classList.add('hidden');
-      }
-    }
-    if (window.lucide && typeof window.lucide.createIcons === 'function') {
-      window.lucide.createIcons();
-    }
-  } else {
-    sheet.classList.add('hidden');
+function loadMoreMenuSection() {
+  const userNameEl = document.getElementById('menu-section-user-name');
+  const userRoleEl = document.getElementById('menu-section-user-role');
+  if (userNameEl && currentUser) {
+    userNameEl.textContent = currentUser.nama || 'Pengguna';
   }
+  if (userRoleEl && currentUser) {
+    userRoleEl.textContent = `Peran: ${currentUser.role || 'Peserta'} · PKBM Aura Anugerah`;
+  }
+
+  const btnUsers = document.getElementById('more-menu-admin-users');
+  const btnApi = document.getElementById('more-menu-admin-api');
+  if (btnUsers) {
+    if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
+      btnUsers.classList.remove('hidden');
+    } else {
+      btnUsers.classList.add('hidden');
+    }
+  }
+  if (btnApi) {
+    if (currentUser && currentUser.role === 'Super Admin') {
+      btnApi.classList.remove('hidden');
+    } else {
+      btnApi.classList.add('hidden');
+    }
+  }
+}
+
+function toggleMobileMoreMenu(forceState) {
+  switchMobileTab('section-more-menu');
 }
 function toggleDropdownMenu(dropdownId) {
   const dropdown = document.getElementById(dropdownId);

@@ -2185,6 +2185,157 @@
           </div>
         </div>
 
+        <!-- ==================== SECTION: MENU LAINNYA (MOBILE SECTION BERUPA MENU-MENU) ==================== -->
+        <div id="section-more-menu" class="content-section hidden">
+          <!-- Header Banner Menu Lainnya -->
+          <div style="background: linear-gradient(135deg, rgba(22, 163, 74, 0.15), rgba(242, 169, 0, 0.1)); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" style="width: 48px; height: 48px; border-radius: 12px; background: var(--primary-color); padding: 5px; object-fit: contain; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
+              <div>
+                <h2 style="margin: 0; font-size: 17px; font-weight: 700; color: var(--text-color);" id="menu-section-user-name">Pengguna</h2>
+                <p style="margin: 3px 0 0; font-size: 12.5px; color: var(--text-muted);" id="menu-section-user-role">Sistem Akademik SIGAP AURA</p>
+              </div>
+            </div>
+            <button class="btn btn-icon" onclick="toggleTheme()" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 10px; width: 40px; height: 40px;" title="Ganti Tema">
+              <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+            </button>
+          </div>
+
+          <!-- Kategori 1: Akademik & Pembelajaran -->
+          <div style="margin-bottom: 22px;">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary-color); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="graduation-cap" style="width: 15px; height: 15px;"></i>
+              <span>Akademik & Pembelajaran</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+              
+              <div class="card-panel menu-grid-card" onclick="switchMobileTab('section-materi')" style="padding: 16px; border-radius: 14px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-color); background: var(--surface-color);">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); color: #2563eb; display: flex; align-items: center; justify-content: center;">
+                  <i data-lucide="book-open" style="width: 22px; height: 22px;"></i>
+                </div>
+                <div>
+                  <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Buku & Materi</div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Modul pembelajaran mandiri</div>
+                </div>
+              </div>
+
+              <div class="card-panel menu-grid-card" onclick="switchMobileTab('section-ujian')" style="padding: 16px; border-radius: 14px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-color); background: var(--surface-color);">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); color: #059669; display: flex; align-items: center; justify-content: center;">
+                  <i data-lucide="file-check-2" style="width: 22px; height: 22px;"></i>
+                </div>
+                <div>
+                  <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Ujian CBT & Nilai</div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Tes modul & transkrip nilai</div>
+                </div>
+              </div>
+
+              <div class="card-panel menu-grid-card" onclick="switchMobileTab('section-bayar')" style="padding: 16px; border-radius: 14px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-color); background: var(--surface-color);">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); color: #d97706; display: flex; align-items: center; justify-content: center;">
+                  <i data-lucide="wallet" style="width: 22px; height: 22px;"></i>
+                </div>
+                <div>
+                  <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">SPP & Tabungan</div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Iuran administrasi & kas</div>
+                </div>
+              </div>
+
+              <div class="card-panel menu-grid-card" onclick="switchMobileTab('section-kegiatan')" style="padding: 16px; border-radius: 14px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border-color); background: var(--surface-color);">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(139, 92, 246, 0.12); color: #7c3aed; display: flex; align-items: center; justify-content: center;">
+                  <i data-lucide="newspaper" style="width: 22px; height: 22px;"></i>
+                </div>
+                <div>
+                  <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Warta Kegiatan</div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Informasi agenda & acara</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Kategori 2: Informasi & Peta -->
+          <div style="margin-bottom: 22px;">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary-color); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="map" style="width: 15px; height: 15px;"></i>
+              <span>Informasi & Peta Lokasi</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div class="card-panel menu-list-row" onclick="switchMobileTab('section-info-tk')" style="padding: 14px 16px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); background: var(--surface-color);">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(14, 165, 233, 0.12); color: #0284c7; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="map-pin" style="width: 20px; height: 20px;"></i>
+                  </div>
+                  <div>
+                    <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Lokasi & Rute PKBM</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Peta geometri satelit & navigasi arah</div>
+                  </div>
+                </div>
+                <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kategori 3: Pengaturan & Notifikasi -->
+          <div style="margin-bottom: 26px;">
+            <div style="font-size: 12px; font-weight: 700; color: var(--primary-color); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="settings" style="width: 15px; height: 15px;"></i>
+              <span>Pengaturan & Perangkat</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              
+              <div class="card-panel menu-list-row" onclick="switchMobileTab('section-notifikasi')" style="padding: 14px 16px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); background: var(--surface-color);">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); color: #10b981; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="bell-ring" style="width: 20px; height: 20px;"></i>
+                  </div>
+                  <div>
+                    <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Notifikasi HP (Push)</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Aktivasi pemberitahuan ujian & hasil belajar</div>
+                  </div>
+                </div>
+                <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
+              </div>
+
+              <!-- Menu Khusus Admin: Kelola Pengguna -->
+              <div id="more-menu-admin-users" class="card-panel menu-list-row hidden" onclick="switchMobileTab('section-users')" style="padding: 14px 16px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); background: var(--surface-color);">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); color: #4f46e5; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="user-cog" style="width: 20px; height: 20px;"></i>
+                  </div>
+                  <div>
+                    <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Kelola Pengguna</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Manajemen akun admin, guru, & siswa</div>
+                  </div>
+                </div>
+                <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
+              </div>
+
+              <!-- Menu Khusus Super Admin: API Gemini -->
+              <div id="more-menu-admin-api" class="card-panel menu-list-row hidden" onclick="switchMobileTab('section-api-keys')" style="padding: 14px 16px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); background: var(--surface-color);">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(236, 72, 153, 0.12); color: #db2777; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="key" style="width: 20px; height: 20px;"></i>
+                  </div>
+                  <div>
+                    <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Kelola API Gemini AI</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Konfigurasi kunci AI pendaftaran cepat</div>
+                  </div>
+                </div>
+                <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Tombol Logout -->
+          <div style="margin-top: 10px; padding-bottom: 24px;">
+            <button type="button" class="btn" onclick="handleLogout()" style="width: 100%; height: 46px; background: rgba(239, 68, 68, 0.1); border: 1.5px solid var(--danger-color); color: var(--danger-color); font-weight: 700; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
+              <span>Keluar dari Aplikasi</span>
+            </button>
+          </div>
+
+        </div>
+
       </main>
     </div>
 
@@ -2207,62 +2358,11 @@
         <i data-lucide="wand-2" style="width: 20px; height: 20px;"></i>
         <span>AI Reg</span>
       </button>
-      <button class="mobile-tab-btn" onclick="toggleMobileMoreMenu()">
-        <i data-lucide="more-horizontal" style="width: 20px; height: 20px;"></i>
+      <button class="mobile-tab-btn" data-target="section-more-menu" onclick="switchMobileTab('section-more-menu', this)">
+        <i data-lucide="grid" style="width: 20px; height: 20px;"></i>
         <span>Lainnya</span>
       </button>
     </nav>
-
-    <!-- Mobile More Menu Bottom Sheet -->
-    <div id="mobile-more-sheet" class="mobile-sheet-backdrop hidden" onclick="toggleMobileMoreMenu(false)">
-      <div class="mobile-sheet-content" onclick="event.stopPropagation()">
-        <div
-          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="font-weight: 700; font-size: 14px; color: var(--text-color);" id="mobile-sheet-username">
-              Pengguna</div>
-          </div>
-          <button class="btn btn-icon" onclick="toggleMobileMoreMenu(false)"
-            style="background: transparent; border: none; font-size: 18px; color: var(--text-muted);">&times;</button>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;"
-            onclick="switchMobileTab('section-bayar'); toggleMobileMoreMenu(false);">
-            <i data-lucide="wallet" style="width: 18px; height: 18px;"></i> SPP & Tabungan
-          </button>
-          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;"
-            onclick="switchMobileTab('section-materi'); toggleMobileMoreMenu(false);">
-            <i data-lucide="book-open" style="width: 18px; height: 18px;"></i> Materi & Buku Belajar
-          </button>
-          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;"
-            onclick="switchMobileTab('section-ujian'); toggleMobileMoreMenu(false);">
-            <i data-lucide="file-check" style="width: 18px; height: 18px;"></i> Ujian & Nilai Siswa
-          </button>
-          <button class="btn" id="mobile-sheet-btn-users" style="width: 100%; justify-content: flex-start; gap: 12px;"
-            onclick="switchMobileTab('section-users'); toggleMobileMoreMenu(false);">
-            <i data-lucide="settings" style="width: 18px; height: 18px;"></i> Kelola Pengguna
-          </button>
-          <button class="btn" id="mobile-sheet-btn-api" style="width: 100%; justify-content: flex-start; gap: 12px;"
-            onclick="switchMobileTab('section-api-keys'); toggleMobileMoreMenu(false);">
-            <i data-lucide="key" style="width: 18px; height: 18px;"></i> Kelola API Gemini
-          </button>
-          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px; color: var(--primary-color); font-weight: 600;"
-            onclick="switchMobileTab('section-notifikasi'); toggleMobileMoreMenu(false);">
-            <i data-lucide="bell-ring" style="width: 18px; height: 18px;"></i> Notifikasi HP (Push)
-          </button>
-          <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <button class="btn" style="flex: 1;" onclick="toggleTheme();">
-              <i data-lucide="moon" style="width: 16px; height: 16px;"></i> Tema
-            </button>
-            <button class="btn"
-              style="flex: 1; background: var(--danger-color); color: #fff; border-color: var(--danger-color);"
-              onclick="toggleMobileMoreMenu(false); handleLogout();">
-              <i data-lucide="log-out" style="width: 16px; height: 16px;"></i> Logout
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Side Drawer Detail Siswa -->
     <div id="siswa-detail-overlay" class="drawer-overlay hidden"></div>
