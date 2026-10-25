@@ -905,6 +905,29 @@ function selesaikanDanHitungNilaiCBT(isTimeUp) {
   saveUjianListToStorage();
   renderUjianTable();
 
+  // 🔔 Kirim Web Push Notification ke Admin & Siswa terkait status hasil ujian
+  if (typeof window.sendAppPushNotification === 'function') {
+    // 1. Notifikasi ke Admin: Siswa telah menyelesaikan ujian
+    window.sendAppPushNotification({
+      title: 'Ujian Diselesaikan 📝',
+      body: `Siswa ${hasilUjianBaru.namaSiswa} telah menyelesaikan ujian ${hasilUjianBaru.bukuJudul} dengan skor ${skorNilai} (${predikat}).`,
+      url: '/portal',
+      targetRole: 'Admin',
+      tag: 'exam-finished-admin'
+    });
+
+    // 2. Notifikasi ke Siswa itu sendiri jika punya akun login: Hasil Ujian Tersedia
+    if (session.siswaUsername) {
+      window.sendAppPushNotification({
+        title: 'Hasil Ujian CBT Anda 🎓',
+        body: `Ujian ${hasilUjianBaru.bukuJudul} selesai: Nilai Anda ${skorNilai} (${predikat}). Klik untuk melihat sertifikat.`,
+        url: '/portal',
+        targetUsername: session.siswaUsername,
+        tag: 'exam-score-student'
+      });
+    }
+  }
+
   // Tutup Modal CBT
   const modalCbt = document.getElementById('modal-cbt-ujian');
   if (modalCbt) modalCbt.classList.add('hidden');

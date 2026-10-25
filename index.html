@@ -4,12 +4,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#059669">
-  <title>SIS PPDB & Portal Akademik - PKBM Aura Anugerah</title>
+  <meta name="theme-color" content="#16a34a">
+  <title>SIGAP AURA - Sistem Informasi & Gerbang Akademik PKBM Aura Anugerah</title>
 
-  <!-- Favicon -->
+  <!-- PWA Manifest & App Config -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SIGAP AURA">
+
+  <!-- Favicon & Touch Icon -->
   <link rel="icon" type="image/png" href="logo_PKBM_Aura_Anugerah_transparan.png">
   <link rel="shortcut icon" href="logo_PKBM_Aura_Anugerah_transparan.png" type="image/png">
+  <link rel="apple-touch-icon" href="logo_PKBM_Aura_Anugerah_transparan.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,10 +44,10 @@
   <div id="page-landing" class="landing-page">
     <header class="landing-header">
       <div class="landing-brand" id="landing-brand-logo">
-        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM Aura Anugerah" class="brand-logo-img">
+        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo SIGAP AURA PKBM Aura Anugerah" class="brand-logo-img">
         <div class="brand-text">
-          <h1>PKBM Aura Anugerah</h1>
-          <p>Pendidikan Kesetaraan Paket A · B · C</p>
+          <h1>SIGAP AURA</h1>
+          <p>Sistem Informasi & Gerbang Akademik · PKBM Aura Anugerah</p>
         </div>
       </div>
       <nav class="landing-nav">
@@ -56,7 +63,12 @@
         <a href="#"
           onclick="document.getElementById('kontak').scrollIntoView({behavior: 'smooth'}); return false;">Kontak</a>
       </nav>
-      <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button id="btn-install-app-header" onclick="triggerPWAInstall()" class="btn"
+          style="display: none; background: rgba(22, 163, 74, 0.12); border: 1.5px solid var(--primary-color); color: var(--primary-color); font-weight: 700; border-radius: 8px; padding: 0 14px; height: 38px; align-items: center; gap: 6px; cursor: pointer;" title="Instal Aplikasi SIGAP AURA ke HP">
+          <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+          <span>Instal Aplikasi</span>
+        </button>
         <button id="btn-theme-landing" onclick="toggleTheme()" class="btn btn-icon"
           style="background: var(--surface-2); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" title="Ganti Mode Terang / Gelap" aria-label="Ganti Mode Tampilan">
           <i data-lucide="moon" id="icon-theme-landing" style="width: 18px; height: 18px;"></i>
@@ -582,8 +594,8 @@
             </div>
 
             <!-- 2 & 3. Judul & Subjudul -->
-            <h2 class="login-title">PKBM AURA ANUGERAH</h2>
-            <p class="login-subtitle">Sistem Informasi Sekolah Terpadu · Sentani Jayapura</p>
+            <h2 class="login-title">SIGAP AURA</h2>
+            <p class="login-subtitle">Sistem Informasi & Gerbang Akademik · Sentani Jayapura</p>
 
             <!-- 9. Area Pesan Error (merah muda, tersembunyi default) -->
             <div id="login-error-alert" class="login-error-box hidden" role="alert" aria-live="assertive"></div>
@@ -652,6 +664,15 @@
                 <span>Masuk Aplikasi</span>
               </button>
 
+              <!-- 9. Tombol Pasang / Instal Aplikasi (Muncul jika belum diinstal) -->
+              <div id="login-install-app-container" style="display: none; margin-top: 12px;">
+                <button type="button" class="btn" onclick="triggerPWAInstall()"
+                  style="width: 100%; height: 42px; background: rgba(22, 163, 74, 0.1); border: 1.5px dashed var(--primary-color); color: var(--primary-color); font-weight: 700; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                  <i data-lucide="smartphone" style="width: 18px; height: 18px;"></i>
+                  <span>Pasang Aplikasi di HP Ini</span>
+                </button>
+              </div>
+
               <!-- 10. Garis pemisah + Tautan Lihat Informasi Awal PKBM -->
               <div class="login-divider-row">
                 <a href="/pkbm"
@@ -669,7 +690,7 @@
                 </p>
                 <p class="footer-secure-text">
                   <i data-lucide="shield" style="width: 13px; height: 13px; display: inline-block; vertical-align: -2px;"></i>
-                  <span>Koneksi aman · © 2026 PKBM Aura Anugerah</span>
+                  <span>Koneksi aman · © 2026 SIGAP AURA · PKBM Aura Anugerah</span>
                 </p>
               </div>
             </form>
@@ -684,12 +705,14 @@
     <!-- Navbar Mobile Header -->
     <header class="mobile-header">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <button id="btn-menu-mobile" class="btn-hamburger">☰</button>
+        <button id="btn-menu-mobile" class="btn-back-mobile" onclick="handleMobileBackAction()" aria-label="Kembali ke halaman sebelumnya" title="Kembali">
+          <i data-lucide="chevron-left" style="width: 22px; height: 22px;"></i>
+        </button>
         <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="app-brand-logo"
           style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain; flex-shrink: 0; background: var(--primary-color); padding: 4px; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);">
         <div style="display: flex; flex-direction: column;">
-          <span style="font-weight: 700; font-size: 15px; color: var(--text-color);">PKBM Aura Anugerah</span>
-          <span style="font-size: 11px; color: var(--text-muted);">Sistem Terpadu & PPDB</span>
+          <span style="font-weight: 700; font-size: 15px; color: var(--text-color);">SIGAP AURA</span>
+          <span style="font-size: 11px; color: var(--text-muted);">PKBM Aura Anugerah · Sentani</span>
         </div>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
@@ -707,11 +730,9 @@
           <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="app-brand-logo"
             style="width: 42px; height: 42px; border-radius: 10px; object-fit: contain; flex-shrink: 0; background: var(--primary-color); padding: 4px; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);">
           <div style="display: flex; flex-direction: column; justify-content: center;">
-            <span style="font-weight: 600; font-size: 16px; line-height: 1.2; color: var(--text-color);">PKBM
-              Aura</span>
+            <span style="font-weight: 700; font-size: 16px; line-height: 1.2; color: var(--text-color); letter-spacing: 0.5px;">SIGAP AURA</span>
             <span
-              style="font-weight: 400; color: var(--text-muted); font-size: 11px; line-height: 1.2; margin-top: 2px;">Sistem
-              Terpadu PPDB</span>
+              style="font-weight: 500; color: var(--text-muted); font-size: 11px; line-height: 1.2; margin-top: 2px;">PKBM Aura Anugerah</span>
           </div>
         </div>
 
@@ -836,6 +857,10 @@
                 <li class="nav-item hidden" data-target="section-api-keys" id="menu-api-keys">
                   <i data-lucide="key" class="menu-icon"></i>
                   <span>Kelola API Gemini</span>
+                </li>
+                <li class="nav-item" data-target="section-notifikasi" id="menu-notifikasi">
+                  <i data-lucide="bell-ring" class="menu-icon"></i>
+                  <span>Notifikasi HP</span>
                 </li>
               </ul>
             </li>
@@ -2073,6 +2098,93 @@
           </div>
         </div>
 
+        <!-- ==================== SECTION: NOTIFIKASI HP (PUSH NOTIFICATION IPHONE & ANDROID) ==================== -->
+        <div id="section-notifikasi" class="content-section hidden">
+          <div style="max-width: 680px; margin: 0 auto; padding: 12px 4px;">
+            <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 20px;">
+              <h1 style="font-size: 24px; font-weight: 800; margin: 0; color: var(--text-color);">Notifikasi HP</h1>
+              <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Pemberitahuan Sistem Otomatis</span>
+            </div>
+
+            <!-- Card Utama Persis Gambar Referensi -->
+            <div class="card-panel" style="background: var(--surface); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px 22px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+              <h3 style="font-size: 18px; font-weight: 700; margin-top: 0; margin-bottom: 12px; color: var(--text-color);">
+                Ujian, hasil belajar, dan informasi kegiatan
+              </h3>
+              
+              <p style="font-size: 14px; line-height: 1.6; color: var(--text-muted); margin-bottom: 16px;">
+                Terima pemberitahuan langsung di layar HP saat ada ujian baru yang siap dikerjakan, pengumuman hasil nilai ujian, jadwal kegiatan belajar, dan informasi penting dari pengelola PKBM Aura Anugerah.
+              </p>
+
+              <!-- Petunjuk Khusus iPhone / iPad Standalone -->
+              <div style="background: rgba(16, 185, 129, 0.08); border-left: 4px solid var(--primary-color); padding: 12px 14px; border-radius: 6px; margin-bottom: 20px;">
+                <p style="font-size: 13.5px; line-height: 1.5; color: var(--text-color); margin: 0;">
+                  <strong>Petunjuk untuk iPhone / iPad (iOS 16.4+):</strong><br>
+                  Buka aplikasi di Safari, tekan tombol Share (kotak dengan panah atas), pilih <em>"Tambahkan ke Layar Utama" (Add to Home Screen)</em>, lalu buka dari ikon di layar HP Anda untuk mengaktifkan notifikasi.
+                </p>
+              </div>
+
+              <!-- Tombol Aksi Notifikasi -->
+              <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+                <button id="btn-subscribe-push" class="btn p" style="padding: 10px 22px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;" onclick="handleSubscribePush()">
+                  <i data-lucide="bell" style="width: 16px; height: 16px;"></i> Aktifkan notifikasi
+                </button>
+                <button id="btn-unsubscribe-push" class="btn" style="padding: 10px 18px; font-size: 14px; background: transparent; border: 1px solid var(--border-color); color: var(--text-color);" onclick="handleUnsubscribePush()">
+                  Nonaktifkan di perangkat ini
+                </button>
+                <button id="btn-test-push" class="btn" style="padding: 10px 18px; font-size: 14px; background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; color: #2563eb; display: inline-flex; align-items: center; gap: 6px;" onclick="handleSendTestPush()">
+                  <i data-lucide="send" style="width: 15px; height: 15px;"></i> Kirim Tes Notifikasi
+                </button>
+              </div>
+
+              <!-- Status Notifikasi Real-time -->
+              <div id="push-status-label" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px; padding-top: 4px;">
+                <span class="spinner-inline" style="display: inline-block;"></span> Memeriksa status notifikasi di perangkat ini...
+              </div>
+
+              <!-- Link Kembali ke beranda -->
+              <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <a href="javascript:void(0)" onclick="switchMobileTab('section-dashboard')" style="font-size: 14px; color: #3b82f6; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+                  &larr; Kembali ke beranda
+                </a>
+              </div>
+            </div>
+
+            <!-- Kartu Info untuk Admin / Pengelola -->
+            <div id="admin-push-broadcast-card" class="card-panel hidden" style="margin-top: 24px; background: var(--surface); border: 1px solid var(--border-color); border-radius: 16px; padding: 22px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <i data-lucide="megaphone" style="width: 20px; height: 20px; color: var(--primary-color);"></i>
+                <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color);">Kirim Siaran Notifikasi (Admin)</h4>
+              </div>
+              <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Kirim pesan langsung ke semua siswa atau role tertentu yang telah mengaktifkan notifikasi di HP mereka.</p>
+              
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; color: var(--text-color);">Target Penerima</label>
+                  <select id="admin-push-target-role" class="btn" style="width: 100%; margin-top: 4px;">
+                    <option value="">Semua Perangkat Terdaftar</option>
+                    <option value="Siswa">Hanya Siswa</option>
+                    <option value="Guru">Hanya Guru & Tutor</option>
+                    <option value="Admin">Hanya Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; color: var(--text-color);">Judul Notifikasi</label>
+                  <input type="text" id="admin-push-title" class="btn" style="width: 100%; text-align: left; margin-top: 4px;" placeholder="Contoh: Pengingat Ujian CBT Mandiri">
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; color: var(--text-color);">Isi Pesan Notifikasi</label>
+                  <textarea id="admin-push-body" rows="3" class="btn" style="width: 100%; text-align: left; height: auto; padding: 8px 12px; margin-top: 4px; resize: vertical;" placeholder="Tuliskan pesan notifikasi yang akan muncul di layar HP..."></textarea>
+                </div>
+                <button class="btn p" style="margin-top: 6px; justify-content: center;" onclick="handleAdminBroadcastPush()">
+                  <i data-lucide="send" style="width: 16px; height: 16px;"></i> Kirim Notifikasi Sekarang
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </main>
     </div>
 
@@ -2133,6 +2245,10 @@
           <button class="btn" id="mobile-sheet-btn-api" style="width: 100%; justify-content: flex-start; gap: 12px;"
             onclick="switchMobileTab('section-api-keys'); toggleMobileMoreMenu(false);">
             <i data-lucide="key" style="width: 18px; height: 18px;"></i> Kelola API Gemini
+          </button>
+          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px; color: var(--primary-color); font-weight: 600;"
+            onclick="switchMobileTab('section-notifikasi'); toggleMobileMoreMenu(false);">
+            <i data-lucide="bell-ring" style="width: 18px; height: 18px;"></i> Notifikasi HP (Push)
           </button>
           <div style="display: flex; gap: 8px; margin-top: 8px;">
             <button class="btn" style="flex: 1;" onclick="toggleTheme();">
@@ -3104,6 +3220,76 @@
       </div>
     </div>
   </div>
+  <!-- ==================== PWA INSTALL POPUP BANNER (ANDROID & IPHONE) ==================== -->
+  <div id="pwa-install-banner" class="pwa-install-banner">
+    <div class="pwa-banner-left">
+      <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="SIGAP AURA Icon" class="pwa-banner-icon">
+      <div class="pwa-banner-text">
+        <span class="pwa-banner-title">Pasang SIGAP AURA</span>
+        <span class="pwa-banner-desc">Instal ke layar utama HP untuk akses cepat tanpa browser & notifikasi langsung.</span>
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button type="button" class="btn-pwa-install" onclick="triggerPWAInstall()">
+        <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+        <span>Pasang</span>
+      </button>
+      <button type="button" class="btn-pwa-dismiss" onclick="dismissPWAInstallBanner()" aria-label="Tutup saran instal">&times;</button>
+    </div>
+  </div>
+
+  <!-- Modal Panduan Khusus iOS / iPhone (Add to Home Screen) -->
+  <div id="modal-ios-install" class="login-modal hidden" style="z-index: 99999;">
+    <div class="ios-install-modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <img src="logo_PKBM_Aura_Anugerah_transparan.png" style="width: 38px; height: 38px; object-fit: contain;">
+          <div>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color);">Instal di iPhone / iPad</h3>
+            <span style="font-size: 12px; color: var(--text-muted);">SIGAP AURA PWA</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="closeIosInstallModal()">&times;</button>
+      </div>
+
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+        Untuk memasang aplikasi ini di layar utama iPhone Anda dan mengaktifkan notifikasi push:
+      </p>
+
+      <div class="ios-step-item">
+        <div class="ios-step-num">1</div>
+        <div class="ios-step-text">
+          Buka situs ini di browser <b>Safari</b> di iPhone Anda.
+        </div>
+      </div>
+
+      <div class="ios-step-item">
+        <div class="ios-step-num">2</div>
+        <div class="ios-step-text">
+          Tekan tombol <b>Bagikan / Share</b> (ikon kotak dengan panah ke atas <span style="font-size: 16px;">⎙ / 📤</span>) di bilah navigasi bawah Safari.
+        </div>
+      </div>
+
+      <div class="ios-step-item">
+        <div class="ios-step-num">3</div>
+        <div class="ios-step-text">
+          Gulir ke bawah pada menu yang muncul, lalu pilih <b>"Tambahkan ke Layar Utama" (Add to Home Screen)</b>.
+        </div>
+      </div>
+
+      <div class="ios-step-item">
+        <div class="ios-step-num">4</div>
+        <div class="ios-step-text">
+          Tekan <b>"Tambah" (Add)</b> di pojok kanan atas. Ikon aplikasi <b>SIGAP AURA</b> kini siap digunakan di layar HP Anda!
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-landing-primary" onclick="closeIosInstallModal()" style="width: 100%; margin-top: 14px; justify-content: center;">
+        Saya Mengerti
+      </button>
+    </div>
+  </div>
+
   <!-- Loading Overlay -->
   <div id="global-loader" class="global-loader hidden">
     <div class="spinner"></div>

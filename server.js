@@ -6,8 +6,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
+import webpush from 'web-push';
 
 dotenv.config();
+
+// Konfigurasi VAPID Keys Web Push Notifications (iPhone & Android)
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BP7KCUfLkQMqYnzgQRwTBmOHxMcip_JXkNiACCoAdrg_wOTED9Awpb6nrY5x8tm9A2hAXmQbvOIzmxA3F-uylwE';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'SUAo6_xSoEN-wJYH4P6Tc1jCnpkWN3LTnAQej9R6Fus';
+const VAPID_MAILTO = process.env.VAPID_MAILTO || 'mailto:admin.pkbm@aura-anugerah.sch.id';
+
+webpush.setVapidDetails(VAPID_MAILTO, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -665,7 +673,144 @@ app.get('/api/proxy-pdf/:fileId', async (req, res) => {
     res.status(500).send('Internal Server Error streaming PDF');
   }
 });
+// =========================================================================
+// ==================== WEB PUSH NOTIFICATIONS API =========================
+// =========================================================================
 
+const PUSH_SUBS_FILE = path.join(__dirname, 'server', 'config', 'push_subscriptions.json');
+
+function getStoredSubscriptions() {
+  try {
+    if (fs.existsSync(PUSH_SUBS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(PUSH_SUBS_FILE, 'utf8'));
+      return Array.isArray(data) ? data : [];
+    }
+  } catch (err) {
+    console.warn('Gagal membaca push_subscriptions.json:', err.message);
+  }
+  return [];
+}
+
+function saveSubscriptions(subs) {
+  try {
+    const dir = path.dirname(PUSH_SUBS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(PUSH_SUBS_FILE, JSON.stringify(subs, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Gagal menyimpan push_subscriptions.json:', err.message);
+  }
+}
+
+// 1. Endpoint publik untuk mendapatkan VAPID Public Key
+app.get('/api/push-public-key', (req, res) => {
+  res.json({ success: true, publicKey: VAPID_PUBLIC_KEY });
+});
+
+// 2. Endpoint mendaftarkan Push Subscription perangkat HP / Desktop
+app.post('/api/push-subscribe', (req, res) => {
+  try {
+    const { subscription, user } = req.body;
+    if (!subscription || !subscription.endpoint) {
+      return res.status(400).json({ success: false, error: 'Subscription endpoint diperlukan' });
+    }
+
+    const currentSubs = getStoredSubscriptions();
+    const existingIndex = currentSubs.findIndex(s => s.subscription.endpoint === subscription.endpoint);
+
+    const subItem = {
+      subscription,
+      user: user || { username: 'guest', role: 'Umum' },
+      updatedAt: new Date().toISOString()
+    };
+
+    if (existingIndex >= 0) {
+      currentSubs[existingIndex] = subItem;
+    } else {
+      currentSubs.push(subItem);
+    }
+
+    saveSubscriptions(currentSubs);
+    console.log(`📱 Push subscription didaftarkan untuk user: ${subItem.user.username} (${subItem.user.role})`);
+    res.json({ success: true, message: 'Push subscription berhasil disimpan' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. Endpoint menghapus Push Subscription (unsubscribe)
+app.post('/api/push-unsubscribe', (req, res) => {
+  try {
+    const { endpoint } = req.body;
+    if (!endpoint) return res.status(400).json({ success: false, error: 'Endpoint diperlukan' });
+
+    let currentSubs = getStoredSubscriptions();
+    currentSubs = currentSubs.filter(s => s.subscription.endpoint !== endpoint);
+    saveSubscriptions(currentSubs);
+
+    res.json({ success: true, message: 'Push subscription berhasil dihapus' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. Endpoint kirim Push Notification (bisa broadcast ke semua, atau filter role/user)
+app.post('/api/send-push', async (req, res) => {
+  try {
+    const { title, body, url, targetRole, targetUsername, tag } = req.body;
+    const subs = getStoredSubscriptions();
+
+    if (!subs.length) {
+      return res.json({ success: true, count: 0, message: 'Belum ada perangkat yang berlangganan notifikasi' });
+    }
+
+    // Filter target penerima
+    const filteredSubs = subs.filter(item => {
+      if (targetUsername && item.user && item.user.username !== targetUsername) return false;
+      if (targetRole && item.user && item.user.role !== targetRole) return false;
+      return true;
+    });
+
+    const payload = JSON.stringify({
+      title: title || 'Pemberitahuan SIGAP AURA',
+      body: body || 'Ada informasi terkini dari PKBM Aura Anugerah.',
+      url: url || '/portal',
+      icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
+      badge: '/logo_PKBM_Aura_Anugerah_transparan.png',
+      tag: tag || 'sigap-' + Date.now()
+    });
+
+    let sentCount = 0;
+    const expiredEndpoints = [];
+
+    const sendPromises = filteredSubs.map(async (item) => {
+      try {
+        await webpush.sendNotification(item.subscription, payload);
+        sentCount++;
+      } catch (err) {
+        // Jika status 404 atau 410, subscription sudah kadaluarsa di browser user
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          expiredEndpoints.push(item.subscription.endpoint);
+        } else {
+          console.warn('Gagal kirim push ke salah satu endpoint:', err.message);
+        }
+      }
+    });
+
+    await Promise.all(sendPromises);
+
+    // Bersihkan subscription kadaluarsa
+    if (expiredEndpoints.length) {
+      const activeSubs = subs.filter(s => !expiredEndpoints.includes(s.subscription.endpoint));
+      saveSubscriptions(activeSubs);
+    }
+
+    console.log(`🔔 Push notification dikirim ke ${sentCount} perangkat. Title: "${title}"`);
+    res.json({ success: true, count: sentCount, message: `Notifikasi berhasil dikirim ke ${sentCount} perangkat.` });
+  } catch (err) {
+    console.error('Error send push:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 // Rute frontend
 app.get(['/', '/pkbm', '/portal', '/portal-pkbm', '/login'], (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));

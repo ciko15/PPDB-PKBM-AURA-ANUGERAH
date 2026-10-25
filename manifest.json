@@ -1,0 +1,41 @@
+{
+  "name": "SIGAP AURA - Sistem Informasi & Gerbang Akademik PKBM Aura Anugerah",
+  "short_name": "SIGAP AURA",
+  "description": "Sistem Informasi & Gerbang Akademik PKBM Aura Anugerah Sentani Jayapura. Melayani PPDB, Pembelajaran, Absensi, CBT Ujian, Penilaian Raport, dan Administrasi Sekolah.",
+  "start_url": "/portal",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d1512",
+  "theme_color": "#16a34a",
+  "icons": [
+    {
+      "src": "logo_PKBM_Aura_Anugerah_transparan.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo_PKBM_Aura_Anugerah_transparan.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Portal Sekolah",
+      "short_name": "Portal",
+      "description": "Buka Portal Login SIGAP AURA",
+      "url": "/portal",
+      "icons": [{ "src": "logo_PKBM_Aura_Anugerah_transparan.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Informasi PKBM",
+      "short_name": "Info PKBM",
+      "description": "Lihat Informasi Kursus & PPDB",
+      "url": "/pkbm",
+      "icons": [{ "src": "logo_PKBM_Aura_Anugerah_transparan.png", "sizes": "192x192" }]
+    }
+  ]
+}

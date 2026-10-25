@@ -298,8 +298,59 @@ function updateThemeIcons(theme) {
   }
 }
 
+// Riwayat navigasi section untuk aksi tombol kembali (<)
+const mobileSectionHistory = ['section-dashboard'];
+
+function handleMobileBackAction() {
+  // 1. Jika ada drawer detail siswa yang sedang terbuka, tutup drawer terlebih dahulu
+  const drawer = document.getElementById('siswa-detail-drawer');
+  if (drawer && !drawer.classList.contains('hidden')) {
+    closeSiswaDetailDrawer();
+    return;
+  }
+
+  // 2. Jika sheet menu lainnya sedang terbuka, tutup sheet
+  const moreSheet = document.getElementById('mobile-more-sheet');
+  if (moreSheet && !moreSheet.classList.contains('hidden')) {
+    toggleMobileMoreMenu(false);
+    return;
+  }
+
+  // 3. Jika sidebar navigation terbuka, tutup sidebar
+  const sidebarNav = document.getElementById('sidebar-nav');
+  if (sidebarNav && sidebarNav.classList.contains('show')) {
+    sidebarNav.classList.remove('show');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    if (sidebarOverlay) sidebarOverlay.classList.add('hidden');
+    return;
+  }
+
+  // 4. Jika ada riwayat section sebelumnya, kembali ke section sebelumnya
+  if (mobileSectionHistory.length > 1) {
+    mobileSectionHistory.pop(); // Hapus section saat ini
+    const prevSectionId = mobileSectionHistory[mobileSectionHistory.length - 1];
+    switchMobileTab(prevSectionId, null, false);
+    return;
+  }
+
+  // 5. Jika berada di section-dashboard paling awal, kembali ke browser history atau konfirmasi logout
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    handleLogout();
+  }
+}
+window.handleMobileBackAction = handleMobileBackAction;
+
 // ======================= MOBILE NAVIGATION TABS (PERSIS ROSTERING TEKNIK) =======================
-function switchMobileTab(targetId, btnEl) {
+function switchMobileTab(targetId, btnEl, recordHistory = true) {
+  // Catat ke riwayat navigasi untuk tombol kembali (<)
+  if (recordHistory) {
+    if (mobileSectionHistory[mobileSectionHistory.length - 1] !== targetId) {
+      mobileSectionHistory.push(targetId);
+    }
+  }
+
   // Sembunyikan semua section
   contentSections.forEach(sec => sec.classList.add('hidden'));
   const targetEl = document.getElementById(targetId);
@@ -333,6 +384,7 @@ function switchMobileTab(targetId, btnEl) {
   if (targetId === 'section-api-keys') loadApiKeys();
   if (targetId === 'section-kegiatan') loadKegiatanData();
   if (targetId === 'section-info-tk') loadTKData();
+  if (targetId === 'section-notifikasi') loadPushNotificationSection();
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     setTimeout(window.lucide.createIcons, 50);
@@ -388,6 +440,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   setupEventListeners();
   checkLocalSession();
+  initServiceWorkerAndPush();
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons();
   }
@@ -843,9 +896,14 @@ function handleClientRouting() {
     return;
   }
 
+  // Deteksi jika aplikasi dibuka dari hasil instalasi (PWA Standalone App di HP / Desktop)
+  const isInstalledApp = window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true ||
+    document.referrer.includes('android-app://');
+
   // Rute rahasia '/portal' (atau '/portal-pkbm') membuka Form Login
-  // Rute root '/' atau '/pkbm' menampilkan Halaman Informasi Awal publik
-  const isPortal = path === '/portal' || path === '/portal/' || path.startsWith('/portal/') ||
+  // Jika dibuka sebagai aplikasi terinstal, otomatis langsung buka Portal Login
+  const isPortal = isInstalledApp || path === '/portal' || path === '/portal/' || path.startsWith('/portal/') ||
     path === '/portal-pkbm' || path === '/portal-pkbm/' || path.startsWith('/portal-pkbm');
   if (isPortal) {
     pageLanding.classList.remove('hidden');
@@ -868,13 +926,13 @@ function handleClientRouting() {
       }, 60);
     }
   } else {
-    // Publik: '/' atau '/pkbm' atau halaman lainnya
+    // Publik via web browser standar: '/' atau '/pkbm'
     pageLanding.classList.remove('hidden');
     pageDashboard.classList.add('hidden');
     if (modalLogin) modalLogin.classList.add('hidden');
   }
 
-  // Render konten kegiatan publik dan profil TK di Landing Page
+  // Render konten kegiatan publik dan profil PKBM di Landing Page
   renderLandingKegiatan();
   renderLandingTK();
 }
@@ -6486,6 +6544,17 @@ function saveKegiatan() {
   renderDashboardKegiatan();
   renderLandingKegiatan();
 
+  // Kirim Web Push Notification jika posting warta/kegiatan baru
+  if (!id && typeof sendAppPushNotification === 'function') {
+    sendAppPushNotification({
+      title: 'Informasi Baru PKBM Aura Anugerah 📢',
+      body: `${judul}: ${deskripsi.substring(0, 90)}...`,
+      url: '/portal',
+      targetRole: 'Siswa',
+      tag: 'kegiatan-baru'
+    });
+  }
+
   Swal.fire({
     icon: 'success',
     title: 'Berhasil Disimpan!',
@@ -7044,3 +7113,562 @@ window.loadKegiatanData = loadKegiatanData;
 window.loadTKData = loadTKData;
 window.openModalNavigasiPeta = openModalNavigasiPeta;
 window.closeModalNavigasiPeta = closeModalNavigasiPeta;
+
+// =============================================================================
+// WEB PUSH NOTIFICATION MANAGER (PWA IPHONE & ANDROID)
+// =============================================================================
+
+let swRegistration = null;
+let isPushSubscribed = false;
+
+// Konversi VAPID public key base64 URL safe ke Uint8Array
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+// Inisialisasi Service Worker & Status Notifikasi
+async function initServiceWorkerAndPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn('Web Push Notification tidak didukung di browser ini.');
+    updatePushUIStatus(false, 'Perangkat atau browser ini belum mendukung Web Push Notification.');
+    return;
+  }
+
+  try {
+    swRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    console.log('✅ Service Worker berhasil didaftarkan:', swRegistration.scope);
+
+    // Periksa status langganan saat ini
+    const sub = await swRegistration.pushManager.getSubscription();
+    isPushSubscribed = !(sub === null);
+    
+    if (isPushSubscribed) {
+      console.log('📱 Perangkat sudah aktif berlangganan push.');
+      // Sinkronkan ke server bila user login telah berganti
+      syncPushSubscriptionWithServer(sub);
+      updatePushUIStatus(true, 'Browser sudah berlangganan. Notifikasi aktif untuk akun ini.');
+    } else {
+      updatePushUIStatus(false, 'Notifikasi belum aktif di perangkat ini. Klik "Aktifkan notifikasi" di bawah.');
+    }
+  } catch (err) {
+    console.error('Gagal menginisialisasi Service Worker / Push:', err);
+    updatePushUIStatus(false, 'Gagal inisialisasi notifikasi: ' + err.message);
+  }
+}
+
+// Update tampilan teks & tombol pada section Notifikasi HP
+function updatePushUIStatus(isActive, message) {
+  const label = document.getElementById('push-status-label');
+  const btnSub = document.getElementById('btn-subscribe-push');
+  const btnUnsub = document.getElementById('btn-unsubscribe-push');
+
+  if (label) {
+    label.innerHTML = isActive 
+      ? `<span style="color: #10b981; font-weight: 600;">● Aktif</span> &mdash; ${message || 'Notifikasi aktif di perangkat ini.'}`
+      : `<span style="color: #94a3b8; font-weight: 600;">○ Belum Aktif</span> &mdash; ${message || 'Notifikasi belum aktif di perangkat ini.'}`;
+  }
+
+  if (btnSub) {
+    if (isActive) {
+      btnSub.innerHTML = '<i data-lucide="check" style="width: 16px; height: 16px;"></i> Notifikasi Aktif';
+      btnSub.classList.remove('p');
+      btnSub.style.background = '#10b981';
+      btnSub.style.color = '#ffffff';
+      btnSub.style.borderColor = '#10b981';
+    } else {
+      btnSub.innerHTML = '<i data-lucide="bell" style="width: 16px; height: 16px;"></i> Aktifkan notifikasi';
+      btnSub.classList.add('p');
+      btnSub.style.background = '';
+      btnSub.style.color = '';
+      btnSub.style.borderColor = '';
+    }
+  }
+
+  if (btnUnsub) {
+    btnUnsub.style.display = isActive ? 'inline-block' : 'none';
+  }
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    setTimeout(window.lucide.createIcons, 20);
+  }
+}
+
+// Sinkronkan data subscription ke backend
+async function syncPushSubscriptionWithServer(subscription) {
+  try {
+    const userPayload = currentUser ? {
+      username: currentUser.username,
+      nama: currentUser.nama,
+      role: currentUser.role
+    } : { username: 'guest', role: 'Umum' };
+
+    await fetch('/api/push-subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscription: subscription,
+        user: userPayload
+      })
+    });
+  } catch (e) {
+    console.warn('Gagal sinkron push subscription ke server:', e.message);
+  }
+}
+
+// User menekan tombol "Aktifkan notifikasi"
+async function handleSubscribePush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Fitur Tidak Didukung',
+      text: 'Browser atau perangkat Anda belum mendukung Web Push Notification.',
+      confirmButtonColor: '#059669'
+    });
+    return;
+  }
+
+  // Khusus iOS PWA: jika di iOS Safari dan belum standalone, beri panduan Add to Home Screen
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  
+  if (isIOS && !isStandalone) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Instal di iPhone / iPad',
+      html: `
+        <div style="text-align: left; font-size: 14px; line-height: 1.6; color: var(--text-color);">
+          <p>Pada perangkat iOS (iPhone/iPad), Apple mensyaratkan aplikasi disimpan ke <b>Layar Utama</b> terlebih dahulu untuk mengaktifkan notifikasi:</p>
+          <ol style="padding-left: 20px; margin-bottom: 0;">
+            <li>Tekan tombol <b>Bagikan (Share)</b> <i data-lucide="share" style="width: 14px; display: inline-block;"></i> di bar bawah Safari.</li>
+            <li>Gulir ke bawah dan pilih <b>"Tambahkan ke Layar Utama" (Add to Home Screen)</b>.</li>
+            <li>Buka ikon <b>SIGAP AURA</b> yang baru muncul di Layar Utama HP Anda, lalu tekan tombol <em>Aktifkan Notifikasi</em> kembali.</li>
+          </ol>
+        </div>
+      `,
+      confirmButtonText: 'Saya Mengerti',
+      confirmButtonColor: '#059669'
+    });
+    return;
+  }
+
+  try {
+    // 1. Minta izin Notifikasi ke pengguna
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Izin Ditolak',
+        text: 'Izin notifikasi tidak diberikan. Mohon izinkan notifikasi pada pengaturan browser / HP Anda.',
+        confirmButtonColor: '#059669'
+      });
+      updatePushUIStatus(false, 'Izin notifikasi ditolak oleh pengguna.');
+      return;
+    }
+
+    // 2. Ambil VAPID Public Key dari backend
+    const keyResp = await fetch('/api/push-public-key');
+    const keyData = await keyResp.json();
+    if (!keyData.success || !keyData.publicKey) {
+      throw new Error('Gagal mengambil public key push dari server.');
+    }
+
+    const applicationServerKey = urlBase64ToUint8Array(keyData.publicKey);
+
+    // 3. Pastikan Service Worker siap
+    if (!swRegistration) {
+      swRegistration = await navigator.serviceWorker.ready;
+    }
+
+    // 4. Langganan push manager
+    const subscription = await swRegistration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: applicationServerKey
+    });
+
+    // 5. Daftarkan subscription ke server
+    await syncPushSubscriptionWithServer(subscription);
+    isPushSubscribed = true;
+
+    updatePushUIStatus(true, 'Browser sudah berlangganan. Notifikasi aktif untuk akun ini.');
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Notifikasi Aktif! 🔔',
+      text: 'Perangkat ini kini akan menerima pemberitahuan otomatis seputar ujian, nilai, dan informasi kegiatan PKBM.',
+      timer: 2500,
+      showConfirmButton: false
+    });
+
+  } catch (err) {
+    console.error('Error saat berlangganan push:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Mengaktifkan Notifikasi',
+      text: err.message,
+      confirmButtonColor: '#059669'
+    });
+  }
+}
+
+// User menekan tombol "Nonaktifkan di perangkat ini"
+async function handleUnsubscribePush() {
+  if (!swRegistration) return;
+
+  try {
+    const sub = await swRegistration.pushManager.getSubscription();
+    if (sub) {
+      // Hapus di server
+      await fetch('/api/push-unsubscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: sub.endpoint })
+      });
+      // Hapus di browser
+      await sub.unsubscribe();
+    }
+
+    isPushSubscribed = false;
+    updatePushUIStatus(false, 'Notifikasi telah dinonaktifkan di perangkat ini.');
+
+    Swal.fire({
+      icon: 'info',
+      title: 'Notifikasi Dinonaktifkan',
+      text: 'Perangkat ini tidak lagi menerima push notification dari SIGAP AURA.',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (err) {
+    console.error('Gagal unsubscribe push:', err);
+    Swal.fire('Error', 'Gagal mematikan notifikasi: ' + err.message, 'error');
+  }
+}
+
+// Kirim tes notifikasi ke perangkat sendiri
+async function handleSendTestPush() {
+  if (!isPushSubscribed) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Aktifkan Notifikasi Terlebih Dahulu',
+      text: 'Silakan tekan tombol "Aktifkan notifikasi" terlebih dahulu agar HP Anda dapat menerima pesan tes.',
+      confirmButtonColor: '#059669'
+    });
+    return;
+  }
+
+  try {
+    const username = currentUser ? currentUser.username : null;
+    const resp = await fetch('/api/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'SIGAP AURA • Tes Notifikasi Berhasil ✅',
+        body: `Halo ${currentUser ? currentUser.nama : 'Peserta'}, notifikasi HP Anda sudah terhubung dengan baik ke sistem PKBM Aura Anugerah!`,
+        url: '/portal',
+        targetUsername: username,
+        tag: 'tes-notifikasi'
+      })
+    });
+
+    const res = await resp.json();
+    if (res.success) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Tes Terkirim!',
+        text: 'Pemberitahuan push telah dikirimkan ke perangkat HP Anda.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } else {
+      throw new Error(res.error || 'Gagal mengirim push tes.');
+    }
+  } catch (err) {
+    Swal.fire('Gagal Kirim Tes', err.message, 'error');
+  }
+}
+
+// Admin mengirim siaran notifikasi massal
+async function handleAdminBroadcastPush() {
+  const title = (document.getElementById('admin-push-title')?.value || '').trim();
+  const body = (document.getElementById('admin-push-body')?.value || '').trim();
+  const targetRole = document.getElementById('admin-push-target-role')?.value || '';
+
+  if (!title || !body) {
+    Swal.fire('Peringatan', 'Judul dan isi pesan notifikasi wajib diisi!', 'warning');
+    return;
+  }
+
+  try {
+    const resp = await fetch('/api/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: `SIGAP AURA • ${title}`,
+        body: body,
+        url: '/portal',
+        targetRole: targetRole || undefined,
+        tag: 'admin-broadcast'
+      })
+    });
+
+    const res = await resp.json();
+    if (res.success) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Siaran Notifikasi Terkirim!',
+        text: `Berhasil mengirim ke ${res.count || 0} perangkat yang terdaftar.`,
+        confirmButtonColor: '#059669'
+      });
+      document.getElementById('admin-push-title').value = '';
+      document.getElementById('admin-push-body').value = '';
+    } else {
+      throw new Error(res.error || 'Gagal mengirim siaran.');
+    }
+  } catch (err) {
+    Swal.fire('Gagal Mengirim', err.message, 'error');
+  }
+}
+
+// Helper umum untuk modul lain memanggil push notification
+async function sendAppPushNotification(options = {}) {
+  try {
+    await fetch('/api/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options)
+    });
+  } catch (err) {
+    console.warn('Gagal memanggil push API:', err.message);
+  }
+}
+
+// Muat UI section notifikasi dan tampilkan panel admin jika role Admin
+function loadPushNotificationSection() {
+  const adminCard = document.getElementById('admin-push-broadcast-card');
+  if (adminCard) {
+    if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
+      adminCard.classList.remove('hidden');
+    } else {
+      adminCard.classList.add('hidden');
+    }
+  }
+
+  // Refresh status langganan
+  if (swRegistration && swRegistration.pushManager) {
+    swRegistration.pushManager.getSubscription().then(sub => {
+      isPushSubscribed = !(sub === null);
+      if (isPushSubscribed) {
+        updatePushUIStatus(true, 'Browser sudah berlangganan. Notifikasi aktif untuk akun ini.');
+      } else {
+        updatePushUIStatus(false, 'Notifikasi belum aktif di perangkat ini. Klik "Aktifkan notifikasi" di bawah.');
+      }
+    });
+  }
+}
+
+// Global exports
+window.initServiceWorkerAndPush = initServiceWorkerAndPush;
+window.handleSubscribePush = handleSubscribePush;
+window.handleUnsubscribePush = handleUnsubscribePush;
+window.handleSendTestPush = handleSendTestPush;
+window.handleAdminBroadcastPush = handleAdminBroadcastPush;
+window.sendAppPushNotification = sendAppPushNotification;
+window.loadPushNotificationSection = loadPushNotificationSection;
+
+// =============================================================================
+// PWA SMART INSTALL DETECTOR & PROMPT (ANDROID & IPHONE/IPAD)
+// =============================================================================
+
+let deferredPWAInstallPrompt = null;
+
+// Cek apakah aplikasi saat ini berjalan dalam mode Standalone (Sudah Terpasang)
+function isPWAInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true ||
+    document.referrer.includes('android-app://');
+}
+
+// Cek apakah perangkat adalah iOS (iPhone / iPad)
+function isIOSDevice() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+// Tangkap event standar browser Android / Chrome Desktop
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Cegah browser menampilkan prompt bawaan yang terlalu cepat
+  e.preventDefault();
+  deferredPWAInstallPrompt = e;
+  console.log('💡 PWA Install prompt ditangkap dan siap digunakan.');
+
+  // Tampilkan tombol instal di UI jika belum diinstal
+  if (!isPWAInstalled()) {
+    showPWAInstallUI();
+  }
+});
+
+// Event saat aplikasi berhasil diinstal oleh pengguna
+window.addEventListener('appinstalled', () => {
+  console.log('🎉 PWA SIGAP AURA berhasil diinstal!');
+  deferredPWAInstallPrompt = null;
+  hidePWAInstallUI();
+  try {
+    sessionStorage.setItem('sigap_pwa_installed_now', 'true');
+  } catch (e) { }
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Aplikasi Berhasil Dipasang! 🎉',
+    text: 'SIGAP AURA telah terpasang di layar utama HP Anda. Anda kini dapat membukanya langsung seperti aplikasi bawaan.',
+    timer: 3000,
+    showConfirmButton: false
+  });
+});
+
+// Tampilkan tombol & banner instal di antarmuka
+function showPWAInstallUI() {
+  if (isPWAInstalled()) return;
+
+  // 1. Tampilkan tombol di Landing Page Header
+  const headerBtn = document.getElementById('btn-install-app-header');
+  if (headerBtn) headerBtn.style.display = 'inline-flex';
+
+  // 2. Tampilkan tombol di Form Login Modal
+  const loginInstallBox = document.getElementById('login-install-app-container');
+  if (loginInstallBox) loginInstallBox.style.display = 'block';
+
+  // 3. Tampilkan Banner Mengambang di Bawah Layar setelah 2 detik
+  const dismissedTime = localStorage.getItem('sigap_pwa_banner_dismissed');
+  const now = Date.now();
+  // Jangan tampilkan banner jika baru ditutup dalam 1 hari terakhir
+  if (!dismissedTime || (now - parseInt(dismissedTime, 10)) > (24 * 60 * 60 * 1000)) {
+    setTimeout(() => {
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner && !isPWAInstalled()) {
+        banner.classList.add('show');
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+      }
+    }, 2000);
+  }
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+// Sembunyikan semua UI promosi instal
+function hidePWAInstallUI() {
+  const headerBtn = document.getElementById('btn-install-app-header');
+  if (headerBtn) headerBtn.style.display = 'none';
+
+  const loginInstallBox = document.getElementById('login-install-app-container');
+  if (loginInstallBox) loginInstallBox.style.display = 'none';
+
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.classList.remove('show');
+}
+
+// Aksi ketika user mengklik tombol "Pasang" / "Instal Aplikasi"
+async function triggerPWAInstall() {
+  // Jika di iPhone / iPad: Tampilkan modal panduan iOS Add to Home Screen
+  if (isIOSDevice()) {
+    openIosInstallModal();
+    return;
+  }
+
+  // Jika di Android / Chrome Desktop dan ada deferred prompt
+  if (deferredPWAInstallPrompt) {
+    try {
+      deferredPWAInstallPrompt.prompt();
+      const choiceResult = await deferredPWAInstallPrompt.userChoice;
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User menerima instalasi PWA SIGAP AURA');
+        hidePWAInstallUI();
+      } else {
+        console.log('User menolak prompt instalasi PWA');
+      }
+      deferredPWAInstallPrompt = null;
+    } catch (err) {
+      console.warn('Gagal memicu install prompt native:', err);
+    }
+  } else {
+    // Jika browser Android (atau Firefox/Samsung Internet) belum mengeluarkan prompt otomatis
+    Swal.fire({
+      icon: 'info',
+      title: 'Pasang di Layar Utama HP',
+      html: `
+        <div style="text-align: left; font-size: 13.5px; line-height: 1.6; color: var(--text-color);">
+          <p>Untuk memasang <b>SIGAP AURA</b> di layar HP Anda:</p>
+          <ol style="padding-left: 20px; margin-bottom: 0;">
+            <li>Tekan tombol menu browser <b>titik tiga (⋮)</b> di pojok kanan atas browser Anda.</li>
+            <li>Pilih opsi <b>"Instal aplikasi"</b> atau <b>"Tambahkan ke Layar Utama"</b>.</li>
+            <li>Konfirmasi pemasangan, dan aplikasi akan langsung muncul di beranda HP Anda.</li>
+          </ol>
+        </div>
+      `,
+      confirmButtonText: 'Saya Mengerti',
+      confirmButtonColor: '#16a34a'
+    });
+  }
+}
+
+// Tutup banner mengambang jika user memilih silang
+function dismissPWAInstallBanner() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.classList.remove('show');
+  try {
+    localStorage.setItem('sigap_pwa_banner_dismissed', Date.now().toString());
+  } catch (e) { }
+}
+
+// Buka modal panduan iOS
+function openIosInstallModal() {
+  const modal = document.getElementById('modal-ios-install');
+  if (modal) {
+    modal.classList.remove('hidden');
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  }
+}
+
+// Tutup modal panduan iOS
+function closeIosInstallModal() {
+  const modal = document.getElementById('modal-ios-install');
+  if (modal) modal.classList.add('hidden');
+}
+
+// Inisialisasi pengecekan instalasi saat halaman dimuat
+function checkAndInitPWAInstallation() {
+  if (isPWAInstalled()) {
+    console.log('📱 Aplikasi SIGAP AURA berjalan dalam mode Standalone Terpasang.');
+    hidePWAInstallUI();
+  } else {
+    console.log('🌐 Aplikasi dibuka via web browser biasa (Belum Terpasang).');
+    showPWAInstallUI();
+  }
+}
+
+// Panggil di akhir pemuatan halaman
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkAndInitPWAInstallation);
+} else {
+  checkAndInitPWAInstallation();
+}
+
+window.triggerPWAInstall = triggerPWAInstall;
+window.dismissPWAInstallBanner = dismissPWAInstallBanner;
+window.openIosInstallModal = openIosInstallModal;
+window.closeIosInstallModal = closeIosInstallModal;
+window.isPWAInstalled = isPWAInstalled;
+
+
