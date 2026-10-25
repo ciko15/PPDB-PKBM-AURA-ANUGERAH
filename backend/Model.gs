@@ -799,3 +799,30 @@ function logNotificationActivity(title, body, url, targetRole, tag) {
   ]);
   return { success: true, message: "Log notifikasi berhasil dicatat" };
 }
+
+// Ambil riwayat log notifikasi untuk dashboard admin/super admin
+function getNotificationLogs(limit) {
+  const maxLimit = limit ? parseInt(limit, 10) : 30;
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheetNotif = ss.getSheetByName('Log_Notifikasi');
+  if (!sheetNotif) return [];
+  const data = sheetNotif.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  const list = [];
+  // Baca dari baris paling bawah (terbaru)
+  for (let i = data.length - 1; i >= 1; i--) {
+    const row = data[i];
+    list.push({
+      timestamp: row[0],
+      title: row[1],
+      body: row[2],
+      url: row[3],
+      targetRole: row[4],
+      tag: row[5]
+    });
+    if (list.length >= maxLimit) break;
+  }
+  return list;
+}
+

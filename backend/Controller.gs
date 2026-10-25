@@ -61,6 +61,8 @@ function doPost(e) {
       result = getPushSubscriptionsFromDB(params.targetRole, params.targetUsername);
     } else if (action === "logNotification") {
       result = logNotificationActivity(params.title, params.body, params.url, params.targetRole, params.tag);
+    } else if (action === "getNotificationLogs") {
+      result = getNotificationLogs(params.limit);
     } else {
       result = { error: "Action not found" };
     }

@@ -716,6 +716,11 @@
         </div>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
+        <button id="btn-notif-nav" onclick="bukaModalNotifikasiDashboard()" class="btn btn-icon"
+          style="background: transparent; border: none; box-shadow: none; padding: 4px; position: relative;" title="Pemberitahuan & Notifikasi">
+          <i data-lucide="bell" id="icon-notif-nav" style="width: 20px; height: 20px; color: var(--text-color);"></i>
+          <span id="badge-notif-count" style="display: none; position: absolute; top: 0; right: 0; background: #ef4444; color: #fff; font-size: 10px; font-weight: 800; border-radius: 9999px; min-width: 16px; height: 16px; align-items: center; justify-content: center; padding: 0 4px; line-height: 1;">0</span>
+        </button>
         <button id="btn-theme-nav" onclick="toggleTheme()" class="btn btn-icon"
           style="background: transparent; border: none; box-shadow: none; padding: 4px;" title="Ganti Tema">
           <i data-lucide="moon" id="icon-theme-nav" style="width: 18px; height: 18px;"></i>
@@ -974,6 +979,36 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- Panel Log Notifikasi & Sistem Peringatan Real-time (Admin & Super Admin) -->
+          <div id="panel-dashboard-notifikasi" class="card-panel" style="margin-top: 1.5rem; border: 1.5px solid rgba(59, 130, 246, 0.3); background: var(--surface);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #2563eb;">
+                  <i data-lucide="bell-ring" style="width: 18px; height: 18px;"></i>
+                </div>
+                <div>
+                  <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: var(--text-color);">Pusat Notifikasi & Log Aktivitas Belajar / Ujian</h3>
+                  <p style="margin: 2px 0 0 0; font-size: 12px; color: var(--text-muted);">Riwayat notifikasi real-time yang dikirimkan ke HP Admin & Tutor</p>
+                </div>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-sm" onclick="muatLogNotifikasiDashboard()" title="Muat Ulang Log Notifikasi">
+                  <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Refresh
+                </button>
+                <button class="btn btn-sm btn-outline" onclick="switchMobileTab('section-notifikasi')" title="Buka Pengaturan Notifikasi HP">
+                  ⚙️ Pengaturan Notifikasi HP
+                </button>
+              </div>
+            </div>
+
+            <!-- List Notifikasi -->
+            <div id="container-log-notifikasi" style="display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; padding-right: 4px;">
+              <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px;">
+                <span class="spinner-inline" style="display: inline-block;"></span> Memuat riwayat notifikasi...
+              </div>
             </div>
           </div>
         </div>
@@ -3317,6 +3352,39 @@
             Tutup
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL PUSAT NOTIFIKASI DASHBOARD ==================== -->
+  <div id="modal-notifikasi-popup" class="login-modal hidden" style="z-index: 99999;">
+    <div class="login-modal-overlay" onclick="tutupModalNotifikasiDashboard()"></div>
+    <div class="login-modal-card" style="max-width: 520px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 22px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-color); padding-bottom: 14px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; color: #2563eb;">
+            <i data-lucide="bell" style="width: 20px; height: 20px;"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: var(--text-color);">Pemberitahuan & Notifikasi</h3>
+            <span style="font-size: 12px; color: var(--text-muted);">Riwayat notifikasi aktivitas belajar, ujian, & sistem</span>
+          </div>
+        </div>
+        <button class="btn-close-modal" onclick="tutupModalNotifikasiDashboard()">&times;</button>
+      </div>
+
+      <!-- Isi Notifikasi -->
+      <div id="popup-notifikasi-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px;">
+        <div style="text-align: center; color: var(--text-muted); padding: 24px;">Memuat notifikasi...</div>
+      </div>
+
+      <div style="margin-top: 14px; pt-2; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-sm btn-outline" onclick="switchMobileTab('section-notifikasi'); tutupModalNotifikasiDashboard();">
+          ⚙️ Kelola Notifikasi HP
+        </button>
+        <button class="btn btn-sm" onclick="tutupModalNotifikasiDashboard()">
+          Tutup
+        </button>
       </div>
     </div>
   </div>

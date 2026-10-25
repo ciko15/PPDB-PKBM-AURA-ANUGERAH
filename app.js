@@ -376,7 +376,10 @@ function switchMobileTab(targetId, btnEl, recordHistory = true) {
 
   try { localStorage.setItem('ppdb_last_section', targetId); } catch (e) { }
 
-  if (targetId === 'section-dashboard') loadDashboardData();
+  if (targetId === 'section-dashboard') {
+    loadDashboardData();
+    muatLogNotifikasiDashboard();
+  }
   if (targetId === 'section-list') loadAllSiswa();
   if (targetId === 'section-materi') loadBukuData();
   if (targetId === 'section-ujian') loadUjianData();
@@ -472,7 +475,10 @@ function setupEventListeners() {
       // Simpan view terakhir agar saat refresh/reload tetap di tab/menu ini
       try { localStorage.setItem('ppdb_last_section', targetId); } catch (e) { }
 
-      if (targetId === 'section-dashboard') loadDashboardData();
+      if (targetId === 'section-dashboard') {
+        loadDashboardData();
+        muatLogNotifikasiDashboard();
+      }
       if (targetId === 'section-list') loadAllSiswa();
       if (targetId === 'section-materi') loadBukuData();
       if (targetId === 'section-ujian') loadUjianData();
@@ -7651,6 +7657,33 @@ async function handleAdminBroadcastPush() {
 // Helper umum untuk modul lain memanggil push notification
 async function sendAppPushNotification(options = {}) {
   try {
+    const notifItem = {
+      id: 'NOTIF-' + Date.now(),
+      timestamp: new Date().toISOString(),
+      title: options.title || 'SIGAP AURA',
+      body: options.body || 'Pemberitahuan dari PKBM Aura Anugerah.',
+      url: options.url || '/portal',
+      targetRole: options.targetRole || 'Semua',
+      targetUsername: options.targetUsername || '',
+      tag: options.tag || 'sigap-' + Date.now()
+    };
+
+    // 1. Simpan ke Log Lokal Dashboard agar Admin/Super Admin langsung bisa melihat riwayat di aplikasi
+    simpanNotifikasiKeLokal(notifItem);
+
+    // 2. Simpan ke database online Google Apps Script (Log_Notifikasi)
+    try {
+      callAPI({
+        action: 'logNotification',
+        title: notifItem.title,
+        body: notifItem.body,
+        url: notifItem.url,
+        targetRole: notifItem.targetRole,
+        tag: notifItem.tag
+      }).catch(() => { });
+    } catch (e) { }
+
+    // 3. Kirim ke Node.js server jika endpoint push online tersedia
     let sent = false;
     try {
       const resp = await fetch('/api/send-push', {
@@ -7664,24 +7697,163 @@ async function sendAppPushNotification(options = {}) {
       }
     } catch (e) { }
 
-    // Jika server offline / static hosting: Tampilkan langsung di browser perangkat lokal
-    if (!sent && Notification.permission === 'granted') {
-      if (!swRegistration) {
-        swRegistration = await navigator.serviceWorker.ready;
-      }
-      if (swRegistration && swRegistration.showNotification) {
-        swRegistration.showNotification(options.title || 'SIGAP AURA', {
-          body: options.body || 'Pemberitahuan dari PKBM Aura Anugerah.',
-          icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
-          badge: '/logo_PKBM_Aura_Anugerah_transparan.png',
-          tag: options.tag || 'sigap-' + Date.now(),
-          data: { url: options.url || '/portal' },
-          vibrate: [100, 50, 100]
-        });
+    // 4. Jika perangkat lokal ini memiliki izin notifikasi (baik siswa maupun admin), munculkan banner langsung di HP
+    if (Notification.permission === 'granted') {
+      try {
+        if (!swRegistration) {
+          swRegistration = await navigator.serviceWorker.ready;
+        }
+        if (swRegistration && swRegistration.showNotification) {
+          swRegistration.showNotification(notifItem.title, {
+            body: notifItem.body,
+            icon: '/logo_PKBM_Aura_Anugerah_transparan.png',
+            badge: '/logo_PKBM_Aura_Anugerah_transparan.png',
+            tag: notifItem.tag,
+            data: { url: notifItem.url },
+            vibrate: [100, 50, 100]
+          });
+        }
+      } catch (swErr) {
+        console.warn('Direct SW notification:', swErr.message);
       }
     }
+
+    // Perbarui badge dan tampilan notifikasi di dashboard
+    updateNotifikasiBadgeUI();
+    renderLogNotifikasiDashboard();
+
   } catch (err) {
     console.warn('Gagal memanggil push API:', err.message);
+  }
+}
+
+// Simpan notifikasi ke localStorage
+function simpanNotifikasiKeLokal(notifItem) {
+  try {
+    let logs = [];
+    const raw = localStorage.getItem('ppdb_notif_logs');
+    if (raw) logs = JSON.parse(raw);
+    logs.unshift(notifItem);
+    // Batasi 40 notifikasi terakhir
+    logs = logs.slice(0, 40);
+    localStorage.setItem('ppdb_notif_logs', JSON.stringify(logs));
+  } catch (e) { }
+}
+
+function ambilNotifikasiLokal() {
+  try {
+    const raw = localStorage.getItem('ppdb_notif_logs');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Update icon lonceng & badge jumlah notifikasi di header
+function updateNotifikasiBadgeUI() {
+  const badge = document.getElementById('badge-notif-count');
+  if (!badge) return;
+  const logs = ambilNotifikasiLokal();
+  if (logs.length > 0) {
+    badge.textContent = logs.length > 99 ? '99+' : String(logs.length);
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Render daftar riwayat notifikasi di dashboard utama
+function renderLogNotifikasiDashboard(customLogs) {
+  const container = document.getElementById('container-log-notifikasi');
+  if (!container) return;
+
+  const logs = customLogs || ambilNotifikasiLokal();
+  if (!logs || logs.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 24px; background: var(--surface-2); border-radius: 10px;">
+        Belum ada riwayat notifikasi aktivitas yang tercatat.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = logs.map(item => {
+    const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : 'Baru saja';
+    return `
+      <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+          <strong style="font-size: 13.5px; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
+            🔔 ${item.title || 'Pemberitahuan'}
+          </strong>
+          <span style="font-size: 11px; color: var(--text-muted); white-space: nowrap;">${dateStr}</span>
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">${item.body || ''}</div>
+        <div style="display: flex; gap: 8px; margin-top: 4px; font-size: 11.5px;">
+          <span style="background: rgba(59, 130, 246, 0.12); color: #2563eb; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Target: ${item.targetRole || 'Semua'}</span>
+          ${item.tag ? `<span style="background: rgba(16, 185, 129, 0.12); color: #10b981; padding: 2px 8px; border-radius: 4px;">Tag: ${item.tag}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Buka popup modal notifikasi
+function bukaModalNotifikasiDashboard() {
+  const modal = document.getElementById('modal-notifikasi-popup');
+  const popupList = document.getElementById('popup-notifikasi-list');
+  if (modal) modal.classList.remove('hidden');
+
+  if (popupList) {
+    const logs = ambilNotifikasiLokal();
+    if (logs.length === 0) {
+      popupList.innerHTML = `
+        <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px;">
+          Belum ada riwayat notifikasi baru.
+        </div>
+      `;
+    } else {
+      popupList.innerHTML = logs.map(item => {
+        const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : 'Baru saja';
+        return `
+          <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <strong style="font-size: 13.5px; color: var(--text-color);">🔔 ${item.title}</strong>
+              <small style="color: var(--text-muted);">${dateStr}</small>
+            </div>
+            <p style="margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.4;">${item.body}</p>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+function tutupModalNotifikasiDashboard() {
+  const modal = document.getElementById('modal-notifikasi-popup');
+  if (modal) modal.classList.add('hidden');
+}
+
+// Ambil riwayat log notifikasi dari server / spreadsheet
+async function muatLogNotifikasiDashboard() {
+  renderLogNotifikasiDashboard();
+  updateNotifikasiBadgeUI();
+
+  try {
+    const res = await callAPI({ action: 'getNotificationLogs', limit: 25 });
+    if (res && Array.isArray(res) && res.length > 0) {
+      renderLogNotifikasiDashboard(res);
+      // Sinkronkan ke lokal
+      try {
+        localStorage.setItem('ppdb_notif_logs', JSON.stringify(res));
+      } catch (e) { }
+      updateNotifikasiBadgeUI();
+    }
+  } catch (err) {
+    console.warn('Muat log notifikasi online:', err.message);
   }
 }
 
@@ -7717,6 +7889,9 @@ window.handleSendTestPush = handleSendTestPush;
 window.handleAdminBroadcastPush = handleAdminBroadcastPush;
 window.sendAppPushNotification = sendAppPushNotification;
 window.loadPushNotificationSection = loadPushNotificationSection;
+window.muatLogNotifikasiDashboard = muatLogNotifikasiDashboard;
+window.bukaModalNotifikasiDashboard = bukaModalNotifikasiDashboard;
+window.tutupModalNotifikasiDashboard = tutupModalNotifikasiDashboard;
 
 // =============================================================================
 // PWA SMART INSTALL DETECTOR & PROMPT (ANDROID & IPHONE/IPAD)
