@@ -5459,6 +5459,17 @@ function launchReaderSession(book, studentName) {
 
   // Rekam status awal ke log aktivitas presensi belajar
   catatLogBelajarBaru(activeBelajarSession);
+
+  // 🔔 Kirim Notifikasi Push ke Admin & Super Admin saat siswa mulai belajar
+  if (typeof sendAppPushNotification === 'function') {
+    sendAppPushNotification({
+      title: 'Aktivitas Belajar Dimulai 📖',
+      body: `Siswa "${studentName}" baru saja mulai membaca materi: ${book.nama} (${book.jenjang} - ${book.kategori}).`,
+      url: '/portal',
+      targetRole: 'Admin',
+      tag: 'mulai-belajar-' + book.id
+    });
+  }
 }
 
 // ==================== ENGINE PDF.JS NATIVE VIEWER ====================
@@ -5770,6 +5781,18 @@ function closeReaderModal() {
   if (activeBelajarSession) {
     activeBelajarSession.status = 'Selesai Belajar';
     updateLogBelajarSession(activeBelajarSession);
+
+    // 🔔 Kirim Notifikasi Push ke Admin & Super Admin saat siswa selesai belajar
+    const durasiMnt = Math.max(1, Math.ceil((activeBelajarSession.durasiDetik || 0) / 60));
+    if (typeof sendAppPushNotification === 'function') {
+      sendAppPushNotification({
+        title: 'Selesai Belajar ✅',
+        body: `Siswa "${activeBelajarSession.namaSiswa}" telah menyelesaikan belajar materi ${activeBelajarSession.bukuJudul} (Durasi: ${durasiMnt} menit).`,
+        url: '/portal',
+        targetRole: 'Admin',
+        tag: 'selesai-belajar-' + activeBelajarSession.sessionId
+      });
+    }
   }
   if (liveTimerInterval) clearInterval(liveTimerInterval);
   activeBelajarSession = null;

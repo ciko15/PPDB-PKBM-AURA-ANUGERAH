@@ -770,7 +770,18 @@ app.post('/api/send-push', async (req, res) => {
     // Filter target penerima
     const filteredSubs = subs.filter(item => {
       if (targetUsername && item.user && item.user.username !== targetUsername) return false;
-      if (targetRole && item.user && item.user.role !== targetRole) return false;
+      if (targetRole && item.user) {
+        const userRole = String(item.user.role || '').toLowerCase();
+        // Jika targetRole adalah Admin, sertakan Admin dan Super Admin
+        if (Array.isArray(targetRole)) {
+          const roles = targetRole.map(r => String(r).toLowerCase());
+          if (!roles.includes(userRole)) return false;
+        } else if (String(targetRole).toLowerCase() === 'admin') {
+          if (userRole !== 'admin' && userRole !== 'super admin') return false;
+        } else if (userRole !== String(targetRole).toLowerCase()) {
+          return false;
+        }
+      }
       return true;
     });
 
