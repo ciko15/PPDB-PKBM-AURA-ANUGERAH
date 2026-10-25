@@ -1,31 +1,38 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#059669">
   <title>SIS PPDB & Portal Akademik - PKBM Aura Anugerah</title>
-  
+
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="logo_PKBM_Aura_Anugerah_transparan.png">
   <link rel="shortcut icon" href="logo_PKBM_Aura_Anugerah_transparan.png" type="image/png">
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
-  
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;600;700&display=swap"
+    rel="stylesheet">
+
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <!-- Lucide Icons (Identik dengan Rostering Teknik) -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Leaflet CSS & JS for OpenStreetMap -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- PDF.js untuk Native High-Performance Reader (Bebas iframe & full navigasi) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  
+
   <!-- ==================== LANDING PAGE ==================== -->
   <div id="page-landing" class="landing-page">
     <header class="landing-header">
@@ -37,12 +44,27 @@
         </div>
       </div>
       <nav class="landing-nav">
-        <a href="#" onclick="document.getElementById('program').scrollIntoView({behavior: 'smooth'}); return false;">Program</a>
-        <a href="#" onclick="document.getElementById('cara-pendaftaran').scrollIntoView({behavior: 'smooth'}); return false;">Cara Pendaftaran</a>
-        <a href="#" onclick="if(typeof resetAndOpenRegisterForm === 'function') resetAndOpenRegisterForm(); else document.getElementById('modal-register').classList.remove('hidden'); return false;">Formulir</a>
-        <a href="#" onclick="document.getElementById('kontak').scrollIntoView({behavior: 'smooth'}); return false;">Kontak</a>
+        <a href="#"
+          onclick="document.getElementById('program').scrollIntoView({behavior: 'smooth'}); return false;">Program</a>
+        <a href="#"
+          onclick="document.getElementById('cara-pendaftaran').scrollIntoView({behavior: 'smooth'}); return false;">Cara
+          Pendaftaran</a>
+        <a href="#"
+          onclick="document.getElementById('landing-kegiatan-section').scrollIntoView({behavior: 'smooth'}); return false;">Kegiatan</a>
+        <a href="#"
+          onclick="document.getElementById('landing-lokasi-section').scrollIntoView({behavior: 'smooth'}); return false;">Lokasi PKBM</a>
+        <a href="#"
+          onclick="document.getElementById('kontak').scrollIntoView({behavior: 'smooth'}); return false;">Kontak</a>
       </nav>
-      <button class="btn btn-landing-primary" onclick="if(typeof resetAndOpenRegisterForm === 'function') resetAndOpenRegisterForm(); else document.getElementById('modal-register').classList.remove('hidden');">Daftar Sekarang</button>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button id="btn-theme-landing" onclick="toggleTheme()" class="btn btn-icon"
+          style="background: var(--surface-2); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" title="Ganti Mode Terang / Gelap" aria-label="Ganti Mode Tampilan">
+          <i data-lucide="moon" id="icon-theme-landing" style="width: 18px; height: 18px;"></i>
+        </button>
+        <button class="btn btn-landing-primary"
+          onclick="if(typeof resetAndOpenRegisterForm === 'function') resetAndOpenRegisterForm(); else document.getElementById('modal-register').classList.remove('hidden');">Daftar
+          Sekarang</button>
+      </div>
     </header>
 
     <main class="landing-main">
@@ -50,10 +72,16 @@
         <div class="hero-content">
           <p class="hero-subtitle">Pendidikan kesetaraan untuk semua usia</p>
           <h2 class="hero-title">Melanjutkan sekolah, kapan pun Anda siap.</h2>
-          <p class="hero-desc">PKBM Aura Anugerah menyelenggarakan Program Kesetaraan Paket A, B, dan C bagi siapa saja yang ingin menyelesaikan atau melanjutkan pendidikan — tanpa batasan usia, dan tanpa harus meninggalkan pekerjaan atau kesibukan sehari-hari.</p>
+          <p class="hero-desc">PKBM Aura Anugerah menyelenggarakan Program Kesetaraan Paket A, B, dan C bagi siapa saja
+            yang ingin menyelesaikan atau melanjutkan pendidikan — tanpa batasan usia, dan tanpa harus meninggalkan
+            pekerjaan atau kesibukan sehari-hari.</p>
           <div class="hero-actions">
-            <button class="btn btn-landing-primary btn-lg" onclick="document.getElementById('formulir').scrollIntoView({behavior: 'smooth'})">Isi Formulir Pendaftaran</button>
-            <button class="btn btn-outline btn-lg" onclick="document.getElementById('cara-pendaftaran').scrollIntoView({behavior: 'smooth'})">Lihat Cara Pendaftaran</button>
+            <button class="btn btn-landing-primary btn-lg"
+              onclick="document.getElementById('formulir').scrollIntoView({behavior: 'smooth'})">Isi Formulir
+              Pendaftaran</button>
+            <button class="btn btn-outline btn-lg"
+              onclick="document.getElementById('cara-pendaftaran').scrollIntoView({behavior: 'smooth'})">Lihat Cara
+              Pendaftaran</button>
           </div>
         </div>
         <div class="hero-cards">
@@ -90,7 +118,8 @@
 
       <section id="program" class="program-section">
         <h2>Pilih program yang sesuai</h2>
-        <p class="section-desc">Setiap program dirancang setara dengan jenjang pendidikan formal, dengan cara belajar yang lebih menyesuaikan kebutuhan warga belajar.</p>
+        <p class="section-desc">Setiap program dirancang setara dengan jenjang pendidikan formal, dengan cara belajar
+          yang lebih menyesuaikan kebutuhan warga belajar.</p>
         <div class="program-table-container">
           <table class="program-table">
             <thead>
@@ -134,7 +163,8 @@
       <section id="cara-pendaftaran" class="steps-section">
         <div class="steps-container">
           <h2>Cara pendaftaran</h2>
-          <p class="section-desc">Pendaftaran dilakukan langsung dari halaman ini, tanpa perlu membuat akun atau masuk sebagai pengguna terdaftar.</p>
+          <p class="section-desc">Pendaftaran dilakukan langsung dari halaman ini, tanpa perlu membuat akun atau masuk
+            sebagai pengguna terdaftar.</p>
           <div class="step-item">
             <div class="step-number">1</div>
             <div class="step-content">
@@ -182,263 +212,470 @@
             <li>Fotokopi ijazah atau rapor jenjang sebelumnya (atau surat keterangan bagi yang belum memilikinya)</li>
             <li>Pas foto terbaru ukuran 3x4 (2 lembar)</li>
           </ul>
-          <p class="docs-note">Dokumen dibawa langsung saat verifikasi berkas — tidak perlu diunggah pada formulir ini.</p>
+          <p class="docs-note">Dokumen dibawa langsung saat verifikasi berkas — tidak perlu diunggah pada formulir ini.
+          </p>
         </div>
       </section>
 
-      <section id="kontak" class="form-section">
-        <h2>Kontak Kami</h2>
-        <p class="section-desc">Hubungi kami melalui saluran berikut untuk informasi lebih lanjut.</p>
-        <div class="landing-form-card" style="padding: 2rem;">
-          <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px;">📍 Alamat PKBM</h3>
-          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Jl. Pendidikan No. 123, Kota Anda, Provinsi Anda</p>
-          
-          <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px;">📱 WhatsApp Admin</h3>
-          <p style="color: var(--text-muted); margin-bottom: 0;">+62 812-3456-7890 (Jam Kerja: 08.00 - 16.00)</p>
+      <!-- ==================== SECTION LANDING: INFORMASI KEGIATAN PUBLIK ==================== -->
+      <section id="landing-kegiatan-section" class="form-section" style="max-width: 1100px; margin: 0 auto 3rem auto;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+          <span
+            style="background: rgba(16, 185, 129, 0.15); color: var(--primary-color); padding: 6px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Warta
+            & Galeri</span>
+          <h2 style="font-size: 1.85rem; font-weight: 800; margin-top: 10px; color: var(--text-color);">Informasi
+            Kegiatan & Berita Terkini</h2>
+          <p class="section-desc" style="max-width: 650px; margin: 0 auto;">Dokumentasi kegiatan belajar, program
+            kemasyarakatan, serta agenda terkini di PKBM Aura Anugerah.</p>
+        </div>
+        <div id="landing-kegiatan-grid"
+          style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+          <!-- Di-render dinamis oleh app.js -->
+        </div>
+      </section>
+
+      <!-- ==================== SECTION LANDING: PROFIL LOKASI & KONTAK PKBM AURA ANUGERAH ==================== -->
+      <section id="landing-lokasi-section" class="form-section" style="max-width: 1280px; width: 100%; margin: 0 auto 3.5rem auto;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+          <span
+            style="background: rgba(34, 197, 94, 0.15); color: var(--primary-color); padding: 6px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Lokasi Kampus Terpadu</span>
+          <h2 style="font-size: 2rem; font-weight: 800; margin-top: 10px; color: var(--text-color);">Informasi & Peta Lokasi PKBM Aura Anugerah</h2>
+          <p class="section-desc" style="max-width: 750px; margin: 0 auto;">Pusat Kegiatan Belajar Masyarakat (PKBM) Aura Anugerah Sentani, melayani pendidikan kesetaraan Paket A, B, C dan kegiatan pemberdayaan masyarakat.</p>
+        </div>
+
+        <div id="landing-tk-container" class="landing-form-card"
+          style="max-width: 100%; width: 100%; padding: 2.25rem; border-radius: 18px; border: 1px solid var(--border-color); background: var(--surface-color); box-shadow: var(--shadow);">
+          <!-- Di-render dinamis oleh app.js (Detail profil PKBM, embedded modal navigasi & Leaflet map geometri) -->
+        </div>
+      </section>
+
+      <!-- Section Kontak Terpadu -->
+      <section id="kontak" class="form-section" style="max-width: 1280px; width: 100%; margin: 0 auto 4rem auto;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+          <span
+            style="background: rgba(34, 197, 94, 0.15); color: var(--primary-color); padding: 6px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Hubungi Kami</span>
+          <h2 style="font-size: 2rem; font-weight: 800; margin-top: 10px; color: var(--text-color);">Kontak Layanan Informasi</h2>
+          <p class="section-desc" style="max-width: 700px; margin: 0 auto;">Konsultasi pendaftaran, verifikasi berkas, atau informasi kurikulum belajar dapat menghubungi pengelola PKBM.</p>
+        </div>
+        <div class="landing-form-card" style="max-width: 100%; width: 100%; padding: 2rem 2.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; border-radius: 18px;">
+          <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 14px; border: 1px solid var(--border-color);">
+            <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; font-size: 1.15rem; color: var(--text-color);">
+              <i data-lucide="map-pin" style="width: 20px; height: 20px; color: var(--primary-color);"></i>
+              <span>Alamat Kampus PKBM</span>
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 0;">
+              JL. Yahim KOMP. Buton Samping Hotel Citra Buana, Sentani, Kabupaten Jayapura, Papua (99352)
+            </p>
+          </div>
+
+          <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 14px; border: 1px solid var(--border-color);">
+            <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; font-size: 1.15rem; color: var(--text-color);">
+              <i data-lucide="message-circle" style="width: 20px; height: 20px; color: #22c55e;"></i>
+              <span>WhatsApp Admin & Pengelola</span>
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 0.75rem;">
+              +62 812-3456-7890 (Jam Kerja: 08.00 - 16.00 WIT)
+            </p>
+            <a href="https://wa.me/628123456789" target="_blank" class="btn btn-landing-primary" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; padding: 6px 14px;">
+              <i data-lucide="send" style="width: 15px; height: 15px;"></i>
+              <span>Chat WhatsApp Sekarang</span>
+            </a>
+          </div>
+
+          <div style="background: var(--surface-2); padding: 1.5rem; border-radius: 14px; border: 1px solid var(--border-color);">
+            <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; font-size: 1.15rem; color: var(--text-color);">
+              <i data-lucide="mail" style="width: 20px; height: 20px; color: #0284c7;"></i>
+              <span>Surel / Email Resmi</span>
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 0;">
+              pkbm.auraanugerah@gmail.com
+            </p>
+          </div>
         </div>
       </section>
     </main>
   </div>
 
-  
+
   <!-- ==================== REGISTER MODAL ==================== -->
   <div id="modal-register" class="login-modal hidden">
     <div class="login-modal-overlay" id="register-modal-overlay"></div>
-    <div class="login-card modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto; text-align: left;">
+    <div class="modal-content"
+      style="max-width: 800px; max-height: 90vh; overflow-y: auto; text-align: left;">
       <button id="btn-close-register" class="btn-close-modal">&times;</button>
 
-        
-        <!-- ==================== SECTION: INPUT PENDAFTARAN & EDIT ==================== -->
-        <div id="section-input" style="padding: 0;">
-          <h3 id="form-input-title">Formulir Pendaftaran Siswa Baru</h3>
-          <p style="color:var(--text-muted); margin-bottom: 1.5rem;">Masukkan data calon peserta didik sesuai dokumen resmi (KK/Ijazah). Sebagian besar kolom bersifat opsional.</p>
-          
-          <form id="form-input-siswa" onsubmit="event.preventDefault();">
-            <!-- Hidden field for Edit Mode -->
-            <input type="hidden" id="reg-id" value="">
 
-            <div class="form-group-row">
-              <div class="form-group half">
-                <label>Tanggal Daftar</label>
-                <input type="date" id="reg-tgl-daftar">
-              </div>
-              <div class="form-group half">
-                <label>Program / Jenjang <span style="color:red">*</span></label>
-                <select id="reg-program" class="form-control" required>
-                  <option value="">-- Pilih --</option>
-                  <option value="Paket A">Paket A (Setara SD)</option>
-                  <option value="Paket B">Paket B (Setara SMP)</option>
-                  <option value="Paket C">Paket C (Setara SMA)</option>
-                </select>
-              </div>
+      <!-- ==================== SECTION: INPUT PENDAFTARAN & EDIT ==================== -->
+      <div id="section-input" style="padding: 0;">
+        <h3 id="form-input-title">Formulir Pendaftaran Siswa Baru</h3>
+        <p style="color:var(--text-muted); margin-bottom: 1.5rem;">Masukkan data calon peserta didik sesuai dokumen
+          resmi (KK/Ijazah). Sebagian besar kolom bersifat opsional.</p>
+
+        <form id="form-input-siswa" onsubmit="event.preventDefault();">
+          <!-- Hidden field for Edit Mode -->
+          <input type="hidden" id="reg-id" value="">
+
+          <div class="form-group-row">
+            <div class="form-group half">
+              <label>Tanggal Daftar</label>
+              <input type="date" id="reg-tgl-daftar">
             </div>
-
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>Nama Lengkap <span style="color:red">*</span></label>
-                <input type="text" id="reg-nama" required>
-              </div>
-              <div class="form-group half">
-                <label>Jenis Kelamin</label>
-                <select id="reg-jk" class="form-control">
-                  <option value="">-- Pilih --</option>
-                  <option value="Laki-laki">Laki-laki</option>
-                  <option value="Perempuan">Perempuan</option>
-                </select>
-              </div>
+            <div class="form-group half">
+              <label>Program / Jenjang <span style="color:red">*</span></label>
+              <select id="reg-program" class="form-control" required>
+                <option value="">-- Pilih --</option>
+                <option value="Paket A">Paket A (Setara SD)</option>
+                <option value="Paket B">Paket B (Setara SMP)</option>
+                <option value="Paket C">Paket C (Setara SMA)</option>
+              </select>
             </div>
+          </div>
 
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>NIK</label>
-                <input type="text" id="reg-nik">
-              </div>
-              <div class="form-group half">
-                <label>NISN</label>
-                <input type="text" id="reg-nisn">
-              </div>
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>Nama Lengkap <span style="color:red">*</span></label>
+              <input type="text" id="reg-nama" required>
             </div>
-
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>No. Kartu Keluarga</label>
-                <input type="text" id="reg-no-kk">
-              </div>
-              <div class="form-group half">
-                <label>Urut KK</label>
-                <input type="text" id="reg-urut-kk">
-              </div>
+            <div class="form-group half">
+              <label>Jenis Kelamin</label>
+              <select id="reg-jk" class="form-control">
+                <option value="">-- Pilih --</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
+              </select>
             </div>
+          </div>
 
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>Kabupaten/Kota</label>
-                <input type="text" id="reg-kab-kota">
-              </div>
-              <div class="form-group half">
-                <label>Kecamatan</label>
-                <input type="text" id="reg-kecamatan">
-              </div>
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>NIK</label>
+              <input type="text" id="reg-nik">
             </div>
-
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>Desa/Kelurahan</label>
-                <input type="text" id="reg-desa-kelurahan">
-              </div>
-              <div class="form-group half">
-                <label>Kelas</label>
-                <input type="text" id="reg-kelas">
-              </div>
+            <div class="form-group half">
+              <label>NISN</label>
+              <input type="text" id="reg-nisn">
             </div>
+          </div>
 
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>Tempat Lahir</label>
-                <input type="text" id="reg-tempat-lahir">
-              </div>
-              <div class="form-group half">
-                <label>Tanggal Lahir</label>
-                <input type="date" id="reg-tgl-lahir">
-              </div>
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>No. Kartu Keluarga</label>
+              <input type="text" id="reg-no-kk">
             </div>
-
-            <hr class="divider">
-            <h4>Data Orang Tua</h4>
-
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>Nama Ayah Kandung</label>
-                <input type="text" id="reg-ayah">
-              </div>
-              <div class="form-group half">
-                <label>Tahun Lahir Ayah</label>
-                <input type="number" id="reg-tahun-lahir-ayah">
-              </div>
+            <div class="form-group half">
+              <label>Urut KK</label>
+              <input type="text" id="reg-urut-kk">
             </div>
+          </div>
 
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>NIK Ayah</label>
-                <input type="text" id="reg-nik-ayah">
-              </div>
-              <div class="form-group half">
-                <label>Nama Wali (Jika ada)</label>
-                <input type="text" id="reg-wali">
-              </div>
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>Kabupaten/Kota</label>
+              <input type="text" id="reg-kab-kota">
             </div>
+            <div class="form-group half">
+              <label>Kecamatan</label>
+              <input type="text" id="reg-kecamatan">
+            </div>
+          </div>
 
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>Nama Ibu Kandung</label>
-                <input type="text" id="reg-ibu">
-              </div>
-              <div class="form-group half">
-                <label>Tahun Lahir Ibu</label>
-                <input type="number" id="reg-tahun-lahir-ibu">
-              </div>
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>Desa/Kelurahan</label>
+              <input type="text" id="reg-desa-kelurahan">
             </div>
+            <div class="form-group half">
+              <label>Kelas</label>
+              <input type="text" id="reg-kelas">
+            </div>
+          </div>
 
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>NIK Ibu</label>
-                <input type="text" id="reg-nik-ibu">
-              </div>
-              <div class="form-group half">
-                <label>Tahun Lulus Ijazah Asal</label>
-                <input type="number" id="reg-tahun-lulus">
-              </div>
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>Tempat Lahir</label>
+              <input type="text" id="reg-tempat-lahir">
             </div>
+            <div class="form-group half">
+              <label>Tanggal Lahir</label>
+              <input type="date" id="reg-tgl-lahir">
+            </div>
+          </div>
 
-            <hr class="divider">
-            <h4>Keterangan Tambahan & Upload (Opsional, Format JPG/PNG)</h4>
+          <hr class="divider">
+          <h4>Data Orang Tua</h4>
 
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>Syarat</label>
-                <input type="text" id="reg-syarat" placeholder="Keterangan Syarat">
-              </div>
-              <div class="form-group half">
-                <label>Dok Berkas</label>
-                <input type="text" id="reg-dok-berkas" placeholder="Keterangan Dok Berkas">
-              </div>
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>Nama Ayah Kandung</label>
+              <input type="text" id="reg-ayah">
             </div>
+            <div class="form-group half">
+              <label>Tahun Lahir Ayah</label>
+              <input type="number" id="reg-tahun-lahir-ayah">
+            </div>
+          </div>
 
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>File Ijazah Asal</label>
-                <input type="file" id="reg-file-ijazah" accept="image/*,application/pdf">
-                <div id="preview-reg-ijazah" style="margin-top:6px; display:none; align-items:center; gap:8px;"></div>
-              </div>
-              <div class="form-group half">
-                <label>File Kartu Keluarga</label>
-                <input type="file" id="reg-file-kk" accept="image/*,application/pdf">
-                <div id="preview-reg-kk" style="margin-top:6px; display:none; align-items:center; gap:8px;"></div>
-              </div>
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>NIK Ayah</label>
+              <input type="text" id="reg-nik-ayah">
             </div>
-            
-            <div class="form-group-row" style="margin-top: 1rem;">
-              <div class="form-group half">
-                <label>Bukti Pembayaran</label>
-                <input type="file" id="reg-file-bayar" accept="image/*">
-                <div id="preview-reg-bayar" style="margin-top:6px; display:none; align-items:center; gap:8px;"></div>
-              </div>
-              <div class="form-group half">
-                <label>Foto Siswa</label>
-                <input type="file" id="reg-file-foto" accept="image/*">
-                <div id="preview-reg-foto" style="margin-top:6px; display:none; align-items:center; gap:8px;"></div>
-              </div>
+            <div class="form-group half">
+              <label>Nama Wali (Jika ada)</label>
+              <input type="text" id="reg-wali">
             </div>
+          </div>
 
-            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-              <button id="btn-submit-reg" type="submit" class="btn btn-primary btn-submit-mobile">Daftarkan Siswa</button>
-              <button id="btn-cancel-edit" type="button" class="btn btn-danger hidden" onclick="cancelEdit()">Batal Edit</button>
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>Nama Ibu Kandung</label>
+              <input type="text" id="reg-ibu">
             </div>
-          </form>
-        </div>
+            <div class="form-group half">
+              <label>Tahun Lahir Ibu</label>
+              <input type="number" id="reg-tahun-lahir-ibu">
+            </div>
+          </div>
+
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>NIK Ibu</label>
+              <input type="text" id="reg-nik-ibu">
+            </div>
+            <div class="form-group half">
+              <label>Tahun Lulus Ijazah Asal</label>
+              <input type="number" id="reg-tahun-lulus">
+            </div>
+          </div>
+
+          <hr class="divider">
+          <h4>Keterangan Tambahan & Upload (Opsional, Format JPG/PNG)</h4>
+
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>Syarat</label>
+              <input type="text" id="reg-syarat" placeholder="Keterangan Syarat">
+            </div>
+            <div class="form-group half">
+              <label>Dok Berkas</label>
+              <input type="text" id="reg-dok-berkas" placeholder="Keterangan Dok Berkas">
+            </div>
+          </div>
+
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>File Ijazah Asal</label>
+              <div style="display: flex; gap: 8px; align-items: stretch;">
+                <input type="file" id="reg-file-ijazah" accept="image/*,application/pdf" style="flex: 1;">
+                <button type="button" class="btn-camera-trigger"
+                  onclick="openCameraCapture('reg-file-ijazah', 'environment', 'Foto Ijazah Asal', 'reg-cam-ijazah')"
+                  title="Ambil Foto Ijazah lewat Kamera">
+                  <i data-lucide="camera" style="width: 16px; height: 16px;"></i> Kamera
+                </button>
+                <input type="file" id="reg-cam-ijazah" accept="image/*" capture="environment" style="display: none;"
+                  onchange="syncCameraToInput(this, 'reg-file-ijazah')">
+              </div>
+              <div id="preview-reg-ijazah" style="margin-top:6px; display:none; align-items:center; gap:8px;"></div>
+            </div>
+            <div class="form-group half">
+              <label>File Kartu Keluarga</label>
+              <div style="display: flex; gap: 8px; align-items: stretch;">
+                <input type="file" id="reg-file-kk" accept="image/*,application/pdf" style="flex: 1;">
+                <button type="button" class="btn-camera-trigger"
+                  onclick="openCameraCapture('reg-file-kk', 'environment', 'Foto Kartu Keluarga', 'reg-cam-kk')"
+                  title="Ambil Foto KK lewat Kamera">
+                  <i data-lucide="camera" style="width: 16px; height: 16px;"></i> Kamera
+                </button>
+                <input type="file" id="reg-cam-kk" accept="image/*" capture="environment" style="display: none;"
+                  onchange="syncCameraToInput(this, 'reg-file-kk')">
+              </div>
+              <div id="preview-reg-kk" style="margin-top:6px; display:none; align-items:center; gap:8px;"></div>
+            </div>
+          </div>
+
+          <div class="form-group-row" style="margin-top: 1rem;">
+            <div class="form-group half">
+              <label>Bukti Pembayaran</label>
+              <div style="display: flex; gap: 8px; align-items: stretch;">
+                <input type="file" id="reg-file-bayar" accept="image/*" style="flex: 1;">
+                <button type="button" class="btn-camera-trigger"
+                  onclick="openCameraCapture('reg-file-bayar', 'environment', 'Foto Bukti Pembayaran', 'reg-cam-bayar')"
+                  title="Ambil Bukti Bayar lewat Kamera">
+                  <i data-lucide="camera" style="width: 16px; height: 16px;"></i> Kamera
+                </button>
+                <input type="file" id="reg-cam-bayar" accept="image/*" capture="environment" style="display: none;"
+                  onchange="syncCameraToInput(this, 'reg-file-bayar')">
+              </div>
+              <div id="preview-reg-bayar" style="margin-top:6px; display:none; align-items:center; gap:8px;"></div>
+            </div>
+            <div class="form-group half">
+              <label>Foto Siswa</label>
+              <div style="display: flex; gap: 8px; align-items: stretch;">
+                <input type="file" id="reg-file-foto" accept="image/*" style="flex: 1;">
+                <button type="button" class="btn-camera-trigger"
+                  onclick="openCameraCapture('reg-file-foto', 'user', 'Pas Foto Siswa', 'reg-cam-foto')"
+                  title="Ambil Pas Foto lewat Kamera">
+                  <i data-lucide="camera" style="width: 16px; height: 16px;"></i> Kamera
+                </button>
+                <input type="file" id="reg-cam-foto" accept="image/*" capture="user" style="display: none;"
+                  onchange="syncCameraToInput(this, 'reg-file-foto')">
+              </div>
+              <div id="preview-reg-foto" style="margin-top:6px; display:none; align-items:center; gap:8px;"></div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button id="btn-submit-reg" type="submit" class="btn btn-primary btn-submit-mobile">Daftarkan Siswa</button>
+            <button id="btn-cancel-edit" type="button" class="btn btn-danger hidden" onclick="cancelEdit()">Batal
+              Edit</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
-<!-- ==================== LOGIN MODAL ==================== -->
+  <!-- ==================== LOGIN MODAL (SISTEM INFORMASI SEKOLAH TERPADU) ==================== -->
   <div id="modal-login" class="login-modal hidden">
     <div class="login-modal-overlay" id="login-modal-overlay"></div>
-    <div class="login-card modal-content">
-      <button id="btn-close-login" class="btn-close-modal">&times;</button>
-      <div style="text-align:center; margin-bottom: 2rem;">
-        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM Aura Anugerah" class="school-logo-large">
-        <h2 style="color: var(--text-color); margin-top: 1rem;">SIS PPDB Terpadu</h2>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">PKBM Aura Anugerah · Sentani Jayapura</p>
-      </div>
-      <form id="form-login" onsubmit="event.preventDefault();">
-        <div class="form-group">
-          <label>Username / NIK / NISN</label>
-          <input type="text" id="login-username" placeholder="Petugas: Username | Siswa: NIK/NISN" required>
-        </div>
-        <div class="form-group" style="margin-top: 1rem;">
-          <label>Password / Tanggal Lahir</label>
-          <input type="password" id="login-password" placeholder="Petugas: Password | Siswa: Tgl Lahir (DDMMYYYY)" required>
+    <div class="login-wrapper-container">
+      <div class="login-inner-layout">
+        <!-- Kolom Kiri: Showcase Fitur Sekolah Digital (Layar Lebar > 900px) -->
+        <div class="login-brand-column">
+          <div class="portal-badge-pill">
+            <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM" style="width: 20px; height: 20px; object-fit: contain;">
+            <span>Portal Sekolah Digital</span>
+          </div>
+          <h1 class="login-showcase-title">Satu sistem untuk seluruh kegiatan sekolah.</h1>
+          <p class="login-showcase-desc">Dari pendaftaran peserta didik, pembelajaran, hingga raport dan administrasi PKBM, semua terkelola rapi di satu tempat.</p>
+          
+          <ul class="login-feature-list">
+            <li class="login-feature-item">
+              <span class="feature-bullet-icon"><i data-lucide="file-pen-line" style="width: 18px; height: 18px;"></i></span>
+              <span class="feature-bullet-text">Pendaftaran peserta didik baru (PPDB)</span>
+            </li>
+            <li class="login-feature-item">
+              <span class="feature-bullet-icon"><i data-lucide="book-open" style="width: 18px; height: 18px;"></i></span>
+              <span class="feature-bullet-text">Kegiatan pembelajaran & absensi</span>
+            </li>
+            <li class="login-feature-item">
+              <span class="feature-bullet-icon"><i data-lucide="award" style="width: 18px; height: 18px;"></i></span>
+              <span class="feature-bullet-text">Penilaian & pembuatan raport</span>
+            </li>
+            <li class="login-feature-item">
+              <span class="feature-bullet-icon"><i data-lucide="school" style="width: 18px; height: 18px;"></i></span>
+              <span class="feature-bullet-text">Administrasi & data sekolah</span>
+            </li>
+          </ul>
+
+          <div class="login-chip-group">
+            <span class="login-chip">Paket A</span>
+            <span class="login-chip">Paket B</span>
+            <span class="login-chip">Paket C</span>
+          </div>
         </div>
 
-        <!-- Captcha Keamanan (Gaya Rostering Teknik) -->
-        <div class="form-group" style="margin-top: 1rem;">
-          <label style="display: flex; justify-content: space-between; align-items: center;">
-            <span>Kode Keamanan (Captcha)</span>
-            <span style="font-size: 0.75rem; color: #64748b; font-weight: normal;">Ketik persis huruf & angka</span>
-          </label>
-          <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-            <canvas id="login-captcha-canvas" width="120" height="40" style="border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-2);"></canvas>
-            <button type="button" id="btn-refresh-captcha" onclick="generateCaptchaLogin()" title="Ganti Captcha" class="btn btn-icon" style="height: 36px; width: 36px;">
-              🔄
-            </button>
+        <!-- Kolom Kanan: Kartu Form Login -->
+        <div class="login-card-container">
+          <div class="login-card modal-content" id="login-card-box">
+            <!-- 1. Logo Resmi PKBM Aura Anugerah dengan Background Hijau Terang -->
+            <div class="login-avatar-logo">
+              <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM Aura Anugerah" class="login-logo-img">
+            </div>
+
+            <!-- 2 & 3. Judul & Subjudul -->
+            <h2 class="login-title">PKBM AURA ANUGERAH</h2>
+            <p class="login-subtitle">Sistem Informasi Sekolah Terpadu · Sentani Jayapura</p>
+
+            <!-- 9. Area Pesan Error (merah muda, tersembunyi default) -->
+            <div id="login-error-alert" class="login-error-box hidden" role="alert" aria-live="assertive"></div>
+
+            <form id="form-login" onsubmit="event.preventDefault();" novalidate>
+              <!-- 4. Field Username / NIK / NISN -->
+              <div class="login-form-group">
+                <label for="login-username" class="login-label">
+                  <i data-lucide="user" style="width: 15px; height: 15px; color: var(--primary-color);"></i>
+                  <span>Username / NIK / NISN</span>
+                </label>
+                <div class="input-with-icon-wrapper">
+                  <i data-lucide="user" class="input-inline-icon"></i>
+                  <input type="text" id="login-username" class="login-input with-icon" placeholder="Masukkan username, NIK, atau NISN"
+                    autocomplete="username" required>
+                </div>
+              </div>
+
+              <!-- 5. Field Password / Tanggal Lahir + Tombol Mata Toggle -->
+              <div class="login-form-group">
+                <label for="login-password" class="login-label">
+                  <i data-lucide="lock" style="width: 15px; height: 15px; color: var(--primary-color);"></i>
+                  <span>Password / Tanggal Lahir</span>
+                </label>
+                <div class="password-input-wrapper input-with-icon-wrapper">
+                  <i data-lucide="lock" class="input-inline-icon"></i>
+                  <input type="password" id="login-password" class="login-input with-icon" placeholder="Masukkan password"
+                    autocomplete="current-password" required>
+                  <button type="button" id="btn-toggle-password" class="btn-toggle-pwd" aria-label="Tampilkan atau sembunyikan password" onclick="togglePasswordVisibility()">
+                    <i data-lucide="eye" id="eye-icon-svg" style="width: 18px; height: 18px;"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 6. Bagian Captcha -->
+              <div class="login-form-group">
+                <div class="captcha-label-row">
+                  <label for="login-captcha-input" class="login-label" style="margin-bottom: 0;">
+                    <i data-lucide="shield-check" style="width: 15px; height: 15px; color: var(--primary-color);"></i>
+                    <span>Kode Keamanan (Captcha)</span>
+                  </label>
+                  <span class="captcha-hint">Ketik persis huruf & angka</span>
+                </div>
+                <div class="captcha-box-row">
+                  <canvas id="login-captcha-canvas" width="130" height="42" class="captcha-canvas" title="Kode Captcha Keamanan"></canvas>
+                  <button type="button" id="btn-refresh-captcha" onclick="generateCaptchaLogin()" class="btn-captcha-refresh" aria-label="Muat ulang kode keamanan (captcha)">
+                    <i data-lucide="rotate-cw" style="width: 18px; height: 18px; color: var(--primary-color);"></i>
+                  </button>
+                </div>
+                <input type="text" id="login-captcha-input" class="login-input" placeholder="Ketik huruf besar & kecil"
+                  autocomplete="off" autocapitalize="off" spellcheck="false" required style="margin-top: 8px;">
+              </div>
+
+              <!-- 7. Baris Ingat Saya & Lupa Password -->
+              <div class="login-meta-row">
+                <label class="remember-label">
+                  <input type="checkbox" id="login-remember-me">
+                  <span>Ingat saya</span>
+                </label>
+                <a href="#" onclick="handleForgotPassword(event)" class="forgot-link">Lupa password?</a>
+              </div>
+
+              <!-- 8. Tombol Masuk Aplikasi -->
+              <button id="btn-login" type="submit" class="btn-login-submit">
+                <i data-lucide="log-in" style="width: 18px; height: 18px;"></i>
+                <span>Masuk Aplikasi</span>
+              </button>
+
+              <!-- 10. Garis pemisah + Tautan Lihat Informasi Awal PKBM -->
+              <div class="login-divider-row">
+                <a href="/pkbm"
+                  onclick="window.navigateToRoute ? window.navigateToRoute('/pkbm') : (modalLogin && modalLogin.classList.add('hidden')); return false;"
+                  class="btn-back-landing">
+                  <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                  <span>Lihat Informasi Awal PKBM</span>
+                </a>
+              </div>
+
+              <!-- 11. Footer Kecil -->
+              <div class="login-card-footer">
+                <p class="footer-help-text">
+                  Butuh bantuan? <a href="https://wa.me/628123456789" target="_blank" class="admin-help-link">Hubungi Admin</a>
+                </p>
+                <p class="footer-secure-text">
+                  <i data-lucide="shield" style="width: 13px; height: 13px; display: inline-block; vertical-align: -2px;"></i>
+                  <span>Koneksi aman · © 2026 PKBM Aura Anugerah</span>
+                </p>
+              </div>
+            </form>
           </div>
-          <input type="text" id="login-captcha-input" placeholder="Ketik huruf besar & kecil" required autocomplete="off" style="margin-top: 8px;">
         </div>
-        <button id="btn-login" type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">Masuk Aplikasi</button>
-        <div style="margin-top: 1.2rem; text-align: center; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-          <a href="/pkbm" onclick="window.navigateToRoute ? window.navigateToRoute('/pkbm') : (modalLogin && modalLogin.classList.add('hidden')); return false;" style="color: var(--primary-color); font-size: 0.88rem; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
-            ← Lihat Informasi Awal PKBM
-          </a>
-        </div>
-      </form>
+      </div>
     </div>
   </div>
 
@@ -448,14 +685,16 @@
     <header class="mobile-header">
       <div style="display: flex; align-items: center; gap: 10px;">
         <button id="btn-menu-mobile" class="btn-hamburger">☰</button>
-        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="app-brand-logo" style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain; flex-shrink: 0; background: var(--primary-color); padding: 4px; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);">
+        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="app-brand-logo"
+          style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain; flex-shrink: 0; background: var(--primary-color); padding: 4px; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);">
         <div style="display: flex; flex-direction: column;">
           <span style="font-weight: 700; font-size: 15px; color: var(--text-color);">PKBM Aura Anugerah</span>
           <span style="font-size: 11px; color: var(--text-muted);">Sistem Terpadu & PPDB</span>
         </div>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
-        <button id="btn-theme-nav" onclick="toggleTheme()" class="btn btn-icon" style="background: transparent; border: none; box-shadow: none; padding: 4px;" title="Ganti Tema">
+        <button id="btn-theme-nav" onclick="toggleTheme()" class="btn btn-icon"
+          style="background: transparent; border: none; box-shadow: none; padding: 4px;" title="Ganti Tema">
           <i data-lucide="moon" id="icon-theme-nav" style="width: 18px; height: 18px;"></i>
         </button>
       </div>
@@ -465,10 +704,14 @@
       <aside>
         <!-- Brand Sidebar Persis Rostering Teknik -->
         <div class="brand" style="display: flex; align-items: center; gap: 12px;">
-          <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="app-brand-logo" style="width: 42px; height: 42px; border-radius: 10px; object-fit: contain; flex-shrink: 0; background: var(--primary-color); padding: 4px; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);">
+          <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="app-brand-logo"
+            style="width: 42px; height: 42px; border-radius: 10px; object-fit: contain; flex-shrink: 0; background: var(--primary-color); padding: 4px; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);">
           <div style="display: flex; flex-direction: column; justify-content: center;">
-            <span style="font-weight: 600; font-size: 16px; line-height: 1.2; color: var(--text-color);">PKBM Aura</span>
-            <span style="font-weight: 400; color: var(--text-muted); font-size: 11px; line-height: 1.2; margin-top: 2px;">Sistem Terpadu PPDB</span>
+            <span style="font-weight: 600; font-size: 16px; line-height: 1.2; color: var(--text-color);">PKBM
+              Aura</span>
+            <span
+              style="font-weight: 400; color: var(--text-muted); font-size: 11px; line-height: 1.2; margin-top: 2px;">Sistem
+              Terpadu PPDB</span>
           </div>
         </div>
 
@@ -528,6 +771,14 @@
                   <i data-lucide="wallet" class="menu-icon"></i>
                   <span>SPP & Administrasi</span>
                 </li>
+                <li class="nav-item" data-target="section-kegiatan" id="menu-kegiatan">
+                  <i data-lucide="newspaper" class="menu-icon"></i>
+                  <span>Informasi Kegiatan</span>
+                </li>
+                <li class="nav-item" data-target="section-info-tk" id="menu-info-tk">
+                  <i data-lucide="map-pin" class="menu-icon"></i>
+                  <span>Informasi TK & Peta</span>
+                </li>
               </ul>
             </li>
 
@@ -557,6 +808,14 @@
                   <i data-lucide="bell" class="menu-icon"></i>
                   <span>Pengumuman</span>
                 </li>
+                <li class="nav-item" data-target="section-kegiatan" id="menu-siswa-kegiatan">
+                  <i data-lucide="newspaper" class="menu-icon"></i>
+                  <span>Warta Kegiatan PKBM</span>
+                </li>
+                <li class="nav-item" data-target="section-info-tk" id="menu-siswa-tk">
+                  <i data-lucide="map-pin" class="menu-icon"></i>
+                  <span>Info TK & Lokasi</span>
+                </li>
               </ul>
             </li>
 
@@ -585,15 +844,20 @@
 
         <!-- Box Profil Bawah (.who) Persis Rostering Teknik -->
         <div class="who">Masuk sebagai
-          <button class="btn" style="width: 100%; justify-content: space-between; margin-top: 4px; background: var(--surface-2); border-color: var(--border-color); text-align: left;" onclick="showUserProfileModal()" id="btn-who-profile" title="Klik untuk lihat profil">
-            <span id="who-user-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 500;">Pengguna</span>
+          <button class="btn"
+            style="width: 100%; justify-content: space-between; margin-top: 4px; background: var(--surface-2); border-color: var(--border-color); text-align: left;"
+            onclick="showUserProfileModal()" id="btn-who-profile" title="Klik untuk lihat profil">
+            <span id="who-user-name"
+              style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 500;">Pengguna</span>
             <span id="who-user-role" class="who-role-badge" style="font-size: 11px; margin-left: 4px;">Role</span>
           </button>
           <div style="display: flex; gap: 8px; margin-top: 8px;">
             <button onclick="toggleTheme()" class="btn btn-icon" aria-label="Ganti Tema" title="Ganti Tema">
               <i data-lucide="moon" id="icon-theme-sidebar" style="width: 16px; height: 16px;"></i>
             </button>
-            <button onclick="handleLogout()" class="btn" style="flex: 1; background: var(--danger-color); border-color: var(--danger-color); color: #fff; justify-content: center; font-weight: 600;" title="Keluar">
+            <button onclick="handleLogout()" class="btn"
+              style="flex: 1; background: var(--danger-color); border-color: var(--danger-color); color: #fff; justify-content: center; font-weight: 600;"
+              title="Keluar">
               <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>Logout
             </button>
           </div>
@@ -603,17 +867,18 @@
       <div id="sidebar-overlay" class="overlay hidden"></div>
 
       <main class="main-content">
-        
+
         <!-- ==================== SECTION: DASHBOARD (HOME) ==================== -->
         <div id="section-dashboard" class="content-section">
           <h2 style="margin-bottom: 1.5rem;">Dashboard Ringkasan</h2>
-          
+
           <div class="stat-cards">
             <div class="stat-card">
               <div class="stat-icon" style="background:#e0f2fe; color:#0369a1; border: 1px solid #bae6fd;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                  <path d="M6 12v5c3 3 9 3 12 0v-5" />
                 </svg>
               </div>
               <div class="stat-info">
@@ -623,9 +888,10 @@
             </div>
             <div class="stat-card">
               <div class="stat-icon" style="background:#fef3c7; color:#b45309; border: 1px solid #fde68a;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
                 </svg>
               </div>
               <div class="stat-info">
@@ -635,9 +901,10 @@
             </div>
             <div class="stat-card">
               <div class="stat-icon" style="background:#dcfce7; color:#15803d; border: 1px solid #bbf7d0;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
               </div>
               <div class="stat-info">
@@ -647,10 +914,11 @@
             </div>
             <div class="stat-card">
               <div class="stat-icon" style="background:#fee2e2; color:#b91c1c; border: 1px solid #fecaca;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="15" y1="9" x2="9" y2="15"/>
-                  <line x1="9" y1="9" x2="15" y2="15"/>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
                 </svg>
               </div>
               <div class="stat-info">
@@ -676,7 +944,9 @@
                   </tr>
                 </thead>
                 <tbody id="table-recent-body">
-                  <tr><td colspan="4" style="text-align: center;">Belum ada aktivitas...</td></tr>
+                  <tr>
+                    <td colspan="4" style="text-align: center;">Belum ada aktivitas...</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -686,13 +956,16 @@
 
         <!-- ==================== SECTION: MATERI & BUKU PEMBELAJARAN (ALA MYAURA) ==================== -->
         <div id="section-materi" class="content-section hidden">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
             <div>
               <h1 style="margin: 0;">Materi & Buku Pelajaran</h1>
-              <p class="sub" style="margin: 4px 0 0 0;">Modul pembelajaran kesetaraan Paket A, B, dan C dilengkapi pelacak aktivitas belajar otomatis.</p>
+              <p class="sub" style="margin: 4px 0 0 0;">Modul pembelajaran kesetaraan Paket A, B, dan C dilengkapi
+                pelacak aktivitas belajar otomatis.</p>
             </div>
             <div id="btn-tambah-buku-wrapper">
-              <button class="btn p" onclick="showAddBukuModal()"><i data-lucide="plus" style="width: 16px; height: 16px;"></i>Tambah Buku Pelajaran</button>
+              <button class="btn p" onclick="showAddBukuModal()"><i data-lucide="plus"
+                  style="width: 16px; height: 16px;"></i>Tambah Buku Pelajaran</button>
             </div>
           </div>
 
@@ -728,13 +1001,17 @@
           </div>
 
           <!-- Live Activity Log: Siapa yang sedang aktif belajar -->
-          <div class="card" style="margin-bottom: 20px; background: var(--surface-color); border: 1px solid var(--border-color); padding: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <div class="card"
+            style="margin-bottom: 20px; background: var(--surface-color); border: 1px solid var(--border-color); padding: 16px;">
+            <div
+              style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e;"></span>
+                <span
+                  style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e;"></span>
                 <h3 style="margin: 0; font-size: 14px;">Log Presensi Belajar Siswa (Real-Time)</h3>
               </div>
-              <button class="btn btn-sm" onclick="renderBelajarLogTable()"><i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Refresh Log</button>
+              <button class="btn btn-sm" onclick="renderBelajarLogTable()"><i data-lucide="refresh-cw"
+                  style="width: 14px; height: 14px;"></i> Refresh Log</button>
             </div>
             <div class="wrap" style="max-height: 220px; overflow-y: auto;">
               <table class="data-table">
@@ -749,7 +1026,10 @@
                   </tr>
                 </thead>
                 <tbody id="table-log-belajar-body">
-                  <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada sesi belajar siswa yang aktif saat ini.</td></tr>
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted);">Belum ada sesi belajar siswa
+                      yang aktif saat ini.</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -760,7 +1040,8 @@
             <div class="filter-toolbar-top">
               <div class="filter-search-box">
                 <i data-lucide="search"></i>
-                <input type="text" id="search-buku" placeholder="Cari judul buku pelajaran, modul, kelas, atau mapel..." oninput="filterBukuGrid()">
+                <input type="text" id="search-buku" placeholder="Cari judul buku pelajaran, modul, kelas, atau mapel..."
+                  oninput="filterBukuGrid()">
               </div>
               <div class="filter-controls-group">
                 <select id="filter-buku-jenjang" class="filter-select" onchange="onJenjangFilterChange()">
@@ -808,16 +1089,22 @@
           <div id="section-buku-populer-wrapper" style="margin-top: 24px; margin-bottom: 28px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: rgba(245, 158, 11, 0.15); color: #d97706;">
+                <span
+                  style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: rgba(245, 158, 11, 0.15); color: #d97706;">
                   <i data-lucide="trending-up" style="width: 17px; height: 17px;"></i>
                 </span>
-                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color);">Buku Paling Banyak Dibaca</h3>
-                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; font-size: 11px; padding: 2px 8px; border-radius: 99px;">🔥 Terpopuler</span>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color);">Buku Paling Banyak
+                  Dibaca</h3>
+                <span class="badge"
+                  style="background: rgba(245, 158, 11, 0.15); color: #d97706; font-size: 11px; padding: 2px 8px; border-radius: 99px;">🔥
+                  Terpopuler</span>
               </div>
-              <small style="color: var(--text-muted); font-size: 12px;">Berdasarkan durasi & frekuensi baca siswa</small>
+              <small style="color: var(--text-muted); font-size: 12px;">Berdasarkan durasi & frekuensi baca
+                siswa</small>
             </div>
-            
-            <div id="grid-buku-populer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
+
+            <div id="grid-buku-populer"
+              style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
               <!-- Rendered by JavaScript (Top 4 buku dengan dibaca tertinggi) -->
             </div>
           </div>
@@ -826,16 +1113,21 @@
           <div style="margin-top: 10px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: rgba(30, 64, 175, 0.1); color: var(--primary-color);">
+                <span
+                  style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: rgba(30, 64, 175, 0.1); color: var(--primary-color);">
                   <i data-lucide="layers" style="width: 17px; height: 17px;"></i>
                 </span>
-                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color);">Semua Buku & Modul Pelajaran</h3>
-                <span id="badge-total-katalog" class="badge" style="background: var(--surface-hover); color: var(--text-muted); font-size: 11px; padding: 2px 8px; border-radius: 99px;">50 Buku</span>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color);">Semua Buku & Modul
+                  Pelajaran</h3>
+                <span id="badge-total-katalog" class="badge"
+                  style="background: var(--surface-hover); color: var(--text-muted); font-size: 11px; padding: 2px 8px; border-radius: 99px;">50
+                  Buku</span>
               </div>
             </div>
 
             <!-- Grid Daftar Buku Belajar -->
-            <div id="grid-buku-belajar" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
+            <div id="grid-buku-belajar"
+              style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
               <!-- Rendered by JavaScript -->
             </div>
           </div>
@@ -843,16 +1135,19 @@
 
         <!-- ==================== SECTION: UJIAN & PENILAIAN SISWA ==================== -->
         <div id="section-ujian" class="content-section hidden">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
             <div>
               <h1 style="margin: 0;">Ujian CBT & Evaluasi Hasil Belajar</h1>
-              <p class="sub" style="margin: 4px 0 0 0;">Pembuatan paket soal CBT, aktivasi token ujian siswa, dan rekapitulasi penilaian hasil belajar.</p>
+              <p class="sub" style="margin: 4px 0 0 0;">Pembuatan paket soal CBT, aktivasi token ujian siswa, dan
+                rekapitulasi penilaian hasil belajar.</p>
             </div>
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
               <button id="btn-buat-paket-soal" class="btn p" onclick="showModalTambahSoal()">
                 <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>Buat Paket Soal Baru
               </button>
-              <button id="btn-mulai-cbt-dialog" class="btn" onclick="bukaModalPilihUjianCBT()" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
+              <button id="btn-mulai-cbt-dialog" class="btn" onclick="bukaModalPilihUjianCBT()"
+                style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
                 <i data-lucide="play-circle" style="width: 16px; height: 16px;"></i>Mulai Ujian CBT (Siswa)
               </button>
               <button class="btn btn-outline" onclick="showInputNilaiModal()">
@@ -863,13 +1158,20 @@
 
           <!-- Navigation Sub-tabs: Bank Paket Soal vs Rekap Nilai vs Ujian Siswa -->
           <div style="display: flex; gap: 12px; border-bottom: 1px solid var(--border-color); margin-bottom: 1.25rem;">
-            <button id="tab-btn-bank-soal" class="btn" style="background: none; border: none; border-bottom: 2px solid var(--primary-color); border-radius: 0; color: var(--primary-color); font-weight: 700; padding: 10px 14px;" onclick="switchUjianSubTab('bank-soal')">
-              <i data-lucide="layers" style="width: 16px; height: 16px;"></i>Bank Paket Soal CBT (<span id="count-paket-soal">0</span>)
+            <button id="tab-btn-bank-soal" class="btn"
+              style="background: none; border: none; border-bottom: 2px solid var(--primary-color); border-radius: 0; color: var(--primary-color); font-weight: 700; padding: 10px 14px;"
+              onclick="switchUjianSubTab('bank-soal')">
+              <i data-lucide="layers" style="width: 16px; height: 16px;"></i>Bank Paket Soal CBT (<span
+                id="count-paket-soal">0</span>)
             </button>
-            <button id="tab-btn-siswa-cbt" class="btn hidden" style="background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-muted); font-weight: 600; padding: 10px 14px;" onclick="switchUjianSubTab('siswa-cbt')">
+            <button id="tab-btn-siswa-cbt" class="btn hidden"
+              style="background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-muted); font-weight: 600; padding: 10px 14px;"
+              onclick="switchUjianSubTab('siswa-cbt')">
               <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i>Daftar Ujian Aktif Saya
             </button>
-            <button id="tab-btn-hasil-ujian" class="btn" style="background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-muted); font-weight: 600; padding: 10px 14px;" onclick="switchUjianSubTab('hasil-ujian')">
+            <button id="tab-btn-hasil-ujian" class="btn"
+              style="background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--text-muted); font-weight: 600; padding: 10px 14px;"
+              onclick="switchUjianSubTab('hasil-ujian')">
               <i data-lucide="award" style="width: 16px; height: 16px;"></i>Hasil & Rapor Nilai Ujian
             </button>
           </div>
@@ -881,7 +1183,9 @@
               <div class="filter-toolbar-top">
                 <div class="filter-search-box">
                   <i data-lucide="search"></i>
-                  <input type="text" id="search-bank-soal" placeholder="Cari kode modul, judul paket soal, atau nama pengajar..." oninput="renderBankSoalTable()">
+                  <input type="text" id="search-bank-soal"
+                    placeholder="Cari kode modul, judul paket soal, atau nama pengajar..."
+                    oninput="renderBankSoalTable()">
                 </div>
                 <div class="filter-controls-group">
                   <select id="filter-soal-jenjang" class="filter-select" onchange="renderBankSoalTable()">
@@ -890,7 +1194,8 @@
                     <option value="Paket B">Paket B (Setara SMP)</option>
                     <option value="Paket C">Paket C (Setara SMA)</option>
                   </select>
-                  <button class="btn btn-icon" onclick="renderBankSoalTable()" title="Refresh"><i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i></button>
+                  <button class="btn btn-icon" onclick="renderBankSoalTable()" title="Refresh"><i
+                      data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i></button>
                 </div>
               </div>
             </div>
@@ -912,7 +1217,10 @@
                   </tr>
                 </thead>
                 <tbody id="table-bank-soal-body">
-                  <tr><td colspan="9" style="text-align: center; padding: 32px; color: var(--text-muted);">Memuat bank soal...</td></tr>
+                  <tr>
+                    <td colspan="9" style="text-align: center; padding: 32px; color: var(--text-muted);">Memuat bank
+                      soal...</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -920,11 +1228,15 @@
 
           <!-- ==================== SUB-TAB 2: DAFTAR UJIAN AKTIF KHUSUS SISWA ==================== -->
           <div id="subtab-siswa-cbt" class="hidden">
-            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 14px 18px; margin-bottom: 1.25rem;">
+            <div
+              style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 14px 18px; margin-bottom: 1.25rem;">
               <h3 style="margin: 0 0 4px 0; color: #10b981; font-size: 15px;">Jadwal & Paket Ujian CBT Tersedia</h3>
-              <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Di bawah ini adalah daftar ujian yang statusnya telah diaktifkan oleh pengajar sesuai jenjang Anda. Klik <b>Ikuti Ujian</b> dan masukkan token.</p>
+              <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Di bawah ini adalah daftar ujian yang
+                statusnya telah diaktifkan oleh pengajar sesuai jenjang Anda. Klik <b>Ikuti Ujian</b> dan masukkan
+                token.</p>
             </div>
-            <div id="container-ujian-khusus-siswa" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+            <div id="container-ujian-khusus-siswa"
+              style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
               <!-- Rendered by renderUjianKhususSiswa() -->
             </div>
           </div>
@@ -932,55 +1244,60 @@
           <!-- ==================== SUB-TAB 3: REKAP HASIL & RAPOR NILAI UJIAN ==================== -->
           <div id="subtab-hasil-ujian" class="hidden">
 
-          <!-- Ujian Filter Bar -->
-          <div class="filter-toolbar">
-            <div class="filter-toolbar-top">
-              <div class="filter-search-box">
-                <i data-lucide="search"></i>
-                <input type="text" id="search-ujian" placeholder="Cari nama peserta didik, mata pelajaran, atau penguji..." oninput="filterUjianTable()">
-              </div>
-              <div class="filter-controls-group">
-                <select id="filter-ujian-program" class="filter-select" onchange="filterUjianTable()">
-                  <option value="">Semua Jenjang</option>
-                  <option value="Paket A">Paket A</option>
-                  <option value="Paket B">Paket B</option>
-                  <option value="Paket C">Paket C</option>
-                </select>
-                <select id="filter-ujian-predikat" class="filter-select" onchange="filterUjianTable()">
-                  <option value="">Semua Predikat</option>
-                  <option value="Sangat Baik">Sangat Baik (A)</option>
-                  <option value="Baik">Baik (B)</option>
-                  <option value="Cukup">Cukup (C)</option>
-                  <option value="Perlu Bimbingan">Perlu Bimbingan (D)</option>
-                </select>
-                <button class="btn btn-icon" onclick="loadUjianData()" title="Refresh"><i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i></button>
+            <!-- Ujian Filter Bar -->
+            <div class="filter-toolbar">
+              <div class="filter-toolbar-top">
+                <div class="filter-search-box">
+                  <i data-lucide="search"></i>
+                  <input type="text" id="search-ujian"
+                    placeholder="Cari nama peserta didik, mata pelajaran, atau penguji..." oninput="filterUjianTable()">
+                </div>
+                <div class="filter-controls-group">
+                  <select id="filter-ujian-program" class="filter-select" onchange="filterUjianTable()">
+                    <option value="">Semua Jenjang</option>
+                    <option value="Paket A">Paket A</option>
+                    <option value="Paket B">Paket B</option>
+                    <option value="Paket C">Paket C</option>
+                  </select>
+                  <select id="filter-ujian-predikat" class="filter-select" onchange="filterUjianTable()">
+                    <option value="">Semua Predikat</option>
+                    <option value="Sangat Baik">Sangat Baik (A)</option>
+                    <option value="Baik">Baik (B)</option>
+                    <option value="Cukup">Cukup (C)</option>
+                    <option value="Perlu Bimbingan">Perlu Bimbingan (D)</option>
+                  </select>
+                  <button class="btn btn-icon" onclick="loadUjianData()" title="Refresh"><i data-lucide="refresh-cw"
+                      style="width: 15px; height: 15px;"></i></button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Tabel Hasil Ujian Siswa -->
-          <div class="wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width: 40px;">No</th>
-                  <th>Tanggal Ujian</th>
-                  <th>Nama Peserta Didik</th>
-                  <th>Program</th>
-                  <th>Buku / Mata Uji</th>
-                  <th>Nilai Angka</th>
-                  <th>Predikat / Keterangan</th>
-                  <th>Tutor Penguji / Penilai</th>
-                  <th style="text-align: right;">Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="table-ujian-body">
-                <tr><td colspan="9" style="text-align: center; padding: 32px; color: var(--text-muted);">Memuat riwayat ujian siswa...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div> <!-- End of subtab-hasil-ujian -->
-      </div> <!-- End of section-ujian -->
+            <!-- Tabel Hasil Ujian Siswa -->
+            <div class="wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 40px;">No</th>
+                    <th>Tanggal Ujian</th>
+                    <th>Nama Peserta Didik</th>
+                    <th>Program</th>
+                    <th>Buku / Mata Uji</th>
+                    <th>Nilai Angka</th>
+                    <th>Predikat / Keterangan</th>
+                    <th>Tutor Penguji / Penilai</th>
+                    <th style="text-align: right;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-ujian-body">
+                  <tr>
+                    <td colspan="9" style="text-align: center; padding: 32px; color: var(--text-muted);">Memuat riwayat
+                      ujian siswa...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div> <!-- End of subtab-hasil-ujian -->
+        </div> <!-- End of section-ujian -->
 
         <!-- ==================== SECTION: PENDAFTARAN CEPAT AI (PERSIS ROSTERING TEKNIK) ==================== -->
         <div id="section-ai-reg" class="content-section hidden">
@@ -993,39 +1310,74 @@
             <p class="sub">AI akan mendeteksi baris data keluarga calon siswa dari KK secara otomatis.</p>
             <div class="form">
               <label>NIK Calon Siswa (16 Digit) *
-                <input type="text" id="ai-reg-nik" placeholder="Contoh: 3201..." maxlength="16" style="font-weight: 600; letter-spacing: 0.5px;">
+                <input type="text" id="ai-reg-nik" placeholder="Contoh: 3201..." maxlength="16"
+                  style="font-weight: 600; letter-spacing: 0.5px;">
               </label>
               <label>Foto / Scan Kartu Keluarga (KK) *
-                <input type="file" id="ai-reg-file-kk" accept="image/*,application/pdf">
+                <div style="display: flex; gap: 8px; align-items: stretch;">
+                  <input type="file" id="ai-reg-file-kk" accept="image/*,application/pdf" style="flex: 1;">
+                  <button type="button" class="btn-camera-trigger"
+                    onclick="openCameraCapture('ai-reg-file-kk', 'environment', 'Foto Kartu Keluarga (KK)', 'ai-reg-cam-kk')"
+                    title="Ambil Foto KK lewat Kamera">
+                    <i data-lucide="camera" style="width: 16px; height: 16px;"></i> Kamera
+                  </button>
+                  <input type="file" id="ai-reg-cam-kk" accept="image/*" capture="environment" style="display: none;"
+                    onchange="syncCameraToInput(this, 'ai-reg-file-kk')">
+                </div>
                 <div id="ai-preview-kk" style="margin-top: 4px; display: none; align-items: center; gap: 8px;"></div>
               </label>
               <label>Foto / Scan Ijazah Terakhir (Opsional)
-                <input type="file" id="ai-reg-file-ijazah" accept="image/*,application/pdf">
-                <div id="ai-preview-ijazah" style="margin-top: 4px; display: none; align-items: center; gap: 8px;"></div>
+                <div style="display: flex; gap: 8px; align-items: stretch;">
+                  <input type="file" id="ai-reg-file-ijazah" accept="image/*,application/pdf" style="flex: 1;">
+                  <button type="button" class="btn-camera-trigger"
+                    onclick="openCameraCapture('ai-reg-file-ijazah', 'environment', 'Foto Ijazah Terakhir', 'ai-reg-cam-ijazah')"
+                    title="Ambil Foto Ijazah lewat Kamera">
+                    <i data-lucide="camera" style="width: 16px; height: 16px;"></i> Kamera
+                  </button>
+                  <input type="file" id="ai-reg-cam-ijazah" accept="image/*" capture="environment"
+                    style="display: none;" onchange="syncCameraToInput(this, 'ai-reg-file-ijazah')">
+                </div>
+                <div id="ai-preview-ijazah" style="margin-top: 4px; display: none; align-items: center; gap: 8px;">
+                </div>
               </label>
               <label>Pas Foto Siswa (Opsional)
-                <input type="file" id="ai-reg-file-foto" accept="image/*">
+                <div style="display: flex; gap: 8px; align-items: stretch;">
+                  <input type="file" id="ai-reg-file-foto" accept="image/*" style="flex: 1;">
+                  <button type="button" class="btn-camera-trigger"
+                    onclick="openCameraCapture('ai-reg-file-foto', 'user', 'Pas Foto Siswa', 'ai-reg-cam-foto')"
+                    title="Ambil Pas Foto lewat Kamera">
+                    <i data-lucide="camera" style="width: 16px; height: 16px;"></i> Kamera
+                  </button>
+                  <input type="file" id="ai-reg-cam-foto" accept="image/*" capture="user" style="display: none;"
+                    onchange="syncCameraToInput(this, 'ai-reg-file-foto')">
+                </div>
                 <div id="ai-preview-foto" style="margin-top: 4px; display: none; align-items: center; gap: 8px;"></div>
               </label>
-            </div>
 
-            <div style="display: flex; gap: 8px; margin-top: 8px;">
-              <button type="button" class="btn p" id="btn-proses-ai-reg">
-                <i data-lucide="wand-2" style="width: 16px; height: 16px;"></i> Ekstrak & Isi Otomatis dengan AI
-              </button>
-              <button type="button" class="btn" onclick="resetAIRegForm()">Reset</button>
+              <!-- Aksi tombol dirapikan berada di tengah kolom grid -->
+              <div
+                style="grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 10px;">
+                <button type="button" class="btn p" id="btn-proses-ai-reg"
+                  style="display: inline-flex; align-items: center; gap: 6px; padding: 0 20px; height: 38px;">
+                  <i data-lucide="wand-2" style="width: 16px; height: 16px;"></i> Ekstrak & Isi Otomatis dengan AI
+                </button>
+                <button type="button" class="btn" onclick="resetAIRegForm()"
+                  style="height: 38px; padding: 0 18px;">Reset</button>
+              </div>
             </div>
           </div>
 
           <!-- Step 2: Formulir Hasil Ekstraksi yang Dapat Ditinjau & Disimpan -->
           <div id="ai-extracted-container" class="card" style="display: none; border: 1px solid var(--primary-color);">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            <div
+              style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
               <h2>2. Hasil Ekstraksi & Konfirmasi Data Siswa</h2>
               <span class="tag pusat" id="ai-extract-header-badge">AI Verified</span>
             </div>
 
             <!-- Banner status kesesuaian berkas (Sesuai / Tidak Sesuai) -->
-            <div id="ai-cross-check-banner" style="margin-bottom: 16px; border-radius: var(--radius-sm); padding: 12px; display: none;"></div>
+            <div id="ai-cross-check-banner"
+              style="margin-bottom: 16px; border-radius: var(--radius-sm); padding: 12px; display: none;"></div>
 
             <form id="form-ai-siswa-submit" onsubmit="event.preventDefault(); handleAISiswaSubmit();">
               <div class="form">
@@ -1094,14 +1446,18 @@
               </div>
 
               <!-- Berkas Dokumen yang akan Disimpan -->
-              <div class="card" style="margin-top: 16px; background: var(--surface-2); border: 1px solid var(--border-color); padding: 16px;">
+              <div class="card"
+                style="margin-top: 16px; background: var(--surface-2); border: 1px solid var(--border-color); padding: 16px;">
                 <h2>📁 Berkas Dokumen Calon Siswa (Siap Disimpan)</h2>
-                <p class="sub" style="margin-bottom: 12px;">Berkas dari langkah 1 otomatis terpasang. Anda dapat meninjau pratinjau berkas sebelum simpan.</p>
+                <p class="sub" style="margin-bottom: 12px;">Berkas dari langkah 1 otomatis terpasang. Anda dapat
+                  meninjau pratinjau berkas sebelum simpan.</p>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
                   <!-- KK -->
-                  <div style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <div
+                    style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
+                    <div
+                      style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                       <span style="font-weight: 600; font-size: 12px;">Kartu Keluarga (KK)</span>
                       <span id="ai-status-badge-kk" class="tag pusat" style="font-size: 11px;">✓ Terlampir</span>
                     </div>
@@ -1110,18 +1466,23 @@
                   </div>
 
                   <!-- Ijazah -->
-                  <div style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <div
+                    style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
+                    <div
+                      style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                       <span style="font-weight: 600; font-size: 12px;">Ijazah Terakhir</span>
                       <span id="ai-status-badge-ijazah" class="tag def" style="font-size: 11px;">(Opsional)</span>
                     </div>
                     <div id="ai-preview-box-ijazah" style="margin-bottom: 8px;"></div>
-                    <input type="file" id="ai-step2-file-ijazah" accept="image/*,application/pdf" style="font-size: 12px;">
+                    <input type="file" id="ai-step2-file-ijazah" accept="image/*,application/pdf"
+                      style="font-size: 12px;">
                   </div>
 
                   <!-- Pas Foto -->
-                  <div style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <div
+                    style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
+                    <div
+                      style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                       <span style="font-weight: 600; font-size: 12px;">Pas Foto Siswa</span>
                       <span id="ai-status-badge-foto" class="tag def" style="font-size: 11px;">(Opsional)</span>
                     </div>
@@ -1151,13 +1512,15 @@
               <!-- Search Input with icon -->
               <div class="filter-search-box">
                 <i data-lucide="search"></i>
-                <input type="text" id="search-siswa" placeholder="Cari nama, NIK, NISN, atau program..." oninput="filterSiswaTable()">
+                <input type="text" id="search-siswa" placeholder="Cari nama, NIK, NISN, atau program..."
+                  oninput="filterSiswaTable()">
               </div>
 
               <!-- Filter Controls Group -->
               <div class="filter-controls-group">
                 <!-- Limit Select -->
-                <select id="filter-siswa-limit" class="filter-select" onchange="changeSiswaPageSize(this.value)" title="Jumlah Baris per Halaman">
+                <select id="filter-siswa-limit" class="filter-select" onchange="changeSiswaPageSize(this.value)"
+                  title="Jumlah Baris per Halaman">
                   <option value="10">10 Baris</option>
                   <option value="25">25 Baris</option>
                   <option value="50">50 Baris</option>
@@ -1192,12 +1555,14 @@
             </div>
 
             <!-- Action Buttons Row -->
-            <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 10px;">
+            <div
+              style="display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 10px;">
               <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <button class="btn btn-icon" onclick="loadAllSiswa()" title="Muat Ulang Data">
                   <i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i>
                 </button>
-                <button id="btn-batch-ai" class="btn" onclick="runBatchAICheck()" title="Periksa AI pada siswa terpilih">
+                <button id="btn-batch-ai" class="btn" onclick="runBatchAICheck()"
+                  title="Periksa AI pada siswa terpilih">
                   <i data-lucide="wand-2" style="width: 15px; height: 15px; color: var(--accent);"></i>Periksa AI
                 </button>
                 <button class="btn" onclick="exportDataToExcel()" title="Export Excel">
@@ -1208,7 +1573,8 @@
                 </button>
                 <label class="btn" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
                   <i data-lucide="upload" style="width: 15px; height: 15px;"></i>Upload Data
-                  <input type="file" id="import-data-file" accept=".csv, .xlsx, .xls" style="display: none;" onchange="importDataFromFile(event)">
+                  <input type="file" id="import-data-file" accept=".csv, .xlsx, .xls" style="display: none;"
+                    onchange="importDataFromFile(event)">
                 </label>
               </div>
 
@@ -1224,7 +1590,8 @@
               <thead>
                 <tr>
                   <th style="width: 40px; text-align: center;">
-                    <input type="checkbox" id="check-all-siswa" onchange="toggleSelectAllSiswa(this.checked)" title="Pilih Semua">
+                    <input type="checkbox" id="check-all-siswa" onchange="toggleSelectAllSiswa(this.checked)"
+                      title="Pilih Semua">
                   </th>
                   <th style="width: 40px;">No</th>
                   <th>Nama Lengkap</th>
@@ -1236,7 +1603,10 @@
                 </tr>
               </thead>
               <tbody id="table-siswa-body">
-                <tr><td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">Memuat data peserta didik...</td></tr>
+                <tr>
+                  <td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">Memuat data
+                    peserta didik...</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -1263,13 +1633,17 @@
 
         <!-- ==================== SECTION: KELOLA PENGGUNA ==================== -->
         <div id="section-users" class="content-section hidden card-panel">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
             <div>
               <h3 style="margin: 0;">Kelola Pengguna (Khusus Admin)</h3>
-              <p style="color:var(--text-muted); margin: 0.25rem 0 0 0;">Kelola akun petugas dan administrator sistem.</p>
+              <p style="color:var(--text-muted); margin: 0.25rem 0 0 0;">Kelola akun petugas dan administrator sistem.
+              </p>
             </div>
-            <button id="btn-toggle-add-user" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;">
+            <button id="btn-toggle-add-user" class="btn btn-primary"
+              style="display: flex; align-items: center; gap: 0.5rem;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
@@ -1278,16 +1652,21 @@
           </div>
 
           <!-- Form Area (Tersembunyi secara default) -->
-          <div id="wrapper-form-user" class="card-panel hidden" style="margin-bottom: 2rem; background: #f8fafc; border: 1px solid #e2e8f0;">
+          <div id="wrapper-form-user" class="card-panel hidden"
+            style="margin-bottom: 2rem; background: #f8fafc; border: 1px solid #e2e8f0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
               <h4 style="margin: 0;">Form Tambah Pengguna Baru</h4>
-              <button type="button" id="btn-cancel-add-user" class="btn btn-danger" style="padding: 4px 10px; font-size: 0.85rem;">Batal</button>
+              <button type="button" id="btn-cancel-add-user" class="btn btn-danger"
+                style="padding: 4px 10px; font-size: 0.85rem;">Batal</button>
             </div>
             <form id="form-add-user" onsubmit="event.preventDefault();">
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
-                <div class="form-group"><label>Username</label><input type="text" id="usr-username" required placeholder="misal: petugas1"></div>
-                <div class="form-group"><label>Password</label><input type="password" id="usr-pass" required placeholder="Minimal 6 karakter"></div>
-                <div class="form-group"><label>Nama Lengkap</label><input type="text" id="usr-nama" required placeholder="Nama lengkap petugas"></div>
+                <div class="form-group"><label>Username</label><input type="text" id="usr-username" required
+                    placeholder="misal: petugas1"></div>
+                <div class="form-group"><label>Password</label><input type="password" id="usr-pass" required
+                    placeholder="Minimal 6 karakter"></div>
+                <div class="form-group"><label>Nama Lengkap</label><input type="text" id="usr-nama" required
+                    placeholder="Nama lengkap petugas"></div>
                 <div class="form-group">
                   <label>Hak Akses (Role)</label>
                   <select id="usr-role" class="form-control" required>
@@ -1297,18 +1676,26 @@
                 </div>
               </div>
               <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
-                <button type="submit" id="btn-add-user" class="btn btn-success" style="padding: 8px 18px;">Simpan Pengguna</button>
+                <button type="submit" id="btn-add-user" class="btn btn-success" style="padding: 8px 18px;">Simpan
+                  Pengguna</button>
               </div>
             </form>
           </div>
-          
+
           <div class="table-container">
             <table class="data-table">
               <thead>
-                <tr><th>Username</th><th>Nama</th><th>Role</th><th>Aksi</th></tr>
+                <tr>
+                  <th>Username</th>
+                  <th>Nama</th>
+                  <th>Role</th>
+                  <th>Aksi</th>
+                </tr>
               </thead>
               <tbody id="table-users-body">
-                <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
+                <tr>
+                  <td colspan="4" style="text-align:center;">Memuat data...</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -1316,7 +1703,8 @@
 
         <!-- ==================== SECTION: KELOLA API GEMINI (SUPER ADMIN) ==================== -->
         <div id="section-api-keys" class="content-section hidden card-panel">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
             <div>
               <h3 style="margin: 0; color: #b45309; display: flex; align-items: center; gap: 8px;">
                 <span>🔑</span> Database & Kuota API Gemini (Super Admin)
@@ -1325,36 +1713,44 @@
                 Kelola daftar akun Google / API Key gratis untuk rotasi otomatis tanpa batas kuota.
               </p>
             </div>
-            <button id="btn-toggle-add-key" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem; background: #d97706; border-color: #b45309;">
+            <button id="btn-toggle-add-key" class="btn btn-primary"
+              style="display: flex; align-items: center; gap: 0.5rem; background: #d97706; border-color: #b45309;">
               <span>➕ Tambah Kunci API Baru</span>
             </button>
           </div>
 
           <!-- Ringkasan Kuota API Realtime -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <div
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px;">
               <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">TOTAL AKUN / KEY AKTIF</div>
-              <div id="api-stat-total-keys" style="font-size: 1.6rem; font-weight: 700; color: #0f172a; margin-top: 4px;">0</div>
+              <div id="api-stat-total-keys"
+                style="font-size: 1.6rem; font-weight: 700; color: #0f172a; margin-top: 4px;">0</div>
             </div>
             <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 14px;">
               <div style="font-size: 0.8rem; color: #047857; font-weight: 600;">TOTAL KUOTA HARIAN</div>
-              <div id="api-stat-total-quota" style="font-size: 1.6rem; font-weight: 700; color: #065f46; margin-top: 4px;">0 Cek</div>
+              <div id="api-stat-total-quota"
+                style="font-size: 1.6rem; font-weight: 700; color: #065f46; margin-top: 4px;">0 Cek</div>
             </div>
             <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px;">
               <div style="font-size: 0.8rem; color: #1d4ed8; font-weight: 600;">TOTAL TERPAKAI HARI INI</div>
-              <div id="api-stat-total-used" style="font-size: 1.6rem; font-weight: 700; color: #1e40af; margin-top: 4px;">0 Cek</div>
+              <div id="api-stat-total-used"
+                style="font-size: 1.6rem; font-weight: 700; color: #1e40af; margin-top: 4px;">0 Cek</div>
             </div>
             <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 10px; padding: 14px;">
               <div style="font-size: 0.8rem; color: #b45309; font-weight: 600;">SISA KUOTA TERSEDIA (AVAILABLE)</div>
-              <div id="api-stat-total-remaining" style="font-size: 1.6rem; font-weight: 700; color: #92400e; margin-top: 4px;">0 Cek</div>
+              <div id="api-stat-total-remaining"
+                style="font-size: 1.6rem; font-weight: 700; color: #92400e; margin-top: 4px;">0 Cek</div>
             </div>
           </div>
 
           <!-- Form Tambah API Key (Hidden by default) -->
-          <div id="wrapper-form-key" class="card-panel hidden" style="margin-bottom: 1.5rem; background: #fffbeb; border: 1px solid #fde68a;">
+          <div id="wrapper-form-key" class="card-panel hidden"
+            style="margin-bottom: 1.5rem; background: #fffbeb; border: 1px solid #fde68a;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
               <h4 style="margin: 0; color: #92400e;">Daftarkan Kunci API Google AI Studio Baru</h4>
-              <button type="button" id="btn-cancel-add-key" class="btn btn-danger" style="padding: 4px 10px; font-size: 0.85rem;">Batal</button>
+              <button type="button" id="btn-cancel-add-key" class="btn btn-danger"
+                style="padding: 4px 10px; font-size: 0.85rem;">Batal</button>
             </div>
             <form id="form-add-key" onsubmit="event.preventDefault();">
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
@@ -1372,7 +1768,8 @@
                 </div>
               </div>
               <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
-                <button type="submit" id="btn-save-key" class="btn btn-success" style="padding: 8px 18px; background: #16a34a;">Simpan ke Database</button>
+                <button type="submit" id="btn-save-key" class="btn btn-success"
+                  style="padding: 8px 18px; background: #16a34a;">Simpan ke Database</button>
               </div>
             </form>
           </div>
@@ -1393,7 +1790,9 @@
                 </tr>
               </thead>
               <tbody id="table-api-keys-body">
-                <tr><td colspan="8" style="text-align:center;">Memuat data kunci API...</td></tr>
+                <tr>
+                  <td colspan="8" style="text-align:center;">Memuat data kunci API...</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -1401,21 +1800,28 @@
 
         <!-- ==================== SECTION: PORTAL SISWA (KHUSUS PESERTA DIDIK) ==================== -->
         <div id="section-portal-siswa" class="content-section card-panel hidden">
-          <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+          <div class="list-header"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
             <div>
               <h2 style="color: var(--primary-color); margin-bottom: 4px;">🎓 Portal Peserta Didik</h2>
-              <p style="color: var(--text-muted); font-size: 0.9rem;">Selamat datang di portal akademik PKBM Aura Anugerah.</p>
+              <p style="color: var(--text-muted); font-size: 0.9rem;">Selamat datang di portal akademik PKBM Aura
+                Anugerah.</p>
             </div>
-            <button class="btn btn-outline" onclick="cetakKartuPendaftaranSiswa()" style="display: inline-flex; align-items: center; gap: 6px;">
+            <button class="btn btn-outline" onclick="cetakKartuPendaftaranSiswa()"
+              style="display: inline-flex; align-items: center; gap: 6px;">
               🖨️ Cetak Kartu Siswa
             </button>
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+          <div
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
             <!-- Kartu Status Berkas -->
-            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid var(--primary-color);">
-              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Status Verifikasi Berkas</div>
-              <div id="siswa-portal-status-badge" style="margin-top: 10px; font-size: 1.15rem; font-weight: 700; color: #059669;">
+            <div
+              style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid var(--primary-color);">
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Status Verifikasi Berkas
+              </div>
+              <div id="siswa-portal-status-badge"
+                style="margin-top: 10px; font-size: 1.15rem; font-weight: 700; color: #059669;">
                 ✅ Terverifikasi & Diterima
               </div>
               <p id="siswa-portal-catatan" style="margin-top: 8px; font-size: 0.85rem; color: #475569;">
@@ -1424,9 +1830,11 @@
             </div>
 
             <!-- Kartu Jenjang Paket -->
-            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid #0284c7;">
+            <div
+              style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid #0284c7;">
               <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Program Pendidikan</div>
-              <div id="siswa-portal-program" style="margin-top: 10px; font-size: 1.25rem; font-weight: 700; color: #0284c7;">
+              <div id="siswa-portal-program"
+                style="margin-top: 10px; font-size: 1.25rem; font-weight: 700; color: #0284c7;">
                 Paket C (Setara SMA)
               </div>
               <div style="margin-top: 6px; font-size: 0.85rem; color: #64748b;">
@@ -1435,9 +1843,12 @@
             </div>
 
             <!-- Kartu Administrasi -->
-            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid #10b981;">
-              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Status Administrasi / SPP</div>
-              <div id="siswa-portal-spp-badge" style="margin-top: 10px; font-size: 1.15rem; font-weight: 700; color: #10b981;">
+            <div
+              style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid #10b981;">
+              <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Status Administrasi / SPP
+              </div>
+              <div id="siswa-portal-spp-badge"
+                style="margin-top: 10px; font-size: 1.15rem; font-weight: 700; color: #10b981;">
                 Lunas Bulan Ini
               </div>
               <div style="margin-top: 6px; font-size: 0.85rem; color: #64748b;">
@@ -1449,7 +1860,8 @@
           <!-- Rincian Biodata Terdaftar -->
           <div style="background: #f8fafc; border-radius: 12px; padding: 1.5rem; border: 1px solid #e2e8f0;">
             <h3 style="font-size: 1.05rem; margin-bottom: 1rem; color: #1e293b;">📋 Informasi Biodata Terdaftar</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; font-size: 0.9rem;">
+            <div
+              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; font-size: 0.9rem;">
               <div><strong>Nama Lengkap:</strong> <span id="siswa-portal-nama">-</span></div>
               <div><strong>NIK:</strong> <span id="siswa-portal-nik">-</span></div>
               <div><strong>NISN:</strong> <span id="siswa-portal-nisn">-</span></div>
@@ -1463,28 +1875,106 @@
         <!-- ==================== SECTION: PENGUMUMAN SISWA ==================== -->
         <div id="section-pengumuman-siswa" class="content-section card-panel hidden">
           <h2 style="color: var(--primary-color); margin-bottom: 0.5rem;">📢 Papan Pengumuman & Jadwal Belajar</h2>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Informasi kegiatan akademik, ujian modul kesetaraan, dan jadwal tutorial tatap muka.</p>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Informasi kegiatan akademik,
+            ujian modul kesetaraan, dan jadwal tutorial tatap muka.</p>
 
           <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <div style="background: #ffffff; border-left: 4px solid var(--primary-color); border-radius: 8px; padding: 1.25rem; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0; border-left-width: 4px;">
+            <div
+              style="background: #ffffff; border-left: 4px solid var(--primary-color); border-radius: 8px; padding: 1.25rem; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0; border-left-width: 4px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <h3 style="font-size: 1rem; margin: 0; color: #0f172a;">Jadwal Pembelajaran Modul & Ujian Semester</h3>
-                <span style="font-size: 0.78rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Terbaru</span>
+                <span
+                  style="font-size: 0.78rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Terbaru</span>
               </div>
               <p style="color: #475569; font-size: 0.88rem; line-height: 1.5; margin: 0;">
-                Diberitahukan kepada seluruh peserta didik Paket A, B, dan C bahwa jadwal pembelajaran modul tatap muka dan daring serta pengumpulan tugas portofolio dapat diakses melalui sekretariat PKBM Aura Anugerah.
+                Diberitahukan kepada seluruh peserta didik Paket A, B, dan C bahwa jadwal pembelajaran modul tatap muka
+                dan daring serta pengumpulan tugas portofolio dapat diakses melalui sekretariat PKBM Aura Anugerah.
               </p>
             </div>
 
-            <div style="background: #ffffff; border-left: 4px solid #0284c7; border-radius: 8px; padding: 1.25rem; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0; border-left-width: 4px;">
+            <div
+              style="background: #ffffff; border-left: 4px solid #0284c7; border-radius: 8px; padding: 1.25rem; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0; border-left-width: 4px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <h3 style="font-size: 1rem; margin: 0; color: #0f172a;">Verifikasi Berkas Kependudukan & NISN</h3>
-                <span style="font-size: 0.78rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Penting</span>
+                <span
+                  style="font-size: 0.78rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">Penting</span>
               </div>
               <p style="color: #475569; font-size: 0.88rem; line-height: 1.5; margin: 0;">
-                Bagi calon peserta didik yang berkasnya masih berstatus "Perlu Cek" atau terdapat ketidaksesuaian data antara Ijazah dan Kartu Keluarga, dimohon untuk berkoordinasi dengan petugas admin.
+                Bagi calon peserta didik yang berkasnya masih berstatus "Perlu Cek" atau terdapat ketidaksesuaian data
+                antara Ijazah dan Kartu Keluarga, dimohon untuk berkoordinasi dengan petugas admin.
               </p>
             </div>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: INFORMASI KEGIATAN (PORTAL & PUBLIK) ==================== -->
+        <div id="section-kegiatan" class="content-section card-panel hidden">
+          <div
+            style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 1.5rem;">
+            <div>
+              <h2
+                style="color: var(--primary-color); margin: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="newspaper" style="width: 24px; height: 24px;"></i> Informasi Kegiatan & Warta PKBM
+              </h2>
+              <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
+                Kelola dan publikasikan pengumuman acara, agenda akademik, atau berita sekolah.
+              </p>
+            </div>
+            <div id="kegiatan-admin-actions" style="display: flex; gap: 8px;">
+              <button type="button" class="btn p" onclick="openModalKegiatan()" id="btn-tambah-kegiatan">
+                <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Tambah Kegiatan
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter & Tab Visibilitas (Untuk Admin / Guru) -->
+          <div
+            style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 1.25rem;">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="kegiatan-filter-group">
+              <button class="btn btn-sm p active" id="btn-filter-keg-all" onclick="filterKegiatan('all')">Semua</button>
+              <button class="btn btn-sm" id="btn-filter-keg-portal" onclick="filterKegiatan('portal')">Hanya
+                Portal</button>
+              <button class="btn btn-sm" id="btn-filter-keg-public" onclick="filterKegiatan('public')">Publik / Luar
+                Portal</button>
+            </div>
+            <div style="position: relative; width: 240px;">
+              <i data-lucide="search"
+                style="position: absolute; left: 10px; top: 10px; width: 15px; height: 15px; color: var(--text-muted); pointer-events: none;"></i>
+              <input type="text" id="search-kegiatan" placeholder="Cari kegiatan..."
+                oninput="handleSearchKegiatan(this.value)"
+                style="width: 100%; padding-left: 32px; height: 36px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-color);">
+            </div>
+          </div>
+
+          <!-- Grid Daftar Kegiatan di Dashboard -->
+          <div id="dashboard-kegiatan-grid"
+            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem;">
+            <!-- Diisi dinamis oleh app.js -->
+          </div>
+        </div>
+
+        <!-- ==================== SECTION: PROFIL TK AURA ANUGERAH & PETA ==================== -->
+        <div id="section-info-tk" class="content-section card-panel hidden">
+          <div
+            style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 1.5rem;">
+            <div>
+              <h2 style="color: #0284c7; margin: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="map-pin" style="width: 24px; height: 24px;"></i> Profil TK Aura Anugerah & Peta Lokasi
+              </h2>
+              <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
+                Satuan Pendidikan Anak Usia Dini binaan Aura Anugerah dalam satu kompleks di Sentani, Jayapura.
+              </p>
+            </div>
+            <div id="tk-admin-actions" style="display: flex; gap: 8px;">
+              <button type="button" class="btn p" onclick="openModalEditTK()" id="btn-edit-tk-info"
+                style="background: #0284c7; border-color: #0284c7;">
+                <i data-lucide="settings" style="width: 16px; height: 16px;"></i> Edit Info & Lokasi TK
+              </button>
+            </div>
+          </div>
+
+          <div id="dashboard-tk-container">
+            <!-- Diisi dinamis oleh app.js -->
           </div>
         </div>
 
@@ -1495,7 +1985,8 @@
 
           <div class="bar">
             <div style="position: relative; width: 260px;">
-              <i data-lucide="search" style="position: absolute; left: 10px; top: 10px; width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;"></i>
+              <i data-lucide="search"
+                style="position: absolute; left: 10px; top: 10px; width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;"></i>
               <input type="text" placeholder="Cari nama tutor/siswa..." style="width: 100%; padding-left: 32px;">
             </div>
             <select class="btn" style="max-width: 180px;">
@@ -1506,7 +1997,8 @@
             </select>
             <span class="sp"></span>
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <button class="btn p" onclick="catatAbsensiCepat()"><i data-lucide="plus" style="width: 16px; height: 16px;"></i>Catat Absen Hari Ini</button>
+              <button class="btn p" onclick="catatAbsensiCepat()"><i data-lucide="plus"
+                  style="width: 16px; height: 16px;"></i>Catat Absen Hari Ini</button>
             </div>
           </div>
 
@@ -1524,7 +2016,10 @@
                 </tr>
               </thead>
               <tbody id="table-absensi-body">
-                <tr><td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">Belum ada data absensi untuk hari ini. Klik "Catat Absen Hari Ini" untuk mengisi.</td></tr>
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">Belum ada data
+                    absensi untuk hari ini. Klik "Catat Absen Hari Ini" untuk mengisi.</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -1537,7 +2032,8 @@
 
           <div class="bar">
             <div style="position: relative; width: 260px;">
-              <i data-lucide="search" style="position: absolute; left: 10px; top: 10px; width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;"></i>
+              <i data-lucide="search"
+                style="position: absolute; left: 10px; top: 10px; width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;"></i>
               <input type="text" placeholder="Cari data transaksi siswa..." style="width: 100%; padding-left: 32px;">
             </div>
             <select class="btn" style="max-width: 180px;">
@@ -1548,7 +2044,8 @@
             </select>
             <span class="sp"></span>
             <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <button class="btn p" onclick="catatTransaksiBaru()"><i data-lucide="plus" style="width: 16px; height: 16px;"></i>Catat Transaksi</button>
+              <button class="btn p" onclick="catatTransaksiBaru()"><i data-lucide="plus"
+                  style="width: 16px; height: 16px;"></i>Catat Transaksi</button>
             </div>
           </div>
 
@@ -1567,7 +2064,10 @@
                 </tr>
               </thead>
               <tbody id="table-bayar-body">
-                <tr><td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">Belum ada riwayat transaksi pembayaran atau tabungan.</td></tr>
+                <tr>
+                  <td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">Belum ada riwayat
+                    transaksi pembayaran atau tabungan.</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -1578,7 +2078,8 @@
 
     <!-- Mobile Bottom Navigation Bar (Persis Rostering Teknik) -->
     <nav class="tabs" id="mobile-bottom-tabs">
-      <button class="mobile-tab-btn on" data-target="section-dashboard" onclick="switchMobileTab('section-dashboard', this)">
+      <button class="mobile-tab-btn on" data-target="section-dashboard"
+        onclick="switchMobileTab('section-dashboard', this)">
         <i data-lucide="layout-dashboard" style="width: 20px; height: 20px;"></i>
         <span>Dashboard</span>
       </button>
@@ -1603,33 +2104,43 @@
     <!-- Mobile More Menu Bottom Sheet -->
     <div id="mobile-more-sheet" class="mobile-sheet-backdrop hidden" onclick="toggleMobileMoreMenu(false)">
       <div class="mobile-sheet-content" onclick="event.stopPropagation()">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+        <div
+          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="font-weight: 700; font-size: 14px; color: var(--text-color);" id="mobile-sheet-username">Pengguna</div>
+            <div style="font-weight: 700; font-size: 14px; color: var(--text-color);" id="mobile-sheet-username">
+              Pengguna</div>
           </div>
-          <button class="btn btn-icon" onclick="toggleMobileMoreMenu(false)" style="background: transparent; border: none; font-size: 18px; color: var(--text-muted);">&times;</button>
+          <button class="btn btn-icon" onclick="toggleMobileMoreMenu(false)"
+            style="background: transparent; border: none; font-size: 18px; color: var(--text-muted);">&times;</button>
         </div>
         <div style="display: flex; flex-direction: column; gap: 8px;">
-          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-bayar'); toggleMobileMoreMenu(false);">
+          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;"
+            onclick="switchMobileTab('section-bayar'); toggleMobileMoreMenu(false);">
             <i data-lucide="wallet" style="width: 18px; height: 18px;"></i> SPP & Tabungan
           </button>
-          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-materi'); toggleMobileMoreMenu(false);">
+          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;"
+            onclick="switchMobileTab('section-materi'); toggleMobileMoreMenu(false);">
             <i data-lucide="book-open" style="width: 18px; height: 18px;"></i> Materi & Buku Belajar
           </button>
-          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-ujian'); toggleMobileMoreMenu(false);">
+          <button class="btn" style="width: 100%; justify-content: flex-start; gap: 12px;"
+            onclick="switchMobileTab('section-ujian'); toggleMobileMoreMenu(false);">
             <i data-lucide="file-check" style="width: 18px; height: 18px;"></i> Ujian & Nilai Siswa
           </button>
-          <button class="btn" id="mobile-sheet-btn-users" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-users'); toggleMobileMoreMenu(false);">
+          <button class="btn" id="mobile-sheet-btn-users" style="width: 100%; justify-content: flex-start; gap: 12px;"
+            onclick="switchMobileTab('section-users'); toggleMobileMoreMenu(false);">
             <i data-lucide="settings" style="width: 18px; height: 18px;"></i> Kelola Pengguna
           </button>
-          <button class="btn" id="mobile-sheet-btn-api" style="width: 100%; justify-content: flex-start; gap: 12px;" onclick="switchMobileTab('section-api-keys'); toggleMobileMoreMenu(false);">
+          <button class="btn" id="mobile-sheet-btn-api" style="width: 100%; justify-content: flex-start; gap: 12px;"
+            onclick="switchMobileTab('section-api-keys'); toggleMobileMoreMenu(false);">
             <i data-lucide="key" style="width: 18px; height: 18px;"></i> Kelola API Gemini
           </button>
           <div style="display: flex; gap: 8px; margin-top: 8px;">
             <button class="btn" style="flex: 1;" onclick="toggleTheme();">
               <i data-lucide="moon" style="width: 16px; height: 16px;"></i> Tema
             </button>
-            <button class="btn" style="flex: 1; background: var(--danger-color); color: #fff; border-color: var(--danger-color);" onclick="toggleMobileMoreMenu(false); handleLogout();">
+            <button class="btn"
+              style="flex: 1; background: var(--danger-color); color: #fff; border-color: var(--danger-color);"
+              onclick="toggleMobileMoreMenu(false); handleLogout();">
               <i data-lucide="log-out" style="width: 16px; height: 16px;"></i> Logout
             </button>
           </div>
@@ -1642,15 +2153,18 @@
     <aside id="siswa-detail-drawer" class="drawer-panel hidden">
       <div class="drawer-header">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <div style="width: 40px; height: 40px; border-radius: 10px; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <div
+            style="width: 40px; height: 40px; border-radius: 10px; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
           </div>
           <div>
             <h3 style="margin: 0; font-size: 1.15rem;">Detail Peserta Didik</h3>
-            <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #64748b;" id="drawer-subtitle">Informasi lengkap calon siswa</p>
+            <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #64748b;" id="drawer-subtitle">Informasi lengkap
+              calon siswa</p>
           </div>
         </div>
         <button id="btn-close-drawer" class="drawer-close-btn" title="Tutup Panel">&times;</button>
@@ -1669,18 +2183,24 @@
   <!-- Document / Image Lightbox Preview Modal -->
   <div id="modal-doc-viewer" class="login-modal hidden" style="z-index: 99999;">
     <div class="login-modal-overlay" onclick="closeDocViewerModal()"></div>
-    <div class="modal-content" style="max-width: 800px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; padding: 1.25rem; border-radius: 16px; background: #ffffff; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); position: relative; z-index: 10;">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+    <div class="modal-content"
+      style="max-width: 800px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; padding: 1.25rem; border-radius: 16px; background: #ffffff; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); position: relative; z-index: 10;">
+      <div
+        style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1rem;">
         <h3 id="doc-modal-title" style="margin: 0; font-size: 1.15rem; color: #0f172a;">Pratinjau Berkas</h3>
-        <button type="button" class="btn-close-modal" onclick="closeDocViewerModal()" style="position: static; font-size: 1.5rem; line-height: 1; border: none; background: transparent; cursor: pointer; color: #64748b;">&times;</button>
+        <button type="button" class="btn-close-modal" onclick="closeDocViewerModal()"
+          style="position: static; font-size: 1.5rem; line-height: 1; border: none; background: transparent; cursor: pointer; color: #64748b;">&times;</button>
       </div>
-      <div style="flex: 1; overflow: auto; display: flex; justify-content: center; align-items: center; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; min-height: 350px; padding: 10px;">
-        <img id="doc-modal-img" src="" alt="Pratinjau Berkas" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 4px; display: none;">
+      <div
+        style="flex: 1; overflow: auto; display: flex; justify-content: center; align-items: center; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; min-height: 350px; padding: 10px;">
+        <img id="doc-modal-img" src="" alt="Pratinjau Berkas"
+          style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 4px; display: none;">
         <iframe id="doc-modal-iframe" src="" style="width: 100%; height: 70vh; border: none; display: none;"></iframe>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
         <button type="button" class="btn btn-outline" onclick="closeDocViewerModal()">Tutup</button>
-        <button type="button" class="btn btn-primary" id="btn-doc-download" onclick="downloadCurrentDocModal()">⬇️ Unduh Berkas</button>
+        <button type="button" class="btn btn-primary" id="btn-doc-download" onclick="downloadCurrentDocModal()">⬇️ Unduh
+          Berkas</button>
       </div>
     </div>
   </div>
@@ -1688,64 +2208,84 @@
   <!-- ==================== MODAL: BACA BUKU & PELACAK WAKTU BELAJAR ==================== -->
   <div id="modal-reader" class="login-modal hidden" style="z-index: 99999; padding: 0;">
     <div class="login-modal-overlay"></div>
-    <div class="modal-content reader-fullscreen-modal" style="max-width: 100vw; width: 100vw; height: 100vh; height: 100dvh; display: flex; flex-direction: column; padding: 0; border-radius: 0; background: var(--surface-color); overflow: hidden; border: none;">
-      
+    <div class="modal-content reader-fullscreen-modal"
+      style="max-width: 100vw; width: 100vw; height: 100vh; height: 100dvh; display: flex; flex-direction: column; padding: 0; border-radius: 0; background: var(--surface-color); overflow: hidden; border: none;">
+
       <!-- Reader Header Bar -->
-      <div class="reader-header-bar" style="padding: 10px 16px; background: var(--surface-2); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 8px; z-index: 20;">
+      <div class="reader-header-bar"
+        style="padding: 10px 16px; background: var(--surface-2); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 8px; z-index: 20;">
         <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
-          <div style="width: 34px; height: 34px; border-radius: 8px; background: var(--primary-color); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <div
+            style="width: 34px; height: 34px; border-radius: 8px; background: var(--primary-color); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             <i data-lucide="book-open" style="width: 18px; height: 18px;"></i>
           </div>
           <div style="min-width: 0;">
-            <div id="reader-book-title" style="font-weight: 700; font-size: 13.5px; color: var(--text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px;">Judul Buku</div>
-            <div id="reader-book-info" style="font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Paket C · Hal. 1</div>
+            <div id="reader-book-title"
+              style="font-weight: 700; font-size: 13.5px; color: var(--text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px;">
+              Judul Buku</div>
+            <div id="reader-book-info"
+              style="font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              Paket C · Hal. 1</div>
           </div>
         </div>
 
         <!-- Zoom & View Controls (In-house Custom, bebas lepas / banner gdrive) -->
-        <div class="reader-zoom-controls" style="display: flex; align-items: center; gap: 4px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 2px 4px;">
+        <div class="reader-zoom-controls"
+          style="display: flex; align-items: center; gap: 4px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 2px 4px;">
           <button class="btn btn-icon btn-sm" onclick="zoomBuku(-0.15)" title="Perkecil (-)" style="padding: 4px 6px;">
             <i data-lucide="zoom-out" style="width: 15px; height: 15px;"></i>
           </button>
-          <span id="reader-zoom-level" style="font-size: 11.5px; font-weight: 600; min-width: 38px; text-align: center; color: var(--text-color);">100%</span>
+          <span id="reader-zoom-level"
+            style="font-size: 11.5px; font-weight: 600; min-width: 38px; text-align: center; color: var(--text-color);">100%</span>
           <button class="btn btn-icon btn-sm" onclick="zoomBuku(0.15)" title="Perbesar (+)" style="padding: 4px 6px;">
             <i data-lucide="zoom-in" style="width: 15px; height: 15px;"></i>
           </button>
-          <button class="btn btn-icon btn-sm" onclick="zoomFitWidth()" title="Pas Lebar (Fit Width)" style="padding: 4px 6px;">
+          <button class="btn btn-icon btn-sm" onclick="zoomFitWidth()" title="Pas Lebar (Fit Width)"
+            style="padding: 4px 6px;">
             <i data-lucide="maximize-2" style="width: 14px; height: 14px;"></i>
           </button>
         </div>
 
         <!-- Timer Belajar Aktif (Live Tracker) & Actions -->
         <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-          <div style="display: flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.12); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.3); padding: 4px 10px; border-radius: 99px; font-weight: 600; font-size: 12px;">
-            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite;"></span>
+          <div
+            style="display: flex; align-items: center; gap: 6px; background: rgba(34, 197, 94, 0.12); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.3); padding: 4px 10px; border-radius: 99px; font-weight: 600; font-size: 12px;">
+            <span
+              style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite;"></span>
             <span id="reader-live-timer">00:00:00</span>
           </div>
-          <button class="btn btn-sm btn-selesai-ujian" onclick="selesaiBelajarDanUjian()" style="background: var(--accent); color: #12263A; font-weight: 700; border: none; font-size: 12px; padding: 6px 12px;">
+          <button class="btn btn-sm btn-selesai-ujian" onclick="selesaiBelajarDanUjian()"
+            style="background: var(--accent); color: #12263A; font-weight: 700; border: none; font-size: 12px; padding: 6px 12px;">
             Selesai & Ujian 📝
           </button>
-          <button type="button" class="btn-close-modal" onclick="closeReaderModal()" style="position: static; font-size: 22px; line-height: 1; padding: 2px 6px;">&times;</button>
+          <button type="button" class="btn-close-modal" onclick="closeReaderModal()"
+            style="position: static; font-size: 22px; line-height: 1; padding: 2px 6px;">&times;</button>
         </div>
       </div>
 
       <!-- Reader Body (Viewport Canvas PDF Asli / Fallback HTML Reader) -->
-      <div id="reader-viewport-container" style="flex: 1; display: flex; flex-direction: column; overflow: auto; background: #334155; position: relative; -webkit-overflow-scrolling: touch;">
-        
+      <div id="reader-viewport-container"
+        style="flex: 1; display: flex; flex-direction: column; overflow: auto; background: #334155; position: relative; -webkit-overflow-scrolling: touch;">
+
         <!-- Loading State Indicator -->
-        <div id="reader-loading-spinner" style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 30; color: #fff;">
-          <div class="spinner" style="width: 36px; height: 36px; border-width: 3px; border-top-color: #f59e0b; margin-bottom: 12px;"></div>
+        <div id="reader-loading-spinner"
+          style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 30; color: #fff;">
+          <div class="spinner"
+            style="width: 36px; height: 36px; border-width: 3px; border-top-color: #f59e0b; margin-bottom: 12px;"></div>
           <div style="font-size: 13.5px; font-weight: 600;">Memuat Halaman Modul...</div>
           <div style="font-size: 11.5px; color: #94a3b8; margin-top: 4px;">Navigasi halaman & zoom aktif mandiri</div>
         </div>
 
         <!-- Canvas Container untuk PDF.js -->
-        <div id="pdf-render-wrapper" style="display: flex; justify-content: center; align-items: flex-start; min-height: 100%; padding: 16px; box-sizing: border-box;">
-          <canvas id="pdf-page-canvas" style="box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); border-radius: 4px; background: #fff; max-width: 100%; height: auto; display: block;"></canvas>
+        <div id="pdf-render-wrapper"
+          style="display: flex; justify-content: center; align-items: flex-start; min-height: 100%; padding: 16px; box-sizing: border-box;">
+          <canvas id="pdf-page-canvas"
+            style="box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); border-radius: 4px; background: #fff; max-width: 100%; height: auto; display: block;"></canvas>
         </div>
 
         <!-- Fallback Text Viewer (Jika file lokal atau fallback) -->
-        <div id="reader-text-viewer" style="display: none; padding: 24px 32px; background: var(--surface-color); color: var(--text-color); font-size: 15px; line-height: 1.7; min-height: 100%;">
+        <div id="reader-text-viewer"
+          style="display: none; padding: 24px 32px; background: var(--surface-color); color: var(--text-color); font-size: 15px; line-height: 1.7; min-height: 100%;">
           <div id="reader-chapter-content">
             <!-- Isi Bab Pelajaran -->
           </div>
@@ -1753,29 +2293,38 @@
       </div>
 
       <!-- Reader Footer Toolbar (Navigasi Halaman Aktif, Prev/Next Responsif) -->
-      <div class="reader-footer-toolbar" style="padding: 8px 16px; background: var(--surface-2); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 8px; z-index: 20;">
+      <div class="reader-footer-toolbar"
+        style="padding: 8px 16px; background: var(--surface-2); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 8px; z-index: 20;">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <button id="btn-reader-prev" class="btn btn-sm btn-primary" onclick="navigasiHalamanBuku(-1)" style="font-size: 12.5px; padding: 6px 12px;">
+          <button id="btn-reader-prev" class="btn btn-sm btn-primary" onclick="navigasiHalamanBuku(-1)"
+            style="font-size: 12.5px; padding: 6px 12px;">
             <i data-lucide="chevron-left" style="width: 15px; height: 15px;"></i>
             <span class="btn-label-nav">Sebelumnya</span>
           </button>
-          
-          <div style="display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; background: var(--surface-color); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-color);">
+
+          <div
+            style="display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; background: var(--surface-color); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-color);">
             <span>Hal.</span>
-            <input type="number" id="reader-page-input" value="1" min="1" max="100" style="width: 44px; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 0; font-size: 12.5px; font-weight: 700; background: var(--surface-2); color: var(--text-color);" onchange="lompatHalamanBuku(this.value)">
+            <input type="number" id="reader-page-input" value="1" min="1" max="100"
+              style="width: 44px; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 0; font-size: 12.5px; font-weight: 700; background: var(--surface-2); color: var(--text-color);"
+              onchange="lompatHalamanBuku(this.value)">
             <span>/ <span id="reader-total-page">28</span></span>
           </div>
 
-          <button id="btn-reader-next" class="btn btn-sm btn-primary" onclick="navigasiHalamanBuku(1)" style="font-size: 12.5px; padding: 6px 12px;">
+          <button id="btn-reader-next" class="btn btn-sm btn-primary" onclick="navigasiHalamanBuku(1)"
+            style="font-size: 12.5px; padding: 6px 12px;">
             <span class="btn-label-nav">Berikutnya</span>
             <i data-lucide="chevron-right" style="width: 15px; height: 15px;"></i>
           </button>
         </div>
 
-        <div style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;" id="reader-student-status">
+        <div style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;"
+          id="reader-student-status">
           <i data-lucide="user" style="width: 14px; height: 14px;"></i>
           <span class="reader-student-label">Siswa:</span>
-          <b id="reader-active-student" style="color: var(--text-color); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Peserta Didik</b>
+          <b id="reader-active-student"
+            style="color: var(--text-color); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Peserta
+            Didik</b>
         </div>
       </div>
     </div>
@@ -1787,8 +2336,9 @@
     <div class="login-card modal-content" style="max-width: 540px; text-align: left;">
       <button class="btn-close-modal" onclick="closeBukuFormModal()">&times;</button>
       <h3 style="margin-top: 0; margin-bottom: 6px;" id="buku-form-title">Tambah Buku Pelajaran</h3>
-      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Kelola modul dan referensi bacaan paket kesetaraan.</p>
-      
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Kelola modul dan referensi bacaan paket
+        kesetaraan.</p>
+
       <form id="form-buku" onsubmit="event.preventDefault(); simpanBukuData();">
         <input type="hidden" id="buku-id" value="">
         <div class="form-group">
@@ -1822,11 +2372,13 @@
         </div>
         <div class="form-group" style="margin-top: 12px;">
           <label>Deskripsi Ringkas / Silabus</label>
-          <textarea id="buku-keterangan" rows="2" placeholder="Kompetensi dasar materi yang dipelajari..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color);"></textarea>
+          <textarea id="buku-keterangan" rows="2" placeholder="Kompetensi dasar materi yang dipelajari..."
+            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color);"></textarea>
         </div>
         <div class="form-group" style="margin-top: 12px;">
           <label>Link Berkas PDF / Bahan Bacaan (Opsional)</label>
-          <input type="text" id="buku-file-url" placeholder="https://... atau biarkan kosong untuk modul interaktif standar">
+          <input type="text" id="buku-file-url"
+            placeholder="https://... atau biarkan kosong untuk modul interaktif standar">
         </div>
         <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
           <button type="button" class="btn btn-outline" onclick="closeBukuFormModal()">Batal</button>
@@ -1842,7 +2394,8 @@
     <div class="login-card modal-content" style="max-width: 520px; text-align: left;">
       <button class="btn-close-modal" onclick="closeInputNilaiModal()">&times;</button>
       <h3 style="margin-top: 0; margin-bottom: 6px;">Input Nilai Ujian Siswa</h3>
-      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Masukkan penilaian hasil belajar setelah siswa menuntaskan materi.</p>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Masukkan penilaian hasil belajar
+        setelah siswa menuntaskan materi.</p>
 
       <form id="form-nilai-ujian" onsubmit="event.preventDefault(); simpanNilaiUjian();">
         <div class="form-group">
@@ -1860,16 +2413,19 @@
         <div class="form-group-row" style="margin-top: 12px;">
           <div class="form-group half">
             <label>Nilai Ujian (Skala 0 - 100) <span style="color:red">*</span></label>
-            <input type="number" id="ujian-angka" min="0" max="100" placeholder="Contoh: 85" required oninput="hitungPredikatNilai(this.value)">
+            <input type="number" id="ujian-angka" min="0" max="100" placeholder="Contoh: 85" required
+              oninput="hitungPredikatNilai(this.value)">
           </div>
           <div class="form-group half">
             <label>Predikat Mutu</label>
-            <input type="text" id="ujian-predikat" readonly value="Baik (B)" style="background: var(--surface-2); font-weight: 600;">
+            <input type="text" id="ujian-predikat" readonly value="Baik (B)"
+              style="background: var(--surface-2); font-weight: 600;">
           </div>
         </div>
         <div class="form-group" style="margin-top: 12px;">
           <label>Catatan Tutor / Evaluator</label>
-          <textarea id="ujian-catatan" rows="2" placeholder="Catatan pemahaman, kemampuan analisis, rekomendasi..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color);"></textarea>
+          <textarea id="ujian-catatan" rows="2" placeholder="Catatan pemahaman, kemampuan analisis, rekomendasi..."
+            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color);"></textarea>
         </div>
         <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
           <button type="button" class="btn btn-outline" onclick="closeInputNilaiModal()">Batal</button>
@@ -1885,7 +2441,8 @@
     <div class="login-card modal-content" style="max-width: 600px; text-align: left;">
       <button class="btn-close-modal" onclick="closeModalFormPaketSoal()">&times;</button>
       <h3 id="modal-paket-soal-title" style="margin-top: 0; margin-bottom: 6px;">Buat Paket Soal CBT Baru</h3>
-      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Tentukan kode ujian, jenjang rombel, alokasi durasi, dan token akses.</p>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Tentukan kode ujian, jenjang rombel,
+        alokasi durasi, dan token akses.</p>
 
       <form id="form-paket-soal" onsubmit="event.preventDefault(); simpanPaketSoal();">
         <input type="hidden" id="paket-soal-id" value="">
@@ -1893,7 +2450,8 @@
         <div class="form-group-row">
           <div class="form-group half">
             <label>Kode Paket / Modul <span style="color:red">*</span></label>
-            <input type="text" id="paket-kode-token" required placeholder="Contoh: CBT-PKC-01" style="font-weight: 700; letter-spacing: 1px;">
+            <input type="text" id="paket-kode-token" required placeholder="Contoh: CBT-PKC-01"
+              style="font-weight: 700; letter-spacing: 1px;">
           </div>
           <div class="form-group half">
             <label>Jenis Ujian <span style="color:red">*</span></label>
@@ -1952,7 +2510,8 @@
 
         <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
           <button type="button" class="btn btn-outline" onclick="closeModalFormPaketSoal()">Batal</button>
-          <button type="submit" class="btn btn-primary"><i data-lucide="save" style="width: 15px; height: 15px;"></i>Simpan Paket Soal</button>
+          <button type="submit" class="btn btn-primary"><i data-lucide="save"
+              style="width: 15px; height: 15px;"></i>Simpan Paket Soal</button>
         </div>
       </form>
     </div>
@@ -1961,39 +2520,52 @@
   <!-- ==================== MODAL KELOLA BUTIR SOAL PILIHAN GANDA (BEESMART) ==================== -->
   <div id="modal-kelola-butir-soal" class="login-modal hidden" style="z-index: 99998;">
     <div class="login-modal-overlay" onclick="closeModalKelolaButirSoal()"></div>
-    <div class="login-card modal-content" style="max-width: 960px; width: 95vw; max-height: 92vh; display: flex; flex-direction: column; text-align: left; padding: 22px;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+    <div class="login-card modal-content"
+      style="max-width: 960px; width: 95vw; max-height: 92vh; display: flex; flex-direction: column; text-align: left; padding: 22px;">
+      <div
+        style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
         <div>
-          <h3 id="kelola-butir-paket-title" style="margin: 0; color: var(--text-color);">Kelola Butir Pertanyaan CBT</h3>
-          <p id="kelola-butir-paket-sub" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 13px;">Paket Soal CBT</p>
+          <h3 id="kelola-butir-paket-title" style="margin: 0; color: var(--text-color);">Kelola Butir Pertanyaan CBT
+          </h3>
+          <p id="kelola-butir-paket-sub" style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 13px;">Paket
+            Soal CBT</p>
         </div>
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <button class="btn btn-sm" onclick="downloadTemplateExcelSoal()" style="background: #059669; color: #fff; border: none; font-size: 12px; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
+          <button class="btn btn-sm" onclick="downloadTemplateExcelSoal()"
+            style="background: #059669; color: #fff; border: none; font-size: 12px; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="download" style="width: 14px; height: 14px;"></i>Download Template
           </button>
-          <label class="btn btn-sm btn-outline" style="cursor: pointer; font-size: 12px; margin: 0; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
+          <label class="btn btn-sm btn-outline"
+            style="cursor: pointer; font-size: 12px; margin: 0; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="file-spreadsheet" style="width: 14px; height: 14px;"></i>Import Excel
-            <input type="file" id="input-import-excel-soal" accept=".xlsx, .xls" style="display: none;" onchange="handleImportExcelSoal(this)">
+            <input type="file" id="input-import-excel-soal" accept=".xlsx, .xls" style="display: none;"
+              onchange="handleImportExcelSoal(this)">
           </label>
-          <button class="btn btn-sm p" onclick="tambahButirSoalBaruUI()" style="font-size: 12px; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
+          <button class="btn btn-sm p" onclick="tambahButirSoalBaruUI()"
+            style="font-size: 12px; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="plus" style="width: 14px; height: 14px;"></i>Tambah Butir
           </button>
-          <button class="btn-close-modal" onclick="closeModalKelolaButirSoal()" style="position: static; margin-left: 4px;">&times;</button>
+          <button class="btn-close-modal" onclick="closeModalKelolaButirSoal()"
+            style="position: static; margin-left: 4px;">&times;</button>
         </div>
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <span id="kelola-butir-total-label" style="font-weight: 700; font-size: 13px; color: var(--text-color);">Total: 0 Butir Soal</span>
+        <span id="kelola-butir-total-label" style="font-weight: 700; font-size: 13px; color: var(--text-color);">Total:
+          0 Butir Soal</span>
         <small style="color: var(--text-muted);">Pilihan Ganda (Opsi A, B, C, D) & Tentukan Kunci Jawaban</small>
       </div>
 
-      <div id="container-list-butir-soal" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px;">
+      <div id="container-list-butir-soal"
+        style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px;">
         <!-- Rendered by renderDaftarButirSoalEditor() -->
       </div>
 
-      <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+      <div
+        style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
         <button type="button" class="btn btn-outline" onclick="closeModalKelolaButirSoal()">Tutup</button>
-        <button type="button" class="btn btn-primary" onclick="simpanSemuaButirSoal()"><i data-lucide="check" style="width: 15px; height: 15px;"></i>Simpan Semua Butir Soal</button>
+        <button type="button" class="btn btn-primary" onclick="simpanSemuaButirSoal()"><i data-lucide="check"
+            style="width: 15px; height: 15px;"></i>Simpan Semua Butir Soal</button>
       </div>
     </div>
   </div>
@@ -2004,7 +2576,8 @@
     <div class="login-card modal-content" style="max-width: 520px; text-align: left;">
       <button class="btn-close-modal" onclick="closeModalPilihUjianCBT()">&times;</button>
       <h3 style="margin-top: 0; margin-bottom: 6px;">Konfirmasi Mengikuti Ujian CBT</h3>
-      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Masukkan Token Ujian yang diberikan tutor untuk memulai ujian.</p>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">Masukkan Token Ujian yang diberikan
+        tutor untuk memulai ujian.</p>
 
       <form id="form-pilih-cbt" onsubmit="event.preventDefault(); prosesMulaiCBT();">
         <div class="form-group">
@@ -2022,7 +2595,8 @@
         </div>
 
         <!-- Info Box Paket -->
-        <div id="box-info-cbt-paket" style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-top: 12px; font-size: 13px;">
+        <div id="box-info-cbt-paket"
+          style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-top: 12px; font-size: 13px;">
           <div style="display: flex; justify-content: space-between;">
             <span style="color: var(--text-muted);">Alokasi Waktu:</span>
             <strong id="cbt-dialog-durasi" style="color: var(--primary-color);">15 Menit</strong>
@@ -2033,18 +2607,21 @@
           </div>
           <div style="display: flex; justify-content: space-between; margin-top: 4px;">
             <span style="color: var(--text-muted);">Status Ujian:</span>
-            <span id="cbt-dialog-status-badge" class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700;">AKTIF</span>
+            <span id="cbt-dialog-status-badge" class="badge"
+              style="background: #dcfce7; color: #15803d; font-weight: 700;">AKTIF</span>
           </div>
         </div>
 
         <div class="form-group" style="margin-top: 14px;">
           <label>Token Ujian (Diberikan oleh Tutor) <span style="color:red">*</span></label>
-          <input type="text" id="cbt-input-token" required placeholder="Masukkan Token (Contoh: BEESMART)" style="text-transform: uppercase; font-family: monospace; font-size: 16px; font-weight: 800; letter-spacing: 2px;">
+          <input type="text" id="cbt-input-token" required placeholder="Masukkan Token (Contoh: BEESMART)"
+            style="text-transform: uppercase; font-family: monospace; font-size: 16px; font-weight: 800; letter-spacing: 2px;">
         </div>
 
         <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
           <button type="button" class="btn btn-outline" onclick="closeModalPilihUjianCBT()">Batal</button>
-          <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #059669, #10b981); border: none;">
+          <button type="submit" class="btn btn-primary"
+            style="background: linear-gradient(135deg, #059669, #10b981); border: none;">
             <i data-lucide="play" style="width: 15px; height: 15px;"></i>Mulai Ujian Sekarang
           </button>
         </div>
@@ -2054,36 +2631,47 @@
 
   <!-- ==================== MODAL CBT UJIAN INTERAKTIF (BEESMART V3 FULL ENGINE) ==================== -->
   <div id="modal-cbt-ujian" class="login-modal hidden" style="z-index: 99999; padding: 0;">
-    <div style="width: 100vw; height: 100vh; background: var(--bg-color); display: flex; flex-direction: column; overflow: hidden; position: relative;">
+    <div
+      style="width: 100vw; height: 100vh; background: var(--bg-color); display: flex; flex-direction: column; overflow: hidden; position: relative;">
       <!-- CBT Topbar / Header -->
-      <header style="background: var(--surface-color); border-bottom: 2px solid var(--primary-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.15); z-index: 10;">
+      <header
+        style="background: var(--surface-color); border-bottom: 2px solid var(--primary-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.15); z-index: 10;">
         <div style="display: flex; align-items: center; gap: 14px;">
-          <div style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-color), #0284c7); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px;">
+          <div
+            style="width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-color), #0284c7); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px;">
             CBT
           </div>
           <div>
-            <h2 id="cbt-header-mapel" style="margin: 0; font-size: 15px; font-weight: 800; color: var(--text-color);">Ujian Evaluasi Belajar</h2>
-            <div id="cbt-header-siswa" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Peserta: Siswa · Token: BEESMART</div>
+            <h2 id="cbt-header-mapel" style="margin: 0; font-size: 15px; font-weight: 800; color: var(--text-color);">
+              Ujian Evaluasi Belajar</h2>
+            <div id="cbt-header-siswa" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Peserta:
+              Siswa · Token: BEESMART</div>
           </div>
         </div>
 
         <!-- Controls: Font Size, Sisa Waktu & Finish -->
         <div style="display: flex; align-items: center; gap: 14px;">
           <!-- Font Size Controls -->
-          <div style="display: flex; align-items: center; gap: 4px; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border-color);">
-            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); padding-right: 4px;">Ukuran Font:</span>
-            <button type="button" class="btn btn-sm" onclick="adjustCbtFontSize(-1)" style="padding: 2px 8px; font-weight: 800; height: 26px;" title="Perkecil Font">A-</button>
-            <button type="button" class="btn btn-sm" onclick="adjustCbtFontSize(1)" style="padding: 2px 8px; font-weight: 800; height: 26px;" title="Perbesar Font">A+</button>
+          <div
+            style="display: flex; align-items: center; gap: 4px; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); padding-right: 4px;">Ukuran
+              Font:</span>
+            <button type="button" class="btn btn-sm" onclick="adjustCbtFontSize(-1)"
+              style="padding: 2px 8px; font-weight: 800; height: 26px;" title="Perkecil Font">A-</button>
+            <button type="button" class="btn btn-sm" onclick="adjustCbtFontSize(1)"
+              style="padding: 2px 8px; font-weight: 800; height: 26px;" title="Perbesar Font">A+</button>
           </div>
 
           <!-- Timer Box -->
-          <div style="background: #0f172a; color: #38bdf8; border: 1.5px solid #0284c7; padding: 6px 14px; border-radius: 8px; display: flex; align-items: center; gap: 8px; font-family: monospace; font-weight: 900; font-size: 18px; letter-spacing: 1px;">
+          <div
+            style="background: #0f172a; color: #38bdf8; border: 1.5px solid #0284c7; padding: 6px 14px; border-radius: 8px; display: flex; align-items: center; gap: 8px; font-family: monospace; font-weight: 900; font-size: 18px; letter-spacing: 1px;">
             <i data-lucide="clock" style="width: 18px; height: 18px; color: #38bdf8;"></i>
             <span id="cbt-countdown-timer">00:00</span>
           </div>
 
           <!-- Selesaikan Ujian -->
-          <button type="button" class="btn" onclick="konfirmasiSelesaiCBT()" style="background: #dc2626; color: #fff; border: none; font-weight: 700; font-size: 13px; padding: 8px 14px;">
+          <button type="button" class="btn" onclick="konfirmasiSelesaiCBT()"
+            style="background: #dc2626; color: #fff; border: none; font-weight: 700; font-size: 13px; padding: 8px 14px;">
             <i data-lucide="check-circle" style="width: 15px; height: 15px;"></i>Selesai Ujian
           </button>
         </div>
@@ -2094,23 +2682,29 @@
         <!-- Area Soal (Kiri) -->
         <main style="flex: 1; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 18px;">
           <!-- Badge Nomor Soal & Status Ragu -->
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-color); padding-bottom: 12px;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border-color); padding-bottom: 12px;">
             <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="background: var(--primary-color); color: #fff; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 14px;">
+              <span
+                style="background: var(--primary-color); color: #fff; padding: 4px 12px; border-radius: 6px; font-weight: 800; font-size: 14px;">
                 SOAL NO. <span id="cbt-current-no">1</span>
               </span>
-              <span id="cbt-ragu-badge" style="display: none; background: #eab308; color: #000; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 800;">
+              <span id="cbt-ragu-badge"
+                style="display: none; background: #eab308; color: #000; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 800;">
                 ⚠️ RAGU-RAGU
               </span>
             </div>
-            <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 700; color: #ca8a04; user-select: none;">
-              <input type="checkbox" id="cbt-check-ragu" onchange="toggleRaguRagu(this.checked)" style="width: 16px; height: 16px; accent-color: #eab308;">
+            <label
+              style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; font-weight: 700; color: #ca8a04; user-select: none;">
+              <input type="checkbox" id="cbt-check-ragu" onchange="toggleRaguRagu(this.checked)"
+                style="width: 16px; height: 16px; accent-color: #eab308;">
               Tandai Ragu-Ragu
             </label>
           </div>
 
           <!-- Teks Pertanyaan -->
-          <div id="cbt-soal-text" style="font-size: 16px; line-height: 1.7; color: var(--text-color); font-weight: 500; word-break: break-word;">
+          <div id="cbt-soal-text"
+            style="font-size: 16px; line-height: 1.7; color: var(--text-color); font-weight: 500; word-break: break-word;">
             Memuat butir pertanyaan...
           </div>
 
@@ -2123,15 +2717,19 @@
           </div>
 
           <!-- Bottom Navigation (Sebelumnya / Selanjutnya / Selesai) -->
-          <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-            <button id="btn-cbt-prev" type="button" class="btn btn-outline" onclick="navigasiSoalCBT(-1)" style="font-weight: 700; gap: 8px;">
+          <div
+            style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <button id="btn-cbt-prev" type="button" class="btn btn-outline" onclick="navigasiSoalCBT(-1)"
+              style="font-weight: 700; gap: 8px;">
               <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>Soal Sebelumnya
             </button>
             <div style="display: flex; gap: 10px;">
-              <button id="btn-cbt-next" type="button" class="btn btn-primary" onclick="navigasiSoalCBT(1)" style="font-weight: 700; gap: 8px;">
+              <button id="btn-cbt-next" type="button" class="btn btn-primary" onclick="navigasiSoalCBT(1)"
+                style="font-weight: 700; gap: 8px;">
                 Soal Berikutnya<i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
               </button>
-              <button id="btn-cbt-finish" type="button" class="btn" onclick="konfirmasiSelesaiCBT()" style="display: none; background: #059669; color: #fff; font-weight: 800; gap: 8px;">
+              <button id="btn-cbt-finish" type="button" class="btn" onclick="konfirmasiSelesaiCBT()"
+                style="display: none; background: #059669; color: #fff; font-weight: 800; gap: 8px;">
                 <i data-lucide="check" style="width: 16px; height: 16px;"></i>Selesaikan Ujian Sekarang
               </button>
             </div>
@@ -2139,19 +2737,24 @@
         </main>
 
         <!-- Sidebar Panel Navigasi Nomor Soal (Kanan) -->
-        <aside style="width: 290px; background: var(--surface-color); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 18px; box-sizing: border-box;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+        <aside
+          style="width: 290px; background: var(--surface-color); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 18px; box-sizing: border-box;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
             <h4 style="margin: 0; font-size: 13.5px; font-weight: 800; color: var(--text-color);">Nomor Soal</h4>
-            <span id="cbt-progress-count" style="font-size: 12px; font-weight: 700; color: var(--primary-color);">0 Terjawab</span>
+            <span id="cbt-progress-count" style="font-size: 12px; font-weight: 700; color: var(--primary-color);">0
+              Terjawab</span>
           </div>
 
           <!-- Grid Nomor Soal -->
-          <div id="cbt-grid-nomor" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-y: auto; flex: 1; align-content: start; padding-right: 4px;">
+          <div id="cbt-grid-nomor"
+            style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; overflow-y: auto; flex: 1; align-content: start; padding-right: 4px;">
             <!-- Rendered by renderCbtGridNomor() -->
           </div>
 
           <!-- Legend Keterangan Warna Grid -->
-          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border-color); display: flex; flex-direction: column; gap: 6px; font-size: 11.5px; color: var(--text-muted);">
+          <div
+            style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border-color); display: flex; flex-direction: column; gap: 6px; font-size: 11.5px; color: var(--text-muted);">
             <div style="display: flex; align-items: center; gap: 8px;">
               <span style="width: 14px; height: 14px; border-radius: 4px; background: #10b981;"></span>
               <span>Sudah Dijawab</span>
@@ -2161,7 +2764,8 @@
               <span>Ragu-Ragu</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="width: 14px; height: 14px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border-color);"></span>
+              <span
+                style="width: 14px; height: 14px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border-color);"></span>
               <span>Belum Dijawab</span>
             </div>
           </div>
@@ -2170,6 +2774,336 @@
     </div>
   </div>
 
+  <!-- Modal Interaktif Kamera (Mendukung Kamera Laptop/PC & HP Langsung) -->
+  <div id="modal-live-camera" class="login-modal hidden" style="z-index: 99999;">
+    <div class="login-modal-overlay" onclick="closeLiveCameraModal()"></div>
+    <div class="login-card modal-content" style="max-width: 540px; width: 95%; padding: 20px; text-align: center;">
+      <div
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+        <h3 id="camera-modal-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="camera" style="width: 18px; height: 18px; color: var(--primary);"></i> Ambil Foto Dokumen
+        </h3>
+        <button type="button" class="btn-close-modal" onclick="closeLiveCameraModal()"
+          style="font-size: 20px; line-height: 1;">&times;</button>
+      </div>
+
+      <!-- Video Live Stream Container -->
+      <div
+        style="position: relative; width: 100%; border-radius: var(--radius-sm); overflow: hidden; background: #000; aspect-ratio: 4/3; margin-bottom: 12px; border: 1px solid var(--border-color);">
+        <video id="camera-video-stream" autoplay playsinline
+          style="width: 100%; height: 100%; object-fit: cover;"></video>
+        <canvas id="camera-canvas-capture" style="display: none;"></canvas>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; justify-content: center; gap: 10px;">
+        <button type="button" class="btn" onclick="closeLiveCameraModal()"
+          style="height: 38px; padding: 0 16px;">Batal</button>
+        <button type="button" class="btn p" onclick="capturePhotoFromStream()"
+          style="height: 38px; padding: 0 20px; font-weight: 600;">
+          <i data-lucide="camera" style="width: 16px; height: 16px;"></i> Ambil Foto Sekarang
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL FORM KEGIATAN (ADMIN & GURU) ==================== -->
+  <div id="modal-kegiatan" class="login-modal hidden">
+    <div class="login-modal-overlay" onclick="closeModalKegiatan()"></div>
+    <div class="login-card modal-content"
+      style="max-width: 680px; max-height: 90vh; overflow-y: auto; text-align: left; border-radius: 16px;">
+      <button class="btn-close-modal" onclick="closeModalKegiatan()">&times;</button>
+      <div style="padding: 1.5rem;">
+        <h3 id="modal-kegiatan-title"
+          style="margin-top: 0; color: var(--primary-color); display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="newspaper"></i> Tambah Informasi Kegiatan
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.25rem;">
+          Guru dan Admin dapat menerbitkan warta kegiatan. Hak akses visibilitas luar portal dapat diatur oleh Admin.
+        </p>
+
+        <form id="form-kegiatan" onsubmit="event.preventDefault(); saveKegiatan();">
+          <input type="hidden" id="keg-id" value="">
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label
+              style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">
+              Judul Kegiatan / Berita <span style="color:red">*</span>
+            </label>
+            <input type="text" id="keg-judul" class="form-control" required
+              placeholder="Contoh: Orientasi Belajar Paket C Angkatan 2026"
+              style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+          </div>
+
+          <div class="form-group-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group half" style="flex: 1;">
+              <label
+                style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">
+                Tanggal Kegiatan <span style="color:red">*</span>
+              </label>
+              <input type="date" id="keg-tanggal" class="form-control" required
+                style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+            </div>
+            <div class="form-group half" style="flex: 1;">
+              <label
+                style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">
+                Kategori Kegiatan
+              </label>
+              <select id="keg-kategori" class="form-control"
+                style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+                <option value="Akademik">Akademik & Belajar</option>
+                <option value="Ujian / Evaluasi">Ujian & Evaluasi CBT</option>
+                <option value="Pentas / Kreativitas">Pentas & Karya Siswa</option>
+                <option value="Sosial & Lingkungan">Bakti Sosial & Komunitas</option>
+                <option value="Pengumuman Penting">Pengumuman Resmi</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label
+              style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">
+              Isi Deskripsi / Berita Lengkap <span style="color:red">*</span>
+            </label>
+            <textarea id="keg-deskripsi" class="form-control" rows="5" required
+              placeholder="Tuliskan detail rangkuman acara, hasil, pesan, atau arahan kegiatan..."
+              style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 10px; font-family: inherit; font-size: 0.9rem; line-height: 1.5;"></textarea>
+          </div>
+
+          <div class="form-group-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group half" style="flex: 1;">
+              <label
+                style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">
+                Foto / Banner (URL / Direct Link)
+              </label>
+              <input type="text" id="keg-gambar" class="form-control" placeholder="https://... atau biarkan default"
+                style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+            </div>
+            <div class="form-group half" style="flex: 1;">
+              <label
+                style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">
+                Link Video (YouTube / Drive Opsional)
+              </label>
+              <input type="text" id="keg-video" class="form-control" placeholder="https://youtube.com/watch?v=..."
+                style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+            </div>
+          </div>
+
+          <!-- Hak Akses Visibilitas: Aturan Guru vs Admin -->
+          <div
+            style="background: rgba(16, 185, 129, 0.08); border: 1px dashed var(--primary-color); border-radius: 10px; padding: 14px; margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <label
+                style="font-size: 0.88rem; font-weight: 700; color: var(--text-color); display: flex; align-items: center; gap: 6px; margin: 0;">
+                <i data-lucide="eye" style="width: 16px; height: 16px; color: var(--primary-color);"></i> Target
+                Visibilitas Tampilan
+              </label>
+              <span id="keg-vis-role-badge"
+                style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: var(--surface-color); font-weight: 600;"></span>
+            </div>
+
+            <select id="keg-target-display" class="form-control"
+              style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-color); font-weight: 600; padding: 0 12px;">
+              <option value="portal">🔒 Hanya Tampil di Portal Siswa & Petugas (Setelah Login)</option>
+              <option value="public">🌐 Tampil di Halaman Publik / Sebelum Portal (Landing Page)</option>
+              <option value="both">🌟 Tampil di Keduanya (Portal Login & Halaman Publik)</option>
+            </select>
+            <p id="keg-vis-hint" style="font-size: 0.76rem; color: var(--text-muted); margin: 6px 0 0 0;">
+              Catatan: Guru hanya dapat mempublikasikan ke dalam Portal. Admin berwenang mengubah visibilitas agar
+              tampil di luar portal / publik.
+            </p>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn" onclick="closeModalKegiatan()"
+              style="padding: 0 18px; height: 38px;">Batal</button>
+            <button type="submit" class="btn p" style="padding: 0 24px; height: 38px; font-weight: 600;">
+              <i data-lucide="save" style="width: 16px; height: 16px;"></i> Simpan Kegiatan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL EDIT PROFIL & LOKASI TK (ADMIN) ==================== -->
+  <div id="modal-edit-tk" class="login-modal hidden">
+    <div class="login-modal-overlay" onclick="closeModalEditTK()"></div>
+    <div class="login-card modal-content"
+      style="max-width: 720px; max-height: 90vh; overflow-y: auto; text-align: left; border-radius: 16px;">
+      <button class="btn-close-modal" onclick="closeModalEditTK()">&times;</button>
+      <div style="padding: 1.5rem;">
+        <h3 style="margin-top: 0; color: #0284c7; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="map-pin"></i> Pengaturan Informasi & Lokasi Peta TK
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.25rem;">
+          Atur informasi PAUD/TK Aura Anugerah serta koordinat titik peta Leaflet (OpenStreetMap) di Sentani, Jayapura.
+        </p>
+
+        <form id="form-edit-tk" onsubmit="event.preventDefault(); saveInfoTK();">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label
+              style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Nama
+              Satuan Pendidikan</label>
+            <input type="text" id="tk-nama" class="form-control" required
+              style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label
+              style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Alamat
+              Lengkap</label>
+            <input type="text" id="tk-jalan" class="form-control" required
+              style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+          </div>
+
+          <div class="form-group-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group half" style="flex: 1;">
+              <label
+                style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Kelurahan
+                / Desa / Distrik</label>
+              <input type="text" id="tk-kecamatan" class="form-control"
+                style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+            </div>
+            <div class="form-group half" style="flex: 1;">
+              <label
+                style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Kabupaten
+                / Kota & Kode Pos</label>
+              <input type="text" id="tk-kabupaten" class="form-control"
+                style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label
+              style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Deskripsi
+              Singkat TK</label>
+            <textarea id="tk-deskripsi" class="form-control" rows="3"
+              style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 10px; font-family: inherit; font-size: 0.9rem; line-height: 1.5;"></textarea>
+          </div>
+
+          <div class="form-group-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group half" style="flex: 1;">
+              <label
+                style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Visi
+                TK</label>
+              <textarea id="tk-visi" class="form-control" rows="2"
+                style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 8px; font-family: inherit; font-size: 0.85rem;"></textarea>
+            </div>
+            <div class="form-group half" style="flex: 1;">
+              <label
+                style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Misi
+                TK</label>
+              <textarea id="tk-misi" class="form-control" rows="2"
+                style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 8px; font-family: inherit; font-size: 0.85rem;"></textarea>
+            </div>
+          </div>
+
+          <div class="form-group-row" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group half" style="flex: 1;">
+              <label
+                style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Nomor
+                WhatsApp</label>
+              <input type="text" id="tk-wa" class="form-control" placeholder="628123456789"
+                style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+            </div>
+            <div class="form-group half" style="flex: 1;">
+              <label
+                style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Kontak
+                Telepon / Email</label>
+              <input type="text" id="tk-telepon" class="form-control" placeholder="aura.anugerah@gmail.com"
+                style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
+            </div>
+          </div>
+
+          <!-- Koordinat Titik Lokasi Peta -->
+          <div
+            style="background: rgba(2, 132, 199, 0.08); border: 1px dashed #0284c7; border-radius: 10px; padding: 14px; margin-bottom: 1.5rem;">
+            <label
+              style="font-size: 0.88rem; font-weight: 700; color: var(--text-color); display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+              <i data-lucide="map" style="width: 16px; height: 16px; color: #0284c7;"></i> Titik Koordinat Peta
+              (Latitude, Longitude)
+            </label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="tk-latlong" class="form-control" required placeholder="-2.566100,140.505700"
+                style="flex: 1; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-color); font-weight: 600; padding: 0 12px;">
+              <button type="button" class="btn" onclick="resetDefaultCoordinates()"
+                style="height: 40px; white-space: nowrap; font-size: 0.82rem;">
+                Titik Sentani
+              </button>
+            </div>
+            <p style="font-size: 0.76rem; color: var(--text-muted); margin: 6px 0 0 0;">
+              Satu lokasi dengan PKBM Aura Anugerah: Sentani, Kab. Jayapura (Format: Latitude,Longitude).
+            </p>
+          </div>
+
+          <!-- Pengaturan Visibilitas Modul TK oleh Admin -->
+          <div
+            style="background: var(--surface-2); border-radius: 10px; padding: 14px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
+            <label
+              style="font-size: 0.88rem; font-weight: 700; color: var(--text-color); display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+              <i data-lucide="layout" style="width: 16px; height: 16px; color: var(--primary-color);"></i> Penempatan
+              Tampilan Informasi TK
+            </label>
+            <select id="tk-target-display" class="form-control"
+              style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-color); font-weight: 600; padding: 0 12px;">
+              <option value="both">🌟 Tampil di Keduanya (Portal & Landing Page Publik)</option>
+              <option value="portal">🔒 Hanya Tampil di Dalam Portal Login</option>
+              <option value="public">🌐 Hanya Tampil di Halaman Luar / Publik (Landing Page)</option>
+            </select>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn" onclick="closeModalEditTK()"
+              style="padding: 0 18px; height: 38px;">Batal</button>
+            <button type="submit" class="btn p"
+              style="background: #0284c7; border-color: #0284c7; padding: 0 24px; height: 38px; font-weight: 600;">
+              <i data-lucide="save" style="width: 16px; height: 16px;"></i> Simpan Pengaturan TK
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- ==================== MODAL EMBEDDED NAVIGASI PETA ==================== -->
+  <div id="modal-navigasi-peta" class="login-modal hidden" style="z-index: 99999;">
+    <div class="login-modal-overlay" onclick="closeModalNavigasiPeta()"></div>
+    <div class="modal-content" style="max-width: 950px; width: 95%; max-height: 92vh; display: flex; flex-direction: column; padding: 1.5rem; border-radius: 18px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="background: rgba(34, 197, 94, 0.15); color: var(--primary-color); padding: 8px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="navigation" style="width: 20px; height: 20px;"></i>
+          </div>
+          <div>
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-color); margin: 0;">Navigasi & Rute Menuju PKBM Aura Anugerah</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 0 0;">Sentani, Kabupaten Jayapura, Papua</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="closeModalNavigasiPeta()">&times;</button>
+      </div>
+
+      <!-- Peta Geometri Interaktif Embedded -->
+      <div style="position: relative; flex: 1; min-height: 440px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border-color);">
+        <div id="embed-navigation-map" style="width: 100%; height: 100%; min-height: 440px;"></div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap;">
+        <div style="font-size: 0.82rem; color: var(--text-muted);">
+          <i data-lucide="info" style="width: 14px; height: 14px; display: inline-block; vertical-align: -2px; color: var(--primary-color);"></i>
+          <span>Peta tampilan geometri satelit resolusi tinggi ESRI World Imagery terintegrasi langsung di aplikasi.</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <a id="btn-open-external-gmaps" href="https://www.google.com/maps?q=-2.566100,140.505700" target="_blank" class="btn" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 0 14px; height: 36px;">
+            <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+            <span>Buka di Google Maps</span>
+          </a>
+          <button type="button" class="btn btn-landing-primary" onclick="closeModalNavigasiPeta()" style="padding: 0 18px; height: 36px; font-size: 0.82rem;">
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- Loading Overlay -->
   <div id="global-loader" class="global-loader hidden">
     <div class="spinner"></div>
@@ -2181,4 +3115,5 @@
   <script src="app.js"></script>
   <script src="cbt-engine.js"></script>
 </body>
+
 </html>

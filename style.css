@@ -32,39 +32,39 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  /* Permukaan Tema Hijau Dark Mode */
-  --bg-color: #0a1a13;
-  --surface-color: #10261c;
-  --surface-2: #10261c;
-  --surface-hover: #173626;
-  --border-color: #1c3a2b;
-  /* Teks */
-  --text-color: #ecfdf5;
-  --text-muted: #8fb5a2;
+  /* Permukaan Tema Dark Mode Modern & Nyaman Dibaca */
+  --bg-color: #0d1512;
+  --surface-color: #15221c;
+  --surface-2: #1c3027;
+  --surface-hover: #243d32;
+  --border-color: #2e4d3f;
+  /* Teks Kontras Tinggi & Terbaca Jelas */
+  --text-color: #f8fafc;
+  --text-muted: #94a3b8;
   /* Aksen Utama */
-  --primary-color: #16a34a;
-  --primary-hover: #22c55e;
-  --primary-light: rgba(34, 197, 94, 0.15);
-  --primary: #16a34a;
-  --accent: #F2A900;
-  --accent-color: #F2A900;
+  --primary-color: #22c55e;
+  --primary-hover: #16a34a;
+  --primary-light: rgba(34, 197, 94, 0.2);
+  --primary: #22c55e;
+  --accent: #fbbf24;
+  --accent-color: #fbbf24;
   /* Status */
   --success-color: #4ade80;
-  --success-bg: rgba(34, 197, 94, 0.15);
-  --warning-color: #FFC857;
-  --warning-bg: rgba(255, 200, 87, 0.14);
-  --danger-color: #C7362F;
-  --danger-text: #FF8A8A;
-  --danger-bg: rgba(255, 138, 138, 0.12);
-  --info: #4ade80;
-  --info-bg: #173626;
+  --success-bg: rgba(34, 197, 94, 0.2);
+  --warning-color: #fcd34d;
+  --warning-bg: rgba(251, 191, 36, 0.16);
+  --danger-color: #f87171;
+  --danger-text: #fca5a5;
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --info: #38bdf8;
+  --info-bg: rgba(56, 189, 248, 0.15);
   /* Bentuk */
   --radius: 10px;
   --radius-sm: 6px;
   --border-radius: 10px;
-  --shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.25);
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.3);
-  --shadow-lg: 0 10px 25px rgba(0,0,0,.5);
+  --shadow: 0 1px 3px rgba(0,0,0,.45), 0 4px 16px rgba(0,0,0,.35);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.35);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,.6);
 }
 
 * {
@@ -439,19 +439,115 @@ td.r, th.r { text-align: right; }
   color: var(--text-muted);
   min-width: 0;
 }
+.form-group-row {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.form-group.half {
+  flex: 1;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.form-group input:not([type="checkbox"]):not([type="radio"]),
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  height: 40px;
+  padding: 0 12px;
+  color: var(--text-color);
+  font-size: 13px;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
 .form input:not([type="checkbox"]):not([type="radio"]), .form select {
   background: var(--surface-2);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  height: 36px;
+  height: 38px;
   padding: 0 12px;
   width: 100%;
   min-width: 0;
   color: var(--text-color);
+  display: flex;
+  align-items: center;
+}
+.form input[type="file"] {
+  padding: 3px 8px;
+  line-height: 30px;
+  cursor: pointer;
+}
+.form input[type="file"]::file-selector-button {
+  background: var(--surface-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 3px 10px;
+  margin-right: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.form input[type="file"]::file-selector-button:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.form .btn-camera-trigger {
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 38px;
+  margin: 0;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+.form .btn-camera-trigger:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 .form input:not([type="checkbox"]):not([type="radio"]):focus, .form select:focus {
   border-color: var(--primary);
   outline: none;
+  box-shadow: 0 0 0 2px var(--primary-light);
 }
 
 /* Card Persis Rostering Teknik */
@@ -1359,8 +1455,9 @@ main.main-content {
   align-items: center;
   padding: 1.5rem 5%;
   border-bottom: 1px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--surface-color);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
   z-index: 50;
@@ -1374,10 +1471,14 @@ main.main-content {
 }
 
 .brand-logo-img {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  background: var(--primary-color);
+  padding: 5px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+  box-sizing: border-box;
 }
 
 .brand-icon {
@@ -1720,7 +1821,17 @@ main.main-content {
   box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
 }
 
-/* Modal Generic (App Modals & Popups) */
+/* ==================== LOGIN MODAL & PAGE (SISTEM INFORMASI SEKOLAH TERPADU) ==================== */
+:root {
+  --bg-img: url('bg-login.jpeg');
+  --login-primary: #2e7d32;
+  --login-primary-hover: #276b2b;
+  --login-focus-accent: #43a047;
+  --login-text: #14231a;
+  --login-muted: #5f6f65;
+  --login-input-bg: #eef3ff;
+}
+
 .login-modal {
   position: fixed;
   top: 0;
@@ -1731,107 +1842,622 @@ main.main-content {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
   padding: 16px;
   box-sizing: border-box;
+  overflow-y: auto;
 }
 
-/* Hanya Modal Login yang menggunakan gambar latar belakang lab/kelas */
-#modal-login {
-  background-image: url('bg-login.jpeg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
+/* Overlay umum untuk seluruh modal */
 .login-modal-overlay {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(11, 26, 43, 0.7);
+  background: rgba(15, 23, 42, 0.72);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  z-index: 1;
 }
 
+/* Konten kartu modal umum (seperti form pendaftaran, edit, dll) */
 .login-modal .modal-content {
   position: relative;
-  z-index: 1001;
+  z-index: 2;
   background: var(--surface-color);
   color: var(--text-color);
-  padding: 32px 28px;
-  border-radius: var(--radius);
   border: 1px solid var(--border-color);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 2.25rem 2rem;
   width: 100%;
-  max-width: 410px;
   box-sizing: border-box;
 }
 
-.login-modal .school-logo-large {
-  width: 76px;
-  height: 76px;
+#modal-login {
+  background-color: #0f172a;
+  background-image: var(--bg-img);
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  padding: calc(env(safe-area-inset-top, 16px) + 16px) 16px calc(env(safe-area-inset-bottom, 16px) + 16px) 16px;
+}
+
+#modal-login .login-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  z-index: 1;
+}
+
+/* Container Pembungkus Dua Kolom */
+.login-wrapper-container {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1080px;
+  margin: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 20px;
+  box-sizing: border-box;
+}
+
+.login-inner-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 56px;
+}
+
+/* Kolom Kiri: Informasi Portal & Showcase Fitur */
+.login-brand-column {
+  flex: 1;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0;
+  max-width: 540px;
+}
+
+.portal-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  padding: 6px 16px 6px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  width: fit-content;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.portal-badge-pill img {
+  width: 22px;
+  height: 22px;
   object-fit: contain;
-  margin: 0 auto;
-  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-.login-modal h2 {
-  color: var(--text-color);
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 12px 0 4px;
+.login-showcase-title {
+  font-size: 2.35rem;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 0 0 1.15rem 0;
+  color: #ffffff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-.login-modal p {
-  color: var(--text-muted);
-  font-size: 0.85rem;
+.login-showcase-desc {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: rgba(241, 245, 249, 0.92);
+  margin: 0 0 2rem 0;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-.login-modal .form-group {
-  margin-bottom: 14px;
+.login-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.login-modal .form-group label {
-  font-size: 0.85rem;
+.login-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.95rem;
   font-weight: 500;
-  color: var(--text-color);
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.feature-bullet-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.login-chip-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.login-chip {
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.4px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Kolom Kanan: Kartu Form Login */
+.login-card-container {
+  width: 100%;
+  max-width: 430px;
+  flex-shrink: 0;
+}
+
+#login-card-box {
+  background: #ffffff !important;
+  color: var(--login-text) !important;
+  border-radius: 20px !important;
+  padding: 38px 34px !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  text-align: left;
+}
+
+/* 1. Logo PKBM: Kotak Hijau Terang Berkilau (Persis Logo Sidebar var(--primary-color) #16a34a) */
+.login-avatar-logo {
+  width: 78px;
+  height: 78px;
+  background: var(--primary-color); /* Hijau terang identik dengan sidebar #16a34a */
+  border-radius: 18px;
+  margin: 0 auto 16px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(22, 163, 74, 0.35), 0 2px 6px rgba(0, 0, 0, 0.08);
+  padding: 10px;
+  box-sizing: border-box;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+}
+
+.login-avatar-logo:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 12px 30px rgba(22, 163, 74, 0.45);
+}
+
+.login-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Logo transparan tampil bersih di atas latar hijau terang */
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* 2 & 3. Judul & Subjudul */
+.login-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--login-text);
+  text-align: center;
+  margin: 0 0 6px 0;
+  letter-spacing: 0.5px;
+}
+
+.login-subtitle {
+  font-size: 13.5px;
+  color: var(--login-muted);
+  text-align: center;
+  margin: 0 0 22px 0;
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+/* 9. Alert Error Box */
+.login-error-box {
+  background: #ffe4e6;
+  border: 1px solid #fecdd3;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  line-height: 1.4;
+  animation: fadeIn 0.2s ease;
+}
+
+.login-error-box.hidden {
+  display: none;
+}
+
+/* Form Groups & Inputs */
+.login-form-group {
+  margin-bottom: 16px;
+}
+
+.login-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--login-text);
   margin-bottom: 6px;
 }
 
-.login-modal .form-group input {
+.input-with-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
   width: 100%;
+}
+
+.input-inline-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: #94a3b8;
+  pointer-events: none;
+  transition: color 0.15s ease;
+}
+
+.login-input {
+  width: 100%;
+  height: 48px;
+  background: var(--login-input-bg);
+  border: 1px solid transparent;
+  color: var(--login-text);
+  font-size: 16px; /* Cegah zoom otomatis di iOS */
+  padding: 0 14px;
+  border-radius: 10px;
   box-sizing: border-box;
-  background: var(--surface-2);
-  border: 1px solid var(--border-color);
-  color: var(--text-color);
-  height: 38px;
-  padding: 0 12px;
-  font-size: 0.92rem;
-  border-radius: var(--radius-sm);
   outline: none;
-  transition: border-color 0.15s ease;
+  font-family: inherit;
+  transition: all 0.15s ease;
 }
 
-.login-modal .form-group input:focus {
-  border-color: var(--primary);
+.login-input.with-icon {
+  padding-left: 42px;
 }
 
-.login-modal .form-group input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.75;
+.login-input:focus {
+  background: #ffffff;
+  border: 1px solid var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18);
+}
+
+.input-with-icon-wrapper:focus-within .input-inline-icon {
+  color: var(--primary-color);
+}
+
+.login-input::placeholder {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+/* Password Toggle Wrapper */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .login-input {
+  padding-right: 46px;
+}
+
+.btn-toggle-pwd {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  font-size: 1.15rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+
+.btn-toggle-pwd:hover {
+  color: var(--login-text);
+}
+
+/* 6. Captcha Styles */
+.captcha-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.captcha-hint {
+  font-size: 0.75rem;
+  color: var(--login-muted);
+}
+
+.captcha-box-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.captcha-canvas {
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  height: 44px;
+  flex: 1;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.btn-captcha-refresh {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: var(--login-input-bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.btn-captcha-refresh:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  transform: rotate(45deg);
+}
+
+/* 7. Baris Ingat Saya & Lupa Password */
+.login-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0 20px 0;
+  font-size: 0.85rem;
+}
+
+.remember-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--login-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--login-primary);
+  cursor: pointer;
+}
+
+.forgot-link {
+  color: var(--login-primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+.forgot-link:hover {
+  color: var(--login-primary-hover);
+  text-decoration: underline;
+}
+
+/* 8. Tombol Masuk Aplikasi */
+.btn-login-submit {
+  width: 100%;
+  height: 48px;
+  background: var(--login-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.25);
+}
+
+.btn-login-submit:hover:not(:disabled) {
+  background: var(--login-primary-hover);
+  box-shadow: 0 6px 16px rgba(46, 125, 50, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-login-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 10. Garis Pemisah & Tautan Kembali */
+.login-divider-row {
+  margin-top: 18px;
+  text-align: center;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 14px;
+}
+
+.btn-back-landing {
+  color: var(--login-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+}
+
+.btn-back-landing:hover {
+  color: var(--login-primary-hover);
+  text-decoration: underline;
+}
+
+/* 11. Footer Kartu Login */
+.login-card-footer {
+  margin-top: 18px;
+  text-align: center;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 12px;
+}
+
+.footer-help-text {
+  font-size: 0.82rem;
+  color: var(--login-muted);
+  margin: 0 0 4px 0;
+}
+
+.admin-help-link {
+  color: var(--login-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-help-link:hover {
+  text-decoration: underline;
+}
+
+.footer-secure-text {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* ==================== RESPONSIVE LAYOUT (<= 900px) ==================== */
+@media (max-width: 900px) {
+  .login-brand-column {
+    display: none; /* Sembunyikan kolom kiri di tablet & HP */
+  }
+
+  .login-wrapper-container {
+    max-width: 440px;
+  }
+
+  .login-inner-layout {
+    justify-content: center;
+    gap: 0;
+  }
+
+  .login-card-container {
+    max-width: 100%;
+    margin: 0 12px;
+  }
+}
+
+/* HP Kecil (<= 480px) */
+@media (max-width: 480px) {
+  #modal-login {
+    align-items: flex-start;
+    padding-top: calc(env(safe-area-inset-top, 12px) + 12px);
+  }
+
+  .login-card-container {
+    margin: 0 6px;
+  }
+
+  #login-card-box {
+    padding: 28px 20px !important;
+  }
+
+  .login-title {
+    font-size: 22px;
+  }
+
+  .login-avatar-logo {
+    width: 64px;
+    height: 64px;
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .btn-close-modal {
   position: absolute;
   top: 1rem;
-  right: 1.5rem;
-  background: none;
+  right: 1.25rem;
+  background: transparent;
   border: none;
   font-size: 1.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   color: var(--text-muted);
+  line-height: 1;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+}
+
+.btn-close-modal:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  transform: rotate(90deg) scale(1.08);
+}
+
+.btn-close-modal:active {
+  transform: rotate(90deg) scale(0.95);
 }
 
 @media (max-width: 768px) {
@@ -2080,6 +2706,126 @@ main.main-content {
   max-height: 260px;
   border-radius: 6px;
   display: block;
+}
+
+/* ==================== SEARCHABLE SELECT DROPDOWN ==================== */
+.searchable-select-wrap {
+  position: relative;
+  width: 100%;
+}
+.searchable-select-trigger {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-color);
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+.searchable-select-trigger:hover {
+  border-color: var(--primary-color);
+}
+.searchable-select-trigger.active {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+.searchable-select-trigger .selected-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  padding-right: 8px;
+}
+.searchable-select-trigger .arrow-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.searchable-select-trigger.active .arrow-icon {
+  transform: rotate(180deg);
+}
+.searchable-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.searchable-select-dropdown.open {
+  display: flex;
+}
+.searchable-select-search-box {
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.searchable-select-search-box input {
+  width: 100%;
+  height: 32px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  color: var(--text-color);
+  outline: none;
+  box-sizing: border-box;
+}
+.searchable-select-search-box input:focus {
+  border-color: var(--primary-color);
+}
+.searchable-select-options {
+  max-height: 220px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+}
+.searchable-select-option {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.15s ease;
+}
+.searchable-select-option:hover,
+.searchable-select-option.highlighted {
+  background: var(--surface-hover);
+  color: var(--primary-color);
+}
+.searchable-select-option.selected {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+.searchable-select-empty {
+  padding: 14px 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 

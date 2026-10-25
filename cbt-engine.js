@@ -2,6 +2,158 @@
 // FITUR CBT UJIAN ONLINE BEESMART V3 PATTERN (MODAL, TIMER, GRID SOAL, AUTO-SCORING)
 // =============================================================================
 
+// ==================== SEARCHABLE SELECT COMPONENT (NATIVE) ====================
+function makeSearchableSelect(selectEl, config = {}) {
+  if (!selectEl) return;
+  const placeholder = config.searchPlaceholder || 'Ketik untuk mencari...';
+
+  // Jika sudah pernah dibuat, update data & trigger text
+  let wrap = selectEl.nextElementSibling;
+  if (wrap && wrap.classList.contains('searchable-select-wrap')) {
+    updateSearchableSelectInstance(selectEl, wrap, placeholder);
+    return;
+  }
+
+  // Sembunyikan elemen select asli tapi tetap simpan di DOM untuk form submit
+  selectEl.style.display = 'none';
+
+  wrap = document.createElement('div');
+  wrap.className = 'searchable-select-wrap';
+
+  wrap.innerHTML = `
+    <div class="searchable-select-trigger" tabindex="0">
+      <span class="selected-text"></span>
+      <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </div>
+    <div class="searchable-select-dropdown">
+      <div class="searchable-select-search-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="${placeholder}" autocomplete="off">
+      </div>
+      <ul class="searchable-select-options"></ul>
+    </div>
+  `;
+
+  selectEl.parentNode.insertBefore(wrap, selectEl.nextSibling);
+
+  const trigger = wrap.querySelector('.searchable-select-trigger');
+  const dropdown = wrap.querySelector('.searchable-select-dropdown');
+  const searchInput = wrap.querySelector('.searchable-select-search-box input');
+  const optionsList = wrap.querySelector('.searchable-select-options');
+
+  function openDropdown() {
+    // Tutup dropdown lain
+    document.querySelectorAll('.searchable-select-dropdown.open').forEach(d => {
+      if (d !== dropdown) {
+        d.classList.remove('open');
+        d.previousElementSibling?.classList.remove('active');
+      }
+    });
+    dropdown.classList.add('open');
+    trigger.classList.add('active');
+    searchInput.value = '';
+    filterOptions('');
+    setTimeout(() => searchInput.focus(), 50);
+  }
+
+  function closeDropdown() {
+    dropdown.classList.remove('open');
+    trigger.classList.remove('active');
+  }
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (dropdown.classList.contains('open')) {
+      closeDropdown();
+    } else {
+      openDropdown();
+    }
+  });
+
+  searchInput.addEventListener('input', (e) => {
+    filterOptions(e.target.value.toLowerCase().trim());
+  });
+
+  searchInput.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  function filterOptions(keyword) {
+    const items = optionsList.querySelectorAll('.searchable-select-option');
+    let hasMatch = false;
+    items.forEach(item => {
+      const text = item.getAttribute('data-text') || '';
+      if (!keyword || text.toLowerCase().includes(keyword)) {
+        item.style.display = '';
+        hasMatch = true;
+      } else {
+        item.style.display = 'none';
+      }
+    });
+
+    let emptyEl = optionsList.querySelector('.searchable-select-empty');
+    if (!hasMatch) {
+      if (!emptyEl) {
+        emptyEl = document.createElement('li');
+        emptyEl.className = 'searchable-select-empty';
+        emptyEl.textContent = 'Tidak ada pilihan yang cocok';
+        optionsList.appendChild(emptyEl);
+      }
+      emptyEl.style.display = '';
+    } else if (emptyEl) {
+      emptyEl.style.display = 'none';
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+
+  updateSearchableSelectInstance(selectEl, wrap, placeholder);
+}
+
+function updateSearchableSelectInstance(selectEl, wrap, placeholder) {
+  const triggerText = wrap.querySelector('.selected-text');
+  const optionsList = wrap.querySelector('.searchable-select-options');
+  if (!triggerText || !optionsList) return;
+
+  optionsList.innerHTML = '';
+
+  const allOptions = Array.from(selectEl.querySelectorAll('option'));
+  let selectedOption = allOptions.find(o => o.selected) || allOptions[0];
+
+  triggerText.textContent = selectedOption ? selectedOption.textContent : (selectEl.getAttribute('placeholder') || '-- Pilih --');
+
+  allOptions.forEach(opt => {
+    const li = document.createElement('li');
+    li.className = 'searchable-select-option' + (opt.value === selectEl.value ? ' selected' : '');
+    li.textContent = opt.textContent;
+    li.setAttribute('data-value', opt.value);
+    li.setAttribute('data-text', opt.textContent);
+
+    li.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectEl.value = opt.value;
+      triggerText.textContent = opt.textContent;
+
+      optionsList.querySelectorAll('.searchable-select-option').forEach(el => el.classList.remove('selected'));
+      li.classList.add('selected');
+
+      wrap.querySelector('.searchable-select-dropdown')?.classList.remove('open');
+      wrap.querySelector('.searchable-select-trigger')?.classList.remove('active');
+
+      // Trigger event onchange asli
+      const event = new Event('change', { bubbles: true });
+      selectEl.dispatchEvent(event);
+    });
+
+    optionsList.appendChild(li);
+  });
+}
+
+
 const INSTITUSI_CONFIG = {
   nama: 'PKBM AURA ANUGERAH',
   yayasan: 'YAYASAN AURA ANUGERAH',

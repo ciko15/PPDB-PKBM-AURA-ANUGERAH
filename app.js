@@ -1,7 +1,7 @@
 // Konfigurasi API Endpoint (Ubah USE_LOCAL_SERVER = true jika menjalankan server Node.js lokal 'npm start')
 const USE_LOCAL_SERVER = false;
 const LOCAL_API_URL = "http://localhost:3001/api";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx8tzFBAyd8aTe1_Or-7skj5lOBQ_K_CoXCAVz_WDqCxkiZg6gTi480I468psGy4wzJ/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzVPoi7lg1ZW6SkD78awPwTLVB51HZQHGiV4R5hUmVD-hURswjVzVzNANX6wJGToYwT/exec";
 const API_URL = USE_LOCAL_SERVER ? LOCAL_API_URL : SCRIPT_URL;
 
 let currentUser = null;
@@ -233,14 +233,36 @@ const tableUsersBody = document.getElementById('table-users-body');
 
 
 // ======================= THEME SWITCHER (DARK / LIGHT) =======================
+function getSystemPreferredTheme() {
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
+  }
+  return 'light';
+}
+
 function initTheme() {
-  const savedTheme = localStorage.getItem('app_theme') || 'light';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  updateThemeIcons(savedTheme);
+  // Default mengikuti tema preferensi device / OS pengguna jika belum tersimpan secara manual
+  const savedTheme = localStorage.getItem('app_theme');
+  const activeTheme = savedTheme || getSystemPreferredTheme();
+  document.documentElement.setAttribute('data-theme', activeTheme);
+  updateThemeIcons(activeTheme);
+
+  // Pasang listener jika preferensi tema device OS berubah dan user belum memilih manual
+  if (window.matchMedia) {
+    try {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('app_theme')) {
+          const autoTheme = e.matches ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', autoTheme);
+          updateThemeIcons(autoTheme);
+        }
+      });
+    } catch (err) { }
+  }
 }
 
 function toggleTheme() {
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  const currentTheme = document.documentElement.getAttribute('data-theme') || getSystemPreferredTheme();
   const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', newTheme);
   try {
@@ -252,11 +274,17 @@ function toggleTheme() {
 function updateThemeIcons(theme) {
   const isDark = theme === 'dark';
   const navBtn = document.getElementById('btn-theme-nav');
+  const landingBtn = document.getElementById('btn-theme-landing');
   const sidebarBtn = document.getElementById('who-toggle-theme');
   const themeText = document.getElementById('theme-text-sidebar');
 
+  if (landingBtn) {
+    landingBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" style="width: 18px; height: 18px;"></i>`;
+    landingBtn.setAttribute('title', isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap');
+  }
   if (navBtn) {
     navBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" style="width: 18px; height: 18px;"></i>`;
+    navBtn.setAttribute('title', isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap');
   }
   if (sidebarBtn) {
     sidebarBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" style="width: 16px; height: 16px;"></i> <span id="theme-text-sidebar">${isDark ? 'Mode Terang' : 'Mode Gelap'}</span>`;
@@ -303,6 +331,8 @@ function switchMobileTab(targetId, btnEl) {
   if (targetId === 'section-ujian') loadUjianData();
   if (targetId === 'section-users') loadAllUsers();
   if (targetId === 'section-api-keys') loadApiKeys();
+  if (targetId === 'section-kegiatan') loadKegiatanData();
+  if (targetId === 'section-info-tk') loadTKData();
 
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     setTimeout(window.lucide.createIcons, 50);
@@ -399,6 +429,8 @@ function setupEventListeners() {
       if (targetId === 'section-ujian') loadUjianData();
       if (targetId === 'section-users') loadAllUsers();
       if (targetId === 'section-api-keys') loadApiKeys();
+      if (targetId === 'section-kegiatan') loadKegiatanData();
+      if (targetId === 'section-info-tk') loadTKData();
 
       if (window.lucide && typeof window.lucide.createIcons === 'function') {
         setTimeout(window.lucide.createIcons, 50);
@@ -639,6 +671,120 @@ function setupEventListeners() {
   }
 }
 
+// State kamera aktif
+let activeCameraStream = null;
+let activeCameraTargetInputId = null;
+
+// Buka kamera (Mendukung Kamera Laptop / PC Webcam & Kamera HP)
+async function openCameraCapture(targetInputId, facingMode = 'environment', title = 'Ambil Foto', fallbackCamInputId = null) {
+  activeCameraTargetInputId = targetInputId;
+
+  // Cek apakah browser mendukung WebRTC MediaDevices
+  if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+    const modal = document.getElementById('modal-live-camera');
+    const video = document.getElementById('camera-video-stream');
+    const titleEl = document.getElementById('camera-modal-title');
+    if (titleEl) {
+      titleEl.innerHTML = `<i data-lucide="camera" style="width: 18px; height: 18px; color: var(--primary);"></i> ${title}`;
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    try {
+      // Prioritaskan facingMode sesuai parameter, fallback ke default jika di PC tidak ada kamera belakang
+      let constraints = {
+        video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      };
+
+      try {
+        activeCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e) {
+        // Fallback coba kamera apa saja yang tersedia (misal webcam laptop biasa)
+        activeCameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+
+      if (video) {
+        video.srcObject = activeCameraStream;
+      }
+      if (modal) {
+        modal.classList.remove('hidden');
+      }
+      return;
+    } catch (err) {
+      console.warn("getUserMedia tidak dapat diakses, beralih ke input kamera bawaan:", err);
+    }
+  }
+
+  // Fallback untuk perangkat atau browser tanpa izin WebRTC: picu input capture kamera bawaan
+  if (fallbackCamInputId) {
+    const fallbackInput = document.getElementById(fallbackCamInputId);
+    if (fallbackInput) {
+      fallbackInput.click();
+      return;
+    }
+  }
+  Swal.fire('Info Kamera', 'Akses kamera tidak diizinkan atau tidak didukung pada browser ini. Anda dapat mengunggah berkas foto secara manual.', 'info');
+}
+
+// Tutup modal kamera dan hentikan video stream
+function closeLiveCameraModal() {
+  if (activeCameraStream) {
+    activeCameraStream.getTracks().forEach(track => track.stop());
+    activeCameraStream = null;
+  }
+  const video = document.getElementById('camera-video-stream');
+  if (video) video.srcObject = null;
+  const modal = document.getElementById('modal-live-camera');
+  if (modal) modal.classList.add('hidden');
+}
+
+// Ambil jepretan foto dari stream kamera dan masukkan ke input file
+function capturePhotoFromStream() {
+  const video = document.getElementById('camera-video-stream');
+  const canvas = document.getElementById('camera-canvas-capture');
+  if (!video || !canvas || !activeCameraTargetInputId) {
+    closeLiveCameraModal();
+    return;
+  }
+
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      closeLiveCameraModal();
+      return;
+    }
+    const fileName = `foto-kamera-${Date.now()}.jpg`;
+    const file = new File([blob], fileName, { type: 'image/jpeg' });
+    const target = document.getElementById(activeCameraTargetInputId);
+    if (target) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      target.files = dt.files;
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    closeLiveCameraModal();
+  }, 'image/jpeg', 0.9);
+}
+
+// Helper untuk menyalin file dari input kamera ke input dokumen utama
+function syncCameraToInput(camInput, targetInputId) {
+  if (!camInput || !camInput.files || camInput.files.length === 0) return;
+  const target = document.getElementById(targetInputId);
+  if (!target) return;
+  try {
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(camInput.files[0]);
+    target.files = dataTransfer.files;
+    target.dispatchEvent(new Event('change', { bubbles: true }));
+  } catch (err) {
+    console.error("Gagal sinkronisasi kamera ke input berkas:", err);
+  }
+}
+
 // ======================= API CALLER =======================
 async function callAPI(payload) {
   async function parseFetchResponse(response) {
@@ -652,7 +798,10 @@ async function callAPI(payload) {
       }
       throw new Error("Respon server bukan format JSON yang valid");
     }
-    if (!result.success) throw new Error(result.error || "Gagal memanggil API");
+    if (!result.success) {
+      console.error("API response error detail:", result);
+      throw new Error(result.error || (typeof result.data === 'object' && result.data && result.data.error) || "Gagal memanggil API");
+    }
     return result.data;
   }
 
@@ -697,13 +846,26 @@ function handleClientRouting() {
   // Rute rahasia '/portal' (atau '/portal-pkbm') membuka Form Login
   // Rute root '/' atau '/pkbm' menampilkan Halaman Informasi Awal publik
   const isPortal = path === '/portal' || path === '/portal/' || path.startsWith('/portal/') ||
-                   path === '/portal-pkbm' || path === '/portal-pkbm/' || path.startsWith('/portal-pkbm');
+    path === '/portal-pkbm' || path === '/portal-pkbm/' || path.startsWith('/portal-pkbm');
   if (isPortal) {
     pageLanding.classList.remove('hidden');
     pageDashboard.classList.add('hidden');
     if (modalLogin) {
       modalLogin.classList.remove('hidden');
-      setTimeout(generateCaptchaLogin, 60);
+      setTimeout(() => {
+        generateCaptchaLogin();
+        try {
+          const remUser = localStorage.getItem('ppdb_remember_username');
+          if (remUser && inputLoginUser) {
+            inputLoginUser.value = remUser;
+            const remCheck = document.getElementById('login-remember-me');
+            if (remCheck) remCheck.checked = true;
+          }
+        } catch (e) { }
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+      }, 60);
     }
   } else {
     // Publik: '/' atau '/pkbm' atau halaman lainnya
@@ -711,16 +873,21 @@ function handleClientRouting() {
     pageDashboard.classList.add('hidden');
     if (modalLogin) modalLogin.classList.add('hidden');
   }
+
+  // Render konten kegiatan publik dan profil TK di Landing Page
+  renderLandingKegiatan();
+  renderLandingTK();
 }
 
-// ======================= CAPTCHA LOGIN (ROSTERING TEKNIK STYLE) =======================
+// ======================= CAPTCHA LOGIN (PKBM AURA ANUGERAH) =======================
 let currentCaptchaCode = '';
 
 function generateCaptchaLogin() {
   const canvas = document.getElementById('login-captcha-canvas');
   if (!canvas) return;
 
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  // 5 karakter acak huruf besar-kecil + angka, tanpa karakter membingungkan (0, O, 1, l, I)
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
   let text = '';
   for (let i = 0; i < 5; i++) {
     text += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -730,8 +897,8 @@ function generateCaptchaLogin() {
   const captchaInput = document.getElementById('login-captcha-input');
   if (captchaInput) captchaInput.value = '';
 
-  canvas.width = 120;
-  canvas.height = 40;
+  canvas.width = 130;
+  canvas.height = 42;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
@@ -739,21 +906,31 @@ function generateCaptchaLogin() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Background
-  ctx.fillStyle = '#f1f5f9';
+  // Background terang bertekstur
+  ctx.fillStyle = '#f8fafc';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Noise Dots
-  for (let i = 0; i < 25; i++) {
-    ctx.fillStyle = `rgba(${Math.floor(Math.random() * 150)},${Math.floor(Math.random() * 150)},${Math.floor(Math.random() * 150)},0.25)`;
+  // Garis kisi latar lembut
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 15) {
     ctx.beginPath();
-    ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 1, 0, Math.PI * 2);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  // Noise Dots
+  for (let i = 0; i < 22; i++) {
+    ctx.fillStyle = `rgba(${Math.floor(Math.random() * 100)},${Math.floor(Math.random() * 100)},${Math.floor(Math.random() * 100)},0.25)`;
+    ctx.beginPath();
+    ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 1.2, 0, Math.PI * 2);
     ctx.fill();
   }
 
   // Noise Lines
-  for (let i = 0; i < 4; i++) {
-    ctx.strokeStyle = `rgba(${Math.floor(Math.random() * 150)},${Math.floor(Math.random() * 150)},${Math.floor(Math.random() * 150)},0.35)`;
+  for (let i = 0; i < 3; i++) {
+    ctx.strokeStyle = `rgba(${Math.floor(Math.random() * 100)},${Math.floor(Math.random() * 100)},${Math.floor(Math.random() * 100)},0.3)`;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
@@ -761,11 +938,11 @@ function generateCaptchaLogin() {
     ctx.stroke();
   }
 
-  // Draw characters with distinct colors & slight rotation
-  const colors = ['#0f172a', '#1e3a8a', '#0369a1', '#15803d', '#b91c1c', '#7c3aed'];
+  // Render teks 5 karakter dengan warna elegan & sedikit rotasi
+  const colors = ['#1e3a8a', '#15803d', '#b91c1c', '#7c3aed', '#0f766e', '#0369a1'];
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
-    const x = 16 + i * 20;
+    const x = 16 + i * 22;
     const y = 26 + (Math.random() * 4 - 2);
     const angle = (Math.random() - 0.5) * 0.35;
 
@@ -780,6 +957,65 @@ function generateCaptchaLogin() {
   }
 }
 window.generateCaptchaLogin = generateCaptchaLogin;
+
+// Helper Password Visibility Toggle (Lucide Icons)
+function togglePasswordVisibility() {
+  const pwdInput = document.getElementById('login-password');
+  const btnToggle = document.getElementById('btn-toggle-password');
+  if (!pwdInput || !btnToggle) return;
+
+  if (pwdInput.type === 'password') {
+    pwdInput.type = 'text';
+    btnToggle.innerHTML = '<i data-lucide="eye-off" style="width: 18px; height: 18px;"></i>';
+  } else {
+    pwdInput.type = 'password';
+    btnToggle.innerHTML = '<i data-lucide="eye" style="width: 18px; height: 18px;"></i>';
+  }
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+window.togglePasswordVisibility = togglePasswordVisibility;
+
+function showLoginError(msg) {
+  const errorBox = document.getElementById('login-error-alert');
+  if (!errorBox) return;
+  errorBox.textContent = msg;
+  errorBox.classList.remove('hidden');
+}
+
+function clearLoginError() {
+  const errorBox = document.getElementById('login-error-alert');
+  if (errorBox) {
+    errorBox.textContent = '';
+    errorBox.classList.add('hidden');
+  }
+}
+
+function handleForgotPassword(e) {
+  if (e) e.preventDefault();
+  Swal.fire({
+    title: 'Lupa Password Akun?',
+    html: `
+      <div style="font-size: 0.92rem; color: #475569; text-align: left; line-height: 1.6;">
+        <p>Silakan hubungi bagian Administrasi / Petugas IT PKBM Aura Anugerah untuk reset password akun Anda:</p>
+        <ul style="margin: 8px 0 14px 20px;">
+          <li><b>Untuk Siswa:</b> Password bawaan adalah Tanggal Lahir (format DDMMYYYY).</li>
+          <li><b>Untuk Petugas/Guru:</b> Hubungi Admin Sekretariat PKBM Sentani.</li>
+        </ul>
+        <div style="text-align: center; margin-top: 10px;">
+          <a href="https://wa.me/628123456789?text=Halo%20Admin%20PKBM,%20saya%20butuh%20bantuan%20reset%20password%20akun" target="_blank" class="btn p" style="display: inline-flex; align-items: center; gap: 6px;">
+            💬 Hubungi Admin via WhatsApp
+          </a>
+        </div>
+      </div>
+    `,
+    confirmButtonText: 'Tutup',
+    confirmButtonColor: '#2e7d32'
+  });
+}
+window.handleForgotPassword = handleForgotPassword;
 
 window.navigateToRoute = function (routePath) {
   try {
@@ -797,20 +1033,27 @@ function checkLocalSession() {
 }
 
 async function handleLogin(e) {
-  const user = inputLoginUser.value;
-  const pass = inputLoginPass.value;
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+
+  clearLoginError();
+
+  const user = (inputLoginUser ? inputLoginUser.value : "").trim();
+  const pass = (inputLoginPass ? inputLoginPass.value : "").trim();
   const captchaInput = document.getElementById('login-captcha-input');
   const userCaptcha = (captchaInput ? captchaInput.value : "").trim();
+  const btnSubmit = document.getElementById('btn-login');
 
-  // Validasi Captcha sama seperti di aplikasi Rostering Teknik
-  if (!userCaptcha) {
-    Swal.fire('Peringatan', 'Harap isi kode keamanan (captcha)!', 'warning');
-    if (captchaInput) captchaInput.focus();
+  // 1. Validasi Sisi Klien: Username dan password wajib diisi
+  if (!user || !pass) {
+    showLoginError("Username dan password wajib diisi.");
+    if (!user && inputLoginUser) inputLoginUser.focus();
+    else if (!pass && inputLoginPass) inputLoginPass.focus();
     return;
   }
 
-  if (userCaptcha !== currentCaptchaCode) {
-    Swal.fire('Captcha Salah', 'Kode keamanan (captcha) tidak cocok. Perhatikan huruf besar & kecil!', 'error');
+  // 2. Validasi Captcha Sisi Klien
+  if (!userCaptcha || userCaptcha !== currentCaptchaCode) {
+    showLoginError("Kode keamanan tidak sesuai. Silakan coba lagi.");
     if (captchaInput) {
       captchaInput.value = '';
       captchaInput.focus();
@@ -819,20 +1062,40 @@ async function handleLogin(e) {
     return;
   }
 
+  // Saat submit berhasil validasi: tombol nonaktif dan teks berubah "Memproses…" (cegah klik ganda)
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "Memproses…";
+  }
+
   showLoader("Mencoba Masuk...");
 
   try {
     const data = await callAPI({ action: "login", username: user, password: pass });
     if (data && data.username) {
       currentUser = data;
+
+      // Fitur Ingat Saya
+      const rememberCheckbox = document.getElementById('login-remember-me');
+      if (rememberCheckbox && rememberCheckbox.checked) {
+        try { localStorage.setItem('ppdb_remember_username', user); } catch (e) { }
+      } else {
+        try { localStorage.removeItem('ppdb_remember_username'); } catch (e) { }
+      }
+
       localStorage.setItem('ppdb_session', JSON.stringify(data));
       showDashboard();
     }
   } catch (err) {
-    Swal.fire('Error', err.message, 'error');
+    showLoginError(err.message || "Gagal masuk. Periksa username dan password Anda.");
     generateCaptchaLogin();
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = "Masuk Aplikasi";
+    }
+    hideLoader();
   }
-  hideLoader();
 }
 
 let syncInterval = null;
@@ -2149,9 +2412,61 @@ function updateSelectedSiswaCount() {
   }
 }
 
+// Helper mengecek apakah siswa sudah pernah diperiksa AI sebelumnya
+function isSiswaAlreadyChecked(s) {
+  if (!s) return false;
+  const rawStatus = String(s.status || '').toLowerCase().trim();
+  const hasHistory = (s.koreksiAI && s.koreksiAI.trim() !== '' && !s.koreksiAI.includes('Menunggu'));
+  const isPending = (rawStatus === 'pending' || rawStatus === '' || rawStatus === 'belum dicek');
+  return (!isPending || hasHistory) && (rawStatus === 'sesuai' || rawStatus === 'cocok' || rawStatus === 'tidak sesuai' || rawStatus === 'tidak_cocok' || rawStatus === 'perlu perbaikan' || hasHistory);
+}
+
 async function runSingleRowAICheck(siswaId) {
   const s = siswaDataList.find(x => String(x.id) === String(siswaId));
   if (!s) return;
+
+  // Jika sudah pernah dicek sebelumnya, minta konfirmasi 1 per 1 dan tampilkan riwayat hasil pengecekannya
+  if (isSiswaAlreadyChecked(s)) {
+    const isCocok = s.status === 'Sesuai' || s.status === 'Cocok';
+    const statusText = isCocok ? '✅ Sesuai / Cocok' : '⚠️ Tidak Sesuai / Perlu Perbaikan';
+    const statusColor = isCocok ? '#15803d' : '#b91c1c';
+    const statusBg = isCocok ? '#dcfce7' : '#fee2e2';
+    const prevResult = s.koreksiAI ? s.koreksiAI : (isCocok ? 'Semua data cocok dengan dokumen fisik.' : 'Ada catatan ketidaksesuaian.');
+
+    const recheckConfirm = await Swal.fire({
+      title: 'Periksa Ulang Dokumen AI?',
+      html: `
+        <div style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #1e293b;">
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;">
+            <div>Calon Siswa: <b>${s.nama}</b></div>
+            <div style="font-size: 0.8rem; color: #64748b;">NIK: ${s.nik || '-'} | Program: ${s.program || '-'}</div>
+          </div>
+
+          <div style="margin-bottom: 6px; font-weight: 600; color: #475569;">
+            ℹ️ Siswa ini <b>sudah pernah diperiksa sebelumnya</b>:
+          </div>
+
+          <div style="background: ${statusBg}; border: 1px solid ${isCocok ? '#86efac' : '#fca5a5'}; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;">
+            <div style="font-weight: 700; color: ${statusColor}; margin-bottom: 4px;">Status Saat Ini: ${statusText}</div>
+            <div style="font-size: 0.85rem; color: #334155; max-height: 140px; overflow-y: auto; white-space: pre-line;">
+              ${prevResult}
+            </div>
+          </div>
+
+          <p style="margin: 0; font-size: 0.85rem; color: #64748b;">
+            Apakah Anda yakin ingin menjalankan pemindaian AI ulang untuk berkas siswa ini?
+          </p>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '🔄 Ya, Periksa Ulang Sekarang',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#0284c7'
+    });
+
+    if (!recheckConfirm.isConfirmed) return;
+  }
 
   const urlIjazah = (s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:'))) ? s.urlIjazah : (getFileLocal(s.id, 'ijazah') || "");
   const urlKK = (s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:'))) ? s.urlKK : (getFileLocal(s.id, 'kk') || "");
@@ -2229,25 +2544,81 @@ async function runBatchAICheck() {
     return;
   }
 
-  const resultConfirm = await Swal.fire({
-    title: 'Periksa AI Bersamaan?',
-    text: `Anda akan menjalankan pemeriksaan dokumen dengan AI untuk ${selectedCbs.length} siswa terpilih secara berurutan.`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'Ya, Jalankan Pemeriksaan',
-    cancelButtonText: 'Batal'
-  });
+  // Pisahkan antara siswa yang masih PENDING dan yang SUDAH PERNAH DICEK
+  const selectedSiswaList = selectedCbs.map(cb => siswaDataList.find(x => String(x.id) === String(cb.value))).filter(Boolean);
+  const pendingSiswaList = selectedSiswaList.filter(s => !isSiswaAlreadyChecked(s));
+  const alreadyCheckedList = selectedSiswaList.filter(s => isSiswaAlreadyChecked(s));
 
-  if (!resultConfirm.isConfirmed) return;
+  let targetListToProcess = [];
 
-  const total = selectedCbs.length;
+  if (alreadyCheckedList.length > 0) {
+    // Ada siswa yang sudah pernah diperiksa sebelumnya
+    const htmlInfo = `
+      <div style="text-align: left; font-size: 0.9rem; line-height: 1.5; color: #1e293b;">
+        <p style="margin-bottom: 8px;">Dari <b>${selectedSiswaList.length}</b> siswa terpilih:</p>
+        <ul style="margin: 0 0 12px 18px; padding: 0;">
+          <li><span style="color: #b45309; font-weight: 600;">⏳ Belum Pernah Dicek / Pending:</span> <b>${pendingSiswaList.length}</b> siswa</li>
+          <li><span style="color: #0369a1; font-weight: 600;">📋 Sudah Pernah Dicek Sebelumnya:</span> <b>${alreadyCheckedList.length}</b> siswa</li>
+        </ul>
+
+        <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; font-size: 0.84rem; max-height: 110px; overflow-y: auto; margin-bottom: 12px;">
+          <div style="font-weight: 600; color: #475569; margin-bottom: 4px;">Daftar siswa yang sudah pernah dicek:</div>
+          ${alreadyCheckedList.map(s => `• <b>${s.nama}</b> (Hasil: <span style="font-weight:600; color:${s.status === 'Sesuai' ? '#15803d' : '#b91c1c'}">${s.status || 'Perlu Perbaikan'}</span>)`).join('<br>')}
+        </div>
+
+        <p style="margin: 0; font-size: 0.85rem; color: #475569;">
+          <b>Rekomendasi:</b> Periksa hanya yang <b>masih Pending</b> agar hemat kuota AI, atau periksa ulang semuanya jika ada dokumen baru.
+        </p>
+      </div>
+    `;
+
+    const choice = await Swal.fire({
+      title: 'Pilihan Pemeriksaan AI Batch',
+      html: htmlInfo,
+      icon: 'question',
+      showDenyButton: alreadyCheckedList.length > 0 && pendingSiswaList.length > 0,
+      showCancelButton: true,
+      confirmButtonText: pendingSiswaList.length > 0 ? `⚡ Periksa Yang Pending Saja (${pendingSiswaList.length})` : `🔄 Periksa Ulang Semua (${alreadyCheckedList.length})`,
+      denyButtonText: `🔄 Periksa Ulang Semua (${selectedSiswaList.length})`,
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#16a34a',
+      denyButtonColor: '#0284c7'
+    });
+
+    if (choice.isConfirmed) {
+      targetListToProcess = pendingSiswaList.length > 0 ? pendingSiswaList : alreadyCheckedList;
+    } else if (choice.isDenied) {
+      targetListToProcess = selectedSiswaList;
+    } else {
+      return;
+    }
+  } else {
+    // Semua yang dipilih berstatus pending (belum dicek)
+    const resultConfirm = await Swal.fire({
+      title: 'Periksa AI Batch?',
+      text: `Jalankan pemeriksaan dokumen AI untuk ${selectedSiswaList.length} siswa pending terpilih?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Jalankan Pemeriksaan',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#16a34a'
+    });
+    if (!resultConfirm.isConfirmed) return;
+    targetListToProcess = selectedSiswaList;
+  }
+
+  if (targetListToProcess.length === 0) {
+    Swal.fire('Info', 'Tidak ada siswa yang perlu diproses.', 'info');
+    return;
+  }
+
+  const total = targetListToProcess.length;
   let suksesCount = 0;
   let gagalCount = 0;
   const userApiKey = localStorage.getItem('gemini_api_key') || '';
 
   for (let i = 0; i < total; i++) {
-    const siswaId = selectedCbs[i].value;
-    const s = siswaDataList.find(x => String(x.id) === String(siswaId));
+    const s = targetListToProcess[i];
     if (!s) continue;
 
     showLoader(`Memeriksa [${i + 1}/${total}]: ${s.nama}...`);
@@ -3234,26 +3605,37 @@ function importDataFromFile(event) {
   reader.readAsArrayBuffer(file);
 }
 
-// ======================= HIDDEN LOGIN MECHANISM =======================
-// (Mekanisme klik 5x dinonaktifkan sesuai permintaan - login hanya via portal-pkbm)
+// ======================= MODAL CLOSE MECHANISM =======================
+
+// Overlay click modal login: form login tetap aktif di rute /portal atau /portal-pkbm
+if (loginModalOverlay) {
+  loginModalOverlay.addEventListener('click', (e) => {
+    // Jika berada di rute login portal khusus, jangan tutup sembarangan
+    if (window.location.pathname.includes('portal')) {
+      e.stopPropagation();
+    } else if (modalLogin) {
+      modalLogin.classList.add('hidden');
+    }
+  });
+}
 
 if (btnCloseLogin) {
   btnCloseLogin.addEventListener('click', () => {
-    modalLogin.classList.add('hidden');
+    if (modalLogin) modalLogin.classList.add('hidden');
     if (window.location.pathname.includes('portal')) {
       try { window.history.pushState({}, '', '/pkbm'); } catch (e) { }
     }
   });
 }
 
-// Overlay click modal login: jangan menutup form login jika diklik di luar (harus tetap di form login)
-if (loginModalOverlay) {
-  loginModalOverlay.addEventListener('click', (e) => {
-    // Mencegah form login tertutup saat klik di luar kotak modal
-    e.stopPropagation();
+// Tombol X (Tutup) Modal Formulir Pendaftaran Siswa
+if (btnCloseRegister && modalRegister) {
+  btnCloseRegister.addEventListener('click', () => {
+    cancelEdit();
   });
 }
 
+// Klik luar overlay Modal Formulir Pendaftaran Siswa
 if (registerModalOverlay && modalRegister) {
   registerModalOverlay.addEventListener('click', () => {
     cancelEdit();
@@ -4980,305 +5362,305 @@ let currentPdfScale = 1.0;
 let isPdfRendering = false;
 let pendingPdfPage = null;
 
-  function launchReaderSession(book, studentName) {
-    // Update view count
-    book.dibaca = (book.dibaca || 0) + 1;
-    saveBukuListToStorage();
-    renderBukuPopuler();
-    renderBukuGrid();
+function launchReaderSession(book, studentName) {
+  // Update view count
+  book.dibaca = (book.dibaca || 0) + 1;
+  saveBukuListToStorage();
+  renderBukuPopuler();
+  renderBukuGrid();
 
-    // Inisialisasi Sesi Belajar
-    activeBelajarSession = {
-      sessionId: 'SES-' + Date.now(),
-      bukuId: book.id,
-      bukuJudul: book.nama,
-      namaSiswa: studentName,
-      tanggal: new Date().toLocaleDateString('id-ID'),
-      jamMulai: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-      halamanAwal: 1,
-      halamanSekarang: 1,
-      totalHalaman: book.totalHal || 28,
-      detikMulai: Date.now(),
-      durasiDetik: 0,
-      status: 'Aktif Belajar'
-    };
+  // Inisialisasi Sesi Belajar
+  activeBelajarSession = {
+    sessionId: 'SES-' + Date.now(),
+    bukuId: book.id,
+    bukuJudul: book.nama,
+    namaSiswa: studentName,
+    tanggal: new Date().toLocaleDateString('id-ID'),
+    jamMulai: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+    halamanAwal: 1,
+    halamanSekarang: 1,
+    totalHalaman: book.totalHal || 28,
+    detikMulai: Date.now(),
+    durasiDetik: 0,
+    status: 'Aktif Belajar'
+  };
 
-    // Setup UI Modal Reader
-    document.getElementById('reader-book-title').textContent = book.nama;
-    document.getElementById('reader-book-info').textContent = `${book.jenjang} · ${book.kelas || ''} · ${book.mapel || book.kategori || ''}`;
-    document.getElementById('reader-page-input').value = '1';
-    document.getElementById('reader-total-page').textContent = book.totalHal || 28;
-    document.getElementById('reader-active-student').textContent = studentName;
-    updateZoomDisplay(1.0);
+  // Setup UI Modal Reader
+  document.getElementById('reader-book-title').textContent = book.nama;
+  document.getElementById('reader-book-info').textContent = `${book.jenjang} · ${book.kelas || ''} · ${book.mapel || book.kategori || ''}`;
+  document.getElementById('reader-page-input').value = '1';
+  document.getElementById('reader-total-page').textContent = book.totalHal || 28;
+  document.getElementById('reader-active-student').textContent = studentName;
+  updateZoomDisplay(1.0);
 
-    // Buka modal reader
-    const modalReader = document.getElementById('modal-reader');
-    if (modalReader) modalReader.classList.remove('hidden');
+  // Buka modal reader
+  const modalReader = document.getElementById('modal-reader');
+  if (modalReader) modalReader.classList.remove('hidden');
 
-    // Load PDF file via Native PDF.js Engine
-    loadPdfDocument(book);
+  // Load PDF file via Native PDF.js Engine
+  loadPdfDocument(book);
 
-    // Start Live Timer
-    startLiveTimer();
+  // Start Live Timer
+  startLiveTimer();
 
-    // Rekam status awal ke log aktivitas presensi belajar
-    catatLogBelajarBaru(activeBelajarSession);
-  }
+  // Rekam status awal ke log aktivitas presensi belajar
+  catatLogBelajarBaru(activeBelajarSession);
+}
 
-  // ==================== ENGINE PDF.JS NATIVE VIEWER ====================
+// ==================== ENGINE PDF.JS NATIVE VIEWER ====================
 
-  async function loadPdfDocument(book) {
-    const spinner = document.getElementById('reader-loading-spinner');
-    const canvas = document.getElementById('pdf-page-canvas');
-    const textViewerEl = document.getElementById('reader-text-viewer');
-    const renderWrapper = document.getElementById('pdf-render-wrapper');
+async function loadPdfDocument(book) {
+  const spinner = document.getElementById('reader-loading-spinner');
+  const canvas = document.getElementById('pdf-page-canvas');
+  const textViewerEl = document.getElementById('reader-text-viewer');
+  const renderWrapper = document.getElementById('pdf-render-wrapper');
 
-    if (spinner) spinner.style.display = 'flex';
-    if (canvas) canvas.style.display = 'block';
-    if (textViewerEl) textViewerEl.style.display = 'none';
+  if (spinner) spinner.style.display = 'flex';
+  if (canvas) canvas.style.display = 'block';
+  if (textViewerEl) textViewerEl.style.display = 'none';
 
-    // Tentukan URL PDF: gunakan proxy internal jika ada ID Google Drive
-    let pdfUrl = '';
-    if (book.id && (book.id.length > 20 || !book.id.startsWith('BK-'))) {
-      pdfUrl = `/api/proxy-pdf/${book.id}`;
-    } else if (book.file && book.file.startsWith('http')) {
-      // Ekstrak ID jika file berupa link Drive
-      const driveMatch = book.file.match(/\/d\/([a-zA-Z0-9_-]+)/) || book.file.match(/id=([a-zA-Z0-9_-]+)/);
-      if (driveMatch) {
-        pdfUrl = `/api/proxy-pdf/${driveMatch[1]}`;
-      } else {
-        pdfUrl = book.file;
-      }
-    }
-
-    // Jika tidak ada URL PDF, gunakan Fallback Chapter Text
-    if (!pdfUrl) {
-      if (spinner) spinner.style.display = 'none';
-      if (canvas) canvas.style.display = 'none';
-      if (textViewerEl) {
-        textViewerEl.style.display = 'block';
-        renderBookChapterContent(document.getElementById('reader-chapter-content'), book, 1);
-      }
-      return;
-    }
-
-    // Pastikan PDF.js library tersedia
-    if (typeof pdfjsLib === 'undefined') {
-      console.warn('PDF.js belum termuat, mencoba load ulang CDN...');
-      try {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-      } catch (e) { }
-    }
-
-    if (typeof pdfjsLib !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-      try {
-        const loadingTask = pdfjsLib.getDocument({
-          url: pdfUrl,
-          cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-          cMapPacked: true
-        });
-
-        loadingTask.promise.then(pdf => {
-          currentPdfDoc = pdf;
-          currentPdfPage = 1;
-          const total = pdf.numPages;
-
-          if (activeBelajarSession) {
-            activeBelajarSession.totalHalaman = total;
-            activeBelajarSession.halamanSekarang = 1;
-          }
-
-          document.getElementById('reader-total-page').textContent = total;
-          document.getElementById('reader-page-input').max = total;
-          document.getElementById('reader-page-input').value = 1;
-
-          // Auto scale: sesuaikan lebar layar (HP = fit width)
-          calculateInitialScale();
-          renderCurrentPdfPage();
-        }).catch(err => {
-          console.error('Error loading PDF:', err);
-          fallbackToTextViewer(book);
-        });
-      } catch (err) {
-        console.error('PDF.js init error:', err);
-        fallbackToTextViewer(book);
-      }
+  // Tentukan URL PDF: gunakan proxy internal jika ada ID Google Drive
+  let pdfUrl = '';
+  if (book.id && (book.id.length > 20 || !book.id.startsWith('BK-'))) {
+    pdfUrl = `/api/proxy-pdf/${book.id}`;
+  } else if (book.file && book.file.startsWith('http')) {
+    // Ekstrak ID jika file berupa link Drive
+    const driveMatch = book.file.match(/\/d\/([a-zA-Z0-9_-]+)/) || book.file.match(/id=([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+      pdfUrl = `/api/proxy-pdf/${driveMatch[1]}`;
     } else {
-      fallbackToTextViewer(book);
+      pdfUrl = book.file;
     }
   }
 
-  function calculateInitialScale() {
-    const container = document.getElementById('reader-viewport-container');
-    const screenWidth = container ? container.clientWidth : window.innerWidth;
-    if (screenWidth <= 768) {
-      // Di HP, sesuaikan skala agar memenuhi lebar layar HP dengan padding minimal
-      currentPdfScale = Math.max(0.65, (screenWidth - 24) / 595); // 595 adalah standard A4 pt
-    } else {
-      currentPdfScale = Math.min(1.35, (screenWidth - 60) / 750);
-    }
-    updateZoomDisplay(currentPdfScale);
-  }
-
-  function fallbackToTextViewer(book) {
-    const spinner = document.getElementById('reader-loading-spinner');
-    const canvas = document.getElementById('pdf-page-canvas');
-    const textViewerEl = document.getElementById('reader-text-viewer');
+  // Jika tidak ada URL PDF, gunakan Fallback Chapter Text
+  if (!pdfUrl) {
     if (spinner) spinner.style.display = 'none';
     if (canvas) canvas.style.display = 'none';
     if (textViewerEl) {
       textViewerEl.style.display = 'block';
       renderBookChapterContent(document.getElementById('reader-chapter-content'), book, 1);
     }
+    return;
   }
 
-  function renderCurrentPdfPage() {
-    if (!currentPdfDoc) return;
-    isPdfRendering = true;
+  // Pastikan PDF.js library tersedia
+  if (typeof pdfjsLib === 'undefined') {
+    console.warn('PDF.js belum termuat, mencoba load ulang CDN...');
+    try {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+    } catch (e) { }
+  }
 
-    const spinner = document.getElementById('reader-loading-spinner');
-    if (spinner) spinner.style.display = 'flex';
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    currentPdfDoc.getPage(currentPdfPage).then(page => {
-      const canvas = document.getElementById('pdf-page-canvas');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-
-      // Gunakan pixelRatio untuk hasil render yang tajam di layar Retina / HP
-      const pixelRatio = window.devicePixelRatio || 1;
-      const viewport = page.getViewport({ scale: currentPdfScale * pixelRatio });
-
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      canvas.style.width = `${viewport.width / pixelRatio}px`;
-      canvas.style.height = `${viewport.height / pixelRatio}px`;
-
-      const renderContext = {
-        canvasContext: ctx,
-        viewport: viewport
-      };
-
-      const renderTask = page.render(renderContext);
-      renderTask.promise.then(() => {
-        isPdfRendering = false;
-        if (spinner) spinner.style.display = 'none';
-
-        // Update button state (disable jika di ujung)
-        const btnPrev = document.getElementById('btn-reader-prev');
-        const btnNext = document.getElementById('btn-reader-next');
-        if (btnPrev) btnPrev.disabled = (currentPdfPage <= 1);
-        if (btnNext) btnNext.disabled = (currentPdfPage >= currentPdfDoc.numPages);
-
-        // Gulir ke atas viewport container setiap ganti halaman
-        const container = document.getElementById('reader-viewport-container');
-        if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
-
-        if (pendingPdfPage !== null) {
-          currentPdfPage = pendingPdfPage;
-          pendingPdfPage = null;
-          renderCurrentPdfPage();
-        }
+    try {
+      const loadingTask = pdfjsLib.getDocument({
+        url: pdfUrl,
+        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+        cMapPacked: true
       });
-    }).catch(err => {
-      console.error('Page render error:', err);
+
+      loadingTask.promise.then(pdf => {
+        currentPdfDoc = pdf;
+        currentPdfPage = 1;
+        const total = pdf.numPages;
+
+        if (activeBelajarSession) {
+          activeBelajarSession.totalHalaman = total;
+          activeBelajarSession.halamanSekarang = 1;
+        }
+
+        document.getElementById('reader-total-page').textContent = total;
+        document.getElementById('reader-page-input').max = total;
+        document.getElementById('reader-page-input').value = 1;
+
+        // Auto scale: sesuaikan lebar layar (HP = fit width)
+        calculateInitialScale();
+        renderCurrentPdfPage();
+      }).catch(err => {
+        console.error('Error loading PDF:', err);
+        fallbackToTextViewer(book);
+      });
+    } catch (err) {
+      console.error('PDF.js init error:', err);
+      fallbackToTextViewer(book);
+    }
+  } else {
+    fallbackToTextViewer(book);
+  }
+}
+
+function calculateInitialScale() {
+  const container = document.getElementById('reader-viewport-container');
+  const screenWidth = container ? container.clientWidth : window.innerWidth;
+  if (screenWidth <= 768) {
+    // Di HP, sesuaikan skala agar memenuhi lebar layar HP dengan padding minimal
+    currentPdfScale = Math.max(0.65, (screenWidth - 24) / 595); // 595 adalah standard A4 pt
+  } else {
+    currentPdfScale = Math.min(1.35, (screenWidth - 60) / 750);
+  }
+  updateZoomDisplay(currentPdfScale);
+}
+
+function fallbackToTextViewer(book) {
+  const spinner = document.getElementById('reader-loading-spinner');
+  const canvas = document.getElementById('pdf-page-canvas');
+  const textViewerEl = document.getElementById('reader-text-viewer');
+  if (spinner) spinner.style.display = 'none';
+  if (canvas) canvas.style.display = 'none';
+  if (textViewerEl) {
+    textViewerEl.style.display = 'block';
+    renderBookChapterContent(document.getElementById('reader-chapter-content'), book, 1);
+  }
+}
+
+function renderCurrentPdfPage() {
+  if (!currentPdfDoc) return;
+  isPdfRendering = true;
+
+  const spinner = document.getElementById('reader-loading-spinner');
+  if (spinner) spinner.style.display = 'flex';
+
+  currentPdfDoc.getPage(currentPdfPage).then(page => {
+    const canvas = document.getElementById('pdf-page-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Gunakan pixelRatio untuk hasil render yang tajam di layar Retina / HP
+    const pixelRatio = window.devicePixelRatio || 1;
+    const viewport = page.getViewport({ scale: currentPdfScale * pixelRatio });
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    canvas.style.width = `${viewport.width / pixelRatio}px`;
+    canvas.style.height = `${viewport.height / pixelRatio}px`;
+
+    const renderContext = {
+      canvasContext: ctx,
+      viewport: viewport
+    };
+
+    const renderTask = page.render(renderContext);
+    renderTask.promise.then(() => {
       isPdfRendering = false;
       if (spinner) spinner.style.display = 'none';
+
+      // Update button state (disable jika di ujung)
+      const btnPrev = document.getElementById('btn-reader-prev');
+      const btnNext = document.getElementById('btn-reader-next');
+      if (btnPrev) btnPrev.disabled = (currentPdfPage <= 1);
+      if (btnNext) btnNext.disabled = (currentPdfPage >= currentPdfDoc.numPages);
+
+      // Gulir ke atas viewport container setiap ganti halaman
+      const container = document.getElementById('reader-viewport-container');
+      if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (pendingPdfPage !== null) {
+        currentPdfPage = pendingPdfPage;
+        pendingPdfPage = null;
+        renderCurrentPdfPage();
+      }
     });
-  }
+  }).catch(err => {
+    console.error('Page render error:', err);
+    isPdfRendering = false;
+    if (spinner) spinner.style.display = 'none';
+  });
+}
 
-  function queueRenderPage(num) {
-    if (isPdfRendering) {
-      pendingPdfPage = num;
-    } else {
-      currentPdfPage = num;
-      renderCurrentPdfPage();
+function queueRenderPage(num) {
+  if (isPdfRendering) {
+    pendingPdfPage = num;
+  } else {
+    currentPdfPage = num;
+    renderCurrentPdfPage();
+  }
+}
+
+// Navigasi Halaman Buku (Next / Prev)
+function navigasiHalamanBuku(step) {
+  if (!activeBelajarSession) return;
+
+  if (currentPdfDoc) {
+    const total = currentPdfDoc.numPages;
+    const nextPg = currentPdfPage + step;
+    if (nextPg < 1 || nextPg > total) return;
+
+    currentPdfPage = nextPg;
+    activeBelajarSession.halamanSekarang = currentPdfPage;
+
+    document.getElementById('reader-page-input').value = currentPdfPage;
+    queueRenderPage(currentPdfPage);
+  } else {
+    // Fallback jika mode teks
+    const newPage = activeBelajarSession.halamanSekarang + step;
+    if (newPage < 1 || newPage > activeBelajarSession.totalHalaman) return;
+
+    activeBelajarSession.halamanSekarang = newPage;
+    document.getElementById('reader-page-input').value = newPage;
+
+    const book = bukuList.find(b => b.id === activeBelajarSession.bukuId);
+    const chapterContentEl = document.getElementById('reader-chapter-content');
+    if (book && chapterContentEl) {
+      renderBookChapterContent(chapterContentEl, book, newPage);
     }
   }
 
-  // Navigasi Halaman Buku (Next / Prev)
-  function navigasiHalamanBuku(step) {
-    if (!activeBelajarSession) return;
+  // Update Log Belajar
+  updateLogBelajarSession(activeBelajarSession);
+}
 
-    if (currentPdfDoc) {
-      const total = currentPdfDoc.numPages;
-      const nextPg = currentPdfPage + step;
-      if (nextPg < 1 || nextPg > total) return;
+// Lompat ke Halaman tertentu melalui input
+function lompatHalamanBuku(val) {
+  const target = parseInt(val, 10);
+  if (isNaN(target)) return;
 
-      currentPdfPage = nextPg;
-      activeBelajarSession.halamanSekarang = currentPdfPage;
+  const total = currentPdfDoc ? currentPdfDoc.numPages : (activeBelajarSession?.totalHalaman || 28);
+  const clamped = Math.max(1, Math.min(total, target));
 
-      document.getElementById('reader-page-input').value = currentPdfPage;
-      queueRenderPage(currentPdfPage);
-    } else {
-      // Fallback jika mode teks
-      const newPage = activeBelajarSession.halamanSekarang + step;
-      if (newPage < 1 || newPage > activeBelajarSession.totalHalaman) return;
-
-      activeBelajarSession.halamanSekarang = newPage;
-      document.getElementById('reader-page-input').value = newPage;
-
-      const book = bukuList.find(b => b.id === activeBelajarSession.bukuId);
-      const chapterContentEl = document.getElementById('reader-chapter-content');
-      if (book && chapterContentEl) {
-        renderBookChapterContent(chapterContentEl, book, newPage);
-      }
-    }
-
-    // Update Log Belajar
-    updateLogBelajarSession(activeBelajarSession);
+  if (activeBelajarSession) {
+    activeBelajarSession.halamanSekarang = clamped;
   }
+  document.getElementById('reader-page-input').value = clamped;
 
-  // Lompat ke Halaman tertentu melalui input
-  function lompatHalamanBuku(val) {
-    const target = parseInt(val, 10);
-    if (isNaN(target)) return;
-
-    const total = currentPdfDoc ? currentPdfDoc.numPages : (activeBelajarSession?.totalHalaman || 28);
-    const clamped = Math.max(1, Math.min(total, target));
-
-    if (activeBelajarSession) {
-      activeBelajarSession.halamanSekarang = clamped;
-    }
-    document.getElementById('reader-page-input').value = clamped;
-
-    if (currentPdfDoc) {
-      currentPdfPage = clamped;
-      queueRenderPage(clamped);
-    } else {
-      const book = bukuList.find(b => b.id === activeBelajarSession.bukuId);
-      const chapterContentEl = document.getElementById('reader-chapter-content');
-      if (book && chapterContentEl) {
-        renderBookChapterContent(chapterContentEl, book, clamped);
-      }
-    }
-    updateLogBelajarSession(activeBelajarSession);
-  }
-
-  // Zoom In / Out Handlers
-  function zoomBuku(delta) {
-    currentPdfScale = Math.max(0.4, Math.min(3.0, currentPdfScale + delta));
-    updateZoomDisplay(currentPdfScale);
-    if (currentPdfDoc) {
-      renderCurrentPdfPage();
+  if (currentPdfDoc) {
+    currentPdfPage = clamped;
+    queueRenderPage(clamped);
+  } else {
+    const book = bukuList.find(b => b.id === activeBelajarSession.bukuId);
+    const chapterContentEl = document.getElementById('reader-chapter-content');
+    if (book && chapterContentEl) {
+      renderBookChapterContent(chapterContentEl, book, clamped);
     }
   }
+  updateLogBelajarSession(activeBelajarSession);
+}
 
-  function zoomFitWidth() {
-    calculateInitialScale();
-    if (currentPdfDoc) {
-      renderCurrentPdfPage();
-    }
+// Zoom In / Out Handlers
+function zoomBuku(delta) {
+  currentPdfScale = Math.max(0.4, Math.min(3.0, currentPdfScale + delta));
+  updateZoomDisplay(currentPdfScale);
+  if (currentPdfDoc) {
+    renderCurrentPdfPage();
   }
+}
 
-  function updateZoomDisplay(scale) {
-    const el = document.getElementById('reader-zoom-level');
-    if (el) el.textContent = `${Math.round(scale * 100)}%`;
+function zoomFitWidth() {
+  calculateInitialScale();
+  if (currentPdfDoc) {
+    renderCurrentPdfPage();
   }
+}
 
-  function renderBookChapterContent(container, book, pageNum) {
-    container.innerHTML = `
+function updateZoomDisplay(scale) {
+  const el = document.getElementById('reader-zoom-level');
+  if (el) el.textContent = `${Math.round(scale * 100)}%`;
+}
+
+function renderBookChapterContent(container, book, pageNum) {
+  container.innerHTML = `
     <div style="max-width: 680px; margin: 0 auto;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-bottom: 20px;">
         <span style="font-size: 12px; font-weight: 700; color: var(--primary-color); text-transform: uppercase;">MODUL PEMBELAJARAN PKBM AURA ANUGERAH</span>
@@ -5305,112 +5687,112 @@ let pendingPdfPage = null;
       </div>
     </div>
   `;
-  }
+}
 
-  function startLiveTimer() {
-    if (liveTimerInterval) clearInterval(liveTimerInterval);
-    const timerEl = document.getElementById('reader-live-timer');
+function startLiveTimer() {
+  if (liveTimerInterval) clearInterval(liveTimerInterval);
+  const timerEl = document.getElementById('reader-live-timer');
 
-    liveTimerInterval = setInterval(() => {
-      if (!activeBelajarSession) return;
-      const now = Date.now();
-      const elapsedSeconds = Math.floor((now - activeBelajarSession.detikMulai) / 1000);
-      activeBelajarSession.durasiDetik = elapsedSeconds;
+  liveTimerInterval = setInterval(() => {
+    if (!activeBelajarSession) return;
+    const now = Date.now();
+    const elapsedSeconds = Math.floor((now - activeBelajarSession.detikMulai) / 1000);
+    activeBelajarSession.durasiDetik = elapsedSeconds;
 
-      const hours = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
-      const minutes = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
-      const seconds = String(elapsedSeconds % 60).padStart(2, '0');
+    const hours = String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((elapsedSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(elapsedSeconds % 60).padStart(2, '0');
 
-      if (timerEl) timerEl.textContent = `${hours}:${minutes}:${seconds}`;
+    if (timerEl) timerEl.textContent = `${hours}:${minutes}:${seconds}`;
 
-      // Sinkronkan ke log setiap 15 detik
-      if (elapsedSeconds % 15 === 0) {
-        updateLogBelajarSession(activeBelajarSession);
-      }
-    }, 1000);
-  }
-
-  function closeReaderModal() {
-    if (activeBelajarSession) {
-      activeBelajarSession.status = 'Selesai Belajar';
+    // Sinkronkan ke log setiap 15 detik
+    if (elapsedSeconds % 15 === 0) {
       updateLogBelajarSession(activeBelajarSession);
     }
-    if (liveTimerInterval) clearInterval(liveTimerInterval);
-    activeBelajarSession = null;
-    currentPdfDoc = null;
+  }, 1000);
+}
 
-    const modalReader = document.getElementById('modal-reader');
-    if (modalReader) modalReader.classList.add('hidden');
-    renderBelajarLogTable();
-    updateBelajarStats();
+function closeReaderModal() {
+  if (activeBelajarSession) {
+    activeBelajarSession.status = 'Selesai Belajar';
+    updateLogBelajarSession(activeBelajarSession);
   }
+  if (liveTimerInterval) clearInterval(liveTimerInterval);
+  activeBelajarSession = null;
+  currentPdfDoc = null;
 
-  function selesaiBelajarDanUjian() {
-    if (!activeBelajarSession) return;
-    const session = { ...activeBelajarSession };
-    closeReaderModal();
+  const modalReader = document.getElementById('modal-reader');
+  if (modalReader) modalReader.classList.add('hidden');
+  renderBelajarLogTable();
+  updateBelajarStats();
+}
 
-    // Buka konfirmasi langsung untuk ujian
-    Swal.fire({
-      title: 'Selesai Belajar! Lanjut ke Ujian?',
-      html: `
+function selesaiBelajarDanUjian() {
+  if (!activeBelajarSession) return;
+  const session = { ...activeBelajarSession };
+  closeReaderModal();
+
+  // Buka konfirmasi langsung untuk ujian
+  Swal.fire({
+    title: 'Selesai Belajar! Lanjut ke Ujian?',
+    html: `
       <div style="text-align: left; font-size: 13.5px; color: var(--text-color);">
         <p>Selamat <b>${session.namaSiswa}</b>, Anda telah tuntas membaca <b>${session.bukuJudul}</b> (Hingga Hal. ${session.halamanSekarang}) dengan durasi <b>${Math.max(1, Math.ceil(session.durasiDetik / 60))} menit</b>.</p>
         <p>Apakah Anda ingin membuka lembar ujian evaluasi sekarang untuk dinilai oleh Tutor / Guru?</p>
       </div>
     `,
-      icon: 'success',
-      showCancelButton: true,
-      confirmButtonText: 'Ya, Laksanakan Ujian 📝',
-      cancelButtonText: 'Nanti Saja',
-      confirmButtonColor: 'var(--primary-color)'
-    }).then(res => {
-      if (res.isConfirmed) {
-        // Buka modal input ujian dengan preset buku & siswa
-        showInputNilaiModal(session.bukuId, session.namaSiswa);
-      }
-    });
-  }
+    icon: 'success',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Laksanakan Ujian 📝',
+    cancelButtonText: 'Nanti Saja',
+    confirmButtonColor: 'var(--primary-color)'
+  }).then(res => {
+    if (res.isConfirmed) {
+      // Buka modal input ujian dengan preset buku & siswa
+      showInputNilaiModal(session.bukuId, session.namaSiswa);
+    }
+  });
+}
 
-  function catatLogBelajarBaru(session) {
-    sesiBelajarLog.unshift({
-      id: session.sessionId,
-      tanggal: session.tanggal,
-      jamMulai: session.jamMulai,
-      namaSiswa: session.namaSiswa,
-      bukuJudul: session.bukuJudul,
-      halamanTerbaca: `Hal. 1`,
-      durasiDetik: 0,
-      status: 'Aktif Membaca 🟢'
-    });
+function catatLogBelajarBaru(session) {
+  sesiBelajarLog.unshift({
+    id: session.sessionId,
+    tanggal: session.tanggal,
+    jamMulai: session.jamMulai,
+    namaSiswa: session.namaSiswa,
+    bukuJudul: session.bukuJudul,
+    halamanTerbaca: `Hal. 1`,
+    durasiDetik: 0,
+    status: 'Aktif Membaca 🟢'
+  });
+  saveLogBelajarToStorage();
+  renderBelajarLogTable();
+}
+
+function updateLogBelajarSession(session) {
+  const item = sesiBelajarLog.find(x => x.id === session.sessionId);
+  if (item) {
+    item.halamanTerbaca = `Hal. 1 - ${session.halamanSekarang}`;
+    item.durasiDetik = session.durasiDetik;
+    const durasiMenit = Math.max(1, Math.ceil(session.durasiDetik / 60));
+    item.status = session.status === 'Selesai Belajar' ? `Selesai (${durasiMenit} mnt) ✅` : `Aktif Membaca (${durasiMenit} mnt) 🟢`;
     saveLogBelajarToStorage();
     renderBelajarLogTable();
   }
+}
 
-  function updateLogBelajarSession(session) {
-    const item = sesiBelajarLog.find(x => x.id === session.sessionId);
-    if (item) {
-      item.halamanTerbaca = `Hal. 1 - ${session.halamanSekarang}`;
-      item.durasiDetik = session.durasiDetik;
-      const durasiMenit = Math.max(1, Math.ceil(session.durasiDetik / 60));
-      item.status = session.status === 'Selesai Belajar' ? `Selesai (${durasiMenit} mnt) ✅` : `Aktif Membaca (${durasiMenit} mnt) 🟢`;
-      saveLogBelajarToStorage();
-      renderBelajarLogTable();
-    }
+function renderBelajarLogTable() {
+  const tbody = document.getElementById('table-log-belajar-body');
+  if (!tbody) return;
+
+  if (sesiBelajarLog.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Belum ada riwayat aktivitas belajar siswa.</td></tr>';
+    return;
   }
 
-  function renderBelajarLogTable() {
-    const tbody = document.getElementById('table-log-belajar-body');
-    if (!tbody) return;
-
-    if (sesiBelajarLog.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Belum ada riwayat aktivitas belajar siswa.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = sesiBelajarLog.slice(0, 10).map((log, idx) => {
-      const menit = Math.ceil((log.durasiDetik || 0) / 60);
-      return `
+  tbody.innerHTML = sesiBelajarLog.slice(0, 10).map((log, idx) => {
+    const menit = Math.ceil((log.durasiDetik || 0) / 60);
+    return `
       <tr>
         <td><small>${log.tanggal || '-'} ${log.jamMulai || ''}</small></td>
         <td><strong>${log.namaSiswa || 'Siswa'}</strong></td>
@@ -5420,199 +5802,199 @@ let pendingPdfPage = null;
         <td><span style="font-size: 12px; font-weight: 600;">${log.status || 'Aktif'}</span></td>
       </tr>
     `;
-    }).join('');
+  }).join('');
+}
+
+function saveBukuListToStorage() {
+  try { localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList)); } catch (e) { }
+}
+
+function saveLogBelajarToStorage() {
+  try { localStorage.setItem('ppdb_belajar_log', JSON.stringify(sesiBelajarLog)); } catch (e) { }
+}
+
+// ==================== MODAL TAMBAH & EDIT BUKU ====================
+
+function showAddBukuModal() {
+  document.getElementById('buku-form-title').textContent = 'Tambah Buku Pelajaran Baru';
+  document.getElementById('buku-id').value = '';
+  document.getElementById('buku-nama').value = '';
+  document.getElementById('buku-total-hal').value = '30';
+  document.getElementById('buku-keterangan').value = '';
+  document.getElementById('buku-file-url').value = '';
+  document.getElementById('modal-form-buku').classList.remove('hidden');
+}
+
+function showEditBukuModal(id) {
+  const b = bukuList.find(x => x.id === id);
+  if (!b) return;
+
+  document.getElementById('buku-form-title').textContent = 'Edit Buku Pelajaran';
+  document.getElementById('buku-id').value = b.id;
+  document.getElementById('buku-nama').value = b.nama;
+  document.getElementById('buku-jenjang').value = b.jenjang;
+  document.getElementById('buku-kategori').value = b.kategori;
+  document.getElementById('buku-total-hal').value = b.totalHal || 30;
+  document.getElementById('buku-keterangan').value = b.keterangan || '';
+  document.getElementById('buku-file-url').value = b.file || '';
+  document.getElementById('modal-form-buku').classList.remove('hidden');
+}
+
+function closeBukuFormModal() {
+  document.getElementById('modal-form-buku').classList.add('hidden');
+}
+
+function simpanBukuData() {
+  const id = document.getElementById('buku-id').value;
+  const nama = document.getElementById('buku-nama').value.trim();
+  const jenjang = document.getElementById('buku-jenjang').value;
+  const kategori = document.getElementById('buku-kategori').value;
+  const totalHal = parseInt(document.getElementById('buku-total-hal').value, 10) || 30;
+  const keterangan = document.getElementById('buku-keterangan').value.trim();
+  const file = document.getElementById('buku-file-url').value.trim();
+
+  if (!nama) {
+    Swal.fire('Peringatan', 'Judul buku pelajaran wajib diisi!', 'warning');
+    return;
   }
 
-  function saveBukuListToStorage() {
-    try { localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList)); } catch (e) { }
-  }
-
-  function saveLogBelajarToStorage() {
-    try { localStorage.setItem('ppdb_belajar_log', JSON.stringify(sesiBelajarLog)); } catch (e) { }
-  }
-
-  // ==================== MODAL TAMBAH & EDIT BUKU ====================
-
-  function showAddBukuModal() {
-    document.getElementById('buku-form-title').textContent = 'Tambah Buku Pelajaran Baru';
-    document.getElementById('buku-id').value = '';
-    document.getElementById('buku-nama').value = '';
-    document.getElementById('buku-total-hal').value = '30';
-    document.getElementById('buku-keterangan').value = '';
-    document.getElementById('buku-file-url').value = '';
-    document.getElementById('modal-form-buku').classList.remove('hidden');
-  }
-
-  function showEditBukuModal(id) {
-    const b = bukuList.find(x => x.id === id);
-    if (!b) return;
-
-    document.getElementById('buku-form-title').textContent = 'Edit Buku Pelajaran';
-    document.getElementById('buku-id').value = b.id;
-    document.getElementById('buku-nama').value = b.nama;
-    document.getElementById('buku-jenjang').value = b.jenjang;
-    document.getElementById('buku-kategori').value = b.kategori;
-    document.getElementById('buku-total-hal').value = b.totalHal || 30;
-    document.getElementById('buku-keterangan').value = b.keterangan || '';
-    document.getElementById('buku-file-url').value = b.file || '';
-    document.getElementById('modal-form-buku').classList.remove('hidden');
-  }
-
-  function closeBukuFormModal() {
-    document.getElementById('modal-form-buku').classList.add('hidden');
-  }
-
-  function simpanBukuData() {
-    const id = document.getElementById('buku-id').value;
-    const nama = document.getElementById('buku-nama').value.trim();
-    const jenjang = document.getElementById('buku-jenjang').value;
-    const kategori = document.getElementById('buku-kategori').value;
-    const totalHal = parseInt(document.getElementById('buku-total-hal').value, 10) || 30;
-    const keterangan = document.getElementById('buku-keterangan').value.trim();
-    const file = document.getElementById('buku-file-url').value.trim();
-
-    if (!nama) {
-      Swal.fire('Peringatan', 'Judul buku pelajaran wajib diisi!', 'warning');
-      return;
+  if (id) {
+    // Edit mode
+    const idx = bukuList.findIndex(x => x.id === id);
+    if (idx !== -1) {
+      bukuList[idx] = { ...bukuList[idx], nama, jenjang, kategori, totalHal, keterangan, file };
     }
-
-    if (id) {
-      // Edit mode
-      const idx = bukuList.findIndex(x => x.id === id);
-      if (idx !== -1) {
-        bukuList[idx] = { ...bukuList[idx], nama, jenjang, kategori, totalHal, keterangan, file };
-      }
-    } else {
-      // Tambah baru
-      const newBook = {
-        id: 'BK-' + String(bukuList.length + 1).padStart(3, '0'),
-        nama,
-        jenjang,
-        kategori,
-        totalHal,
-        keterangan,
-        file,
-        dibaca: 0
-      };
-      bukuList.unshift(newBook);
-    }
-
-    saveBukuListToStorage();
-    closeBukuFormModal();
-    renderBukuGrid();
-    updateBelajarStats();
-    populateUjianSelectOptions();
-    Swal.fire('Berhasil', 'Data buku pelajaran berhasil disimpan.', 'success');
-  }
-
-  function hapusBuku(id) {
-    Swal.fire({
-      title: 'Hapus Buku Pelajaran?',
-      text: 'Buku ini akan dihapus dari daftar bahan bacaan siswa.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Ya, Hapus',
-      confirmButtonColor: 'var(--danger-color)',
-      cancelButtonText: 'Batal'
-    }).then(res => {
-      if (res.isConfirmed) {
-        bukuList = bukuList.filter(x => x.id !== id);
-        saveBukuListToStorage();
-        renderBukuGrid();
-        updateBelajarStats();
-        populateUjianSelectOptions();
-        Swal.fire('Dihapus', 'Buku telah berhasil dihapus.', 'success');
-      }
-    });
-  }
-
-  // ==================== SISTEM UJIAN & PENILAIAN HASIL BELAJAR ====================
-
-  function populateUjianSelectOptions() {
-    const selectSiswa = document.getElementById('ujian-siswa-id');
-    const selectBuku = document.getElementById('ujian-buku-id');
-    if (!selectSiswa || !selectBuku) return;
-
-    // Isi data siswa dari siswaDataList
-    selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>' +
-      siswaDataList.map(s => `<option value="${s.id}">${s.nama} (${s.program || 'Paket C'})</option>`).join('');
-
-    // Isi data buku
-    selectBuku.innerHTML = '<option value="">-- Pilih Buku / Modul --</option>' +
-      bukuList.map(b => `<option value="${b.id}">${b.nama} [${b.jenjang}]</option>`).join('');
-  }
-
-  function hitungPredikatNilai(val) {
-    const num = Number(val);
-    const elPredikat = document.getElementById('ujian-predikat');
-    if (!elPredikat) return;
-
-    if (num >= 88) elPredikat.value = 'Sangat Baik (A)';
-    else if (num >= 75) elPredikat.value = 'Baik (B)';
-    else if (num >= 60) elPredikat.value = 'Cukup (C)';
-    else elPredikat.value = 'Perlu Bimbingan (D)';
-  }
-
-  function showInputNilaiModal(presetBukuId = null, presetNamaSiswa = null) {
-    populateUjianSelectOptions();
-    const selectSiswa = document.getElementById('ujian-siswa-id');
-    const selectBuku = document.getElementById('ujian-buku-id');
-
-    if (presetBukuId && selectBuku) selectBuku.value = presetBukuId;
-    if (presetNamaSiswa && selectSiswa) {
-      const matchingSiswa = siswaDataList.find(s => s.nama.toLowerCase() === presetNamaSiswa.toLowerCase());
-      if (matchingSiswa) selectSiswa.value = matchingSiswa.id;
-    }
-
-    document.getElementById('ujian-angka').value = '';
-    document.getElementById('ujian-predikat').value = 'Baik (B)';
-    document.getElementById('ujian-catatan').value = '';
-
-    const modal = document.getElementById('modal-input-nilai');
-    if (modal) modal.classList.remove('hidden');
-  }
-
-  function closeInputNilaiModal() {
-    const modal = document.getElementById('modal-input-nilai');
-    if (modal) modal.classList.add('hidden');
-  }
-
-  function simpanNilaiUjian() {
-    const siswaId = document.getElementById('ujian-siswa-id').value;
-    const bukuId = document.getElementById('ujian-buku-id').value;
-    const nilaiAngka = parseInt(document.getElementById('ujian-angka').value, 10);
-    const predikat = document.getElementById('ujian-predikat').value;
-    const catatan = document.getElementById('ujian-catatan').value.trim();
-
-    if (!siswaId || !bukuId || isNaN(nilaiAngka)) {
-      Swal.fire('Peringatan', 'Harap lengkapi semua kolom penilaian ujian!', 'warning');
-      return;
-    }
-
-    const s = siswaDataList.find(x => String(x.id) === String(siswaId));
-    const b = bukuList.find(x => String(x.id) === String(bukuId));
-
-    const newUjian = {
-      id: 'EX-' + Date.now(),
-      tanggal: new Date().toLocaleDateString('id-ID'),
-      siswaId,
-      namaSiswa: s ? s.nama : 'Peserta Didik',
-      program: s ? (s.program || 'Paket C') : 'Paket C',
-      bukuJudul: b ? b.nama : 'Modul Pembelajaran',
-      nilai: nilaiAngka,
-      predikat,
-      catatan: catatan || 'Siswa telah menyelesaikan evaluasi pembelajaran.',
-      penguji: currentUser ? `${currentUser.nama} (${currentUser.role})` : 'Tutor Evaluator'
+  } else {
+    // Tambah baru
+    const newBook = {
+      id: 'BK-' + String(bukuList.length + 1).padStart(3, '0'),
+      nama,
+      jenjang,
+      kategori,
+      totalHal,
+      keterangan,
+      file,
+      dibaca: 0
     };
+    bukuList.unshift(newBook);
+  }
 
-    ujianHasilList.unshift(newUjian);
-    saveUjianListToStorage();
-    closeInputNilaiModal();
-    renderUjianTable();
+  saveBukuListToStorage();
+  closeBukuFormModal();
+  renderBukuGrid();
+  updateBelajarStats();
+  populateUjianSelectOptions();
+  Swal.fire('Berhasil', 'Data buku pelajaran berhasil disimpan.', 'success');
+}
 
-    Swal.fire({
-      title: 'Nilai Ujian Berhasil Disimpan! 🎉',
-      html: `
+function hapusBuku(id) {
+  Swal.fire({
+    title: 'Hapus Buku Pelajaran?',
+    text: 'Buku ini akan dihapus dari daftar bahan bacaan siswa.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    confirmButtonColor: 'var(--danger-color)',
+    cancelButtonText: 'Batal'
+  }).then(res => {
+    if (res.isConfirmed) {
+      bukuList = bukuList.filter(x => x.id !== id);
+      saveBukuListToStorage();
+      renderBukuGrid();
+      updateBelajarStats();
+      populateUjianSelectOptions();
+      Swal.fire('Dihapus', 'Buku telah berhasil dihapus.', 'success');
+    }
+  });
+}
+
+// ==================== SISTEM UJIAN & PENILAIAN HASIL BELAJAR ====================
+
+function populateUjianSelectOptions() {
+  const selectSiswa = document.getElementById('ujian-siswa-id');
+  const selectBuku = document.getElementById('ujian-buku-id');
+  if (!selectSiswa || !selectBuku) return;
+
+  // Isi data siswa dari siswaDataList
+  selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>' +
+    siswaDataList.map(s => `<option value="${s.id}">${s.nama} (${s.program || 'Paket C'})</option>`).join('');
+
+  // Isi data buku
+  selectBuku.innerHTML = '<option value="">-- Pilih Buku / Modul --</option>' +
+    bukuList.map(b => `<option value="${b.id}">${b.nama} [${b.jenjang}]</option>`).join('');
+}
+
+function hitungPredikatNilai(val) {
+  const num = Number(val);
+  const elPredikat = document.getElementById('ujian-predikat');
+  if (!elPredikat) return;
+
+  if (num >= 88) elPredikat.value = 'Sangat Baik (A)';
+  else if (num >= 75) elPredikat.value = 'Baik (B)';
+  else if (num >= 60) elPredikat.value = 'Cukup (C)';
+  else elPredikat.value = 'Perlu Bimbingan (D)';
+}
+
+function showInputNilaiModal(presetBukuId = null, presetNamaSiswa = null) {
+  populateUjianSelectOptions();
+  const selectSiswa = document.getElementById('ujian-siswa-id');
+  const selectBuku = document.getElementById('ujian-buku-id');
+
+  if (presetBukuId && selectBuku) selectBuku.value = presetBukuId;
+  if (presetNamaSiswa && selectSiswa) {
+    const matchingSiswa = siswaDataList.find(s => s.nama.toLowerCase() === presetNamaSiswa.toLowerCase());
+    if (matchingSiswa) selectSiswa.value = matchingSiswa.id;
+  }
+
+  document.getElementById('ujian-angka').value = '';
+  document.getElementById('ujian-predikat').value = 'Baik (B)';
+  document.getElementById('ujian-catatan').value = '';
+
+  const modal = document.getElementById('modal-input-nilai');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeInputNilaiModal() {
+  const modal = document.getElementById('modal-input-nilai');
+  if (modal) modal.classList.add('hidden');
+}
+
+function simpanNilaiUjian() {
+  const siswaId = document.getElementById('ujian-siswa-id').value;
+  const bukuId = document.getElementById('ujian-buku-id').value;
+  const nilaiAngka = parseInt(document.getElementById('ujian-angka').value, 10);
+  const predikat = document.getElementById('ujian-predikat').value;
+  const catatan = document.getElementById('ujian-catatan').value.trim();
+
+  if (!siswaId || !bukuId || isNaN(nilaiAngka)) {
+    Swal.fire('Peringatan', 'Harap lengkapi semua kolom penilaian ujian!', 'warning');
+    return;
+  }
+
+  const s = siswaDataList.find(x => String(x.id) === String(siswaId));
+  const b = bukuList.find(x => String(x.id) === String(bukuId));
+
+  const newUjian = {
+    id: 'EX-' + Date.now(),
+    tanggal: new Date().toLocaleDateString('id-ID'),
+    siswaId,
+    namaSiswa: s ? s.nama : 'Peserta Didik',
+    program: s ? (s.program || 'Paket C') : 'Paket C',
+    bukuJudul: b ? b.nama : 'Modul Pembelajaran',
+    nilai: nilaiAngka,
+    predikat,
+    catatan: catatan || 'Siswa telah menyelesaikan evaluasi pembelajaran.',
+    penguji: currentUser ? `${currentUser.nama} (${currentUser.role})` : 'Tutor Evaluator'
+  };
+
+  ujianHasilList.unshift(newUjian);
+  saveUjianListToStorage();
+  closeInputNilaiModal();
+  renderUjianTable();
+
+  Swal.fire({
+    title: 'Nilai Ujian Berhasil Disimpan! 🎉',
+    html: `
       <div style="text-align: left; font-size: 13.5px; color: var(--text-color);">
         <p>Hasil ujian telah tersimpan ke rapor akademik siswa:</p>
         <div style="background: var(--surface-2); padding: 12px; border-radius: 8px;">
@@ -5622,61 +6004,61 @@ let pendingPdfPage = null;
         </div>
       </div>
     `,
-      icon: 'success',
-      confirmButtonColor: 'var(--primary-color)'
-    });
+    icon: 'success',
+    confirmButtonColor: 'var(--primary-color)'
+  });
+}
+
+function saveUjianListToStorage() {
+  try { localStorage.setItem('ppdb_ujian_list', JSON.stringify(ujianHasilList)); } catch (e) { }
+}
+
+function loadUjianData() {
+  try {
+    const saved = localStorage.getItem('ppdb_ujian_list');
+    if (saved) ujianHasilList = JSON.parse(saved);
+  } catch (e) { }
+  renderUjianTable();
+}
+
+function filterUjianTable() {
+  const query = (document.getElementById('search-ujian')?.value || '').toLowerCase().trim();
+  const program = document.getElementById('filter-ujian-program')?.value || '';
+  const predikat = document.getElementById('filter-ujian-predikat')?.value || '';
+
+  const filtered = ujianHasilList.filter(u => {
+    const matchQuery = !query || u.namaSiswa.toLowerCase().includes(query) || u.bukuJudul.toLowerCase().includes(query) || (u.penguji || '').toLowerCase().includes(query);
+    const matchProgram = !program || u.program === program;
+    const matchPredikat = !predikat || u.predikat.includes(predikat);
+    return matchQuery && matchProgram && matchPredikat;
+  });
+
+  renderUjianTable(filtered);
+}
+
+function renderUjianTable(data) {
+  const tbody = document.getElementById('table-ujian-body');
+  if (!tbody) return;
+
+  let list = data || ujianHasilList;
+
+  // Jika login sebagai siswa, hanya tampilkan nilai miliknya
+  if (currentUser && currentUser.role === 'Siswa') {
+    list = list.filter(u => u.namaSiswa.toLowerCase() === currentUser.nama.toLowerCase());
   }
 
-  function saveUjianListToStorage() {
-    try { localStorage.setItem('ppdb_ujian_list', JSON.stringify(ujianHasilList)); } catch (e) { }
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">Belum ada data nilai ujian peserta didik.</td></tr>';
+    return;
   }
 
-  function loadUjianData() {
-    try {
-      const saved = localStorage.getItem('ppdb_ujian_list');
-      if (saved) ujianHasilList = JSON.parse(saved);
-    } catch (e) { }
-    renderUjianTable();
-  }
+  const isPetugas = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin' || currentUser.role === 'Guru');
 
-  function filterUjianTable() {
-    const query = (document.getElementById('search-ujian')?.value || '').toLowerCase().trim();
-    const program = document.getElementById('filter-ujian-program')?.value || '';
-    const predikat = document.getElementById('filter-ujian-predikat')?.value || '';
+  tbody.innerHTML = list.map((u, idx) => {
+    const nilaiColor = u.nilai >= 75 ? '#15803d' : (u.nilai >= 60 ? '#b45309' : '#b91c1c');
+    const badgeBg = u.nilai >= 75 ? '#dcfce7' : (u.nilai >= 60 ? '#fef3c7' : '#fee2e2');
 
-    const filtered = ujianHasilList.filter(u => {
-      const matchQuery = !query || u.namaSiswa.toLowerCase().includes(query) || u.bukuJudul.toLowerCase().includes(query) || (u.penguji || '').toLowerCase().includes(query);
-      const matchProgram = !program || u.program === program;
-      const matchPredikat = !predikat || u.predikat.includes(predikat);
-      return matchQuery && matchProgram && matchPredikat;
-    });
-
-    renderUjianTable(filtered);
-  }
-
-  function renderUjianTable(data) {
-    const tbody = document.getElementById('table-ujian-body');
-    if (!tbody) return;
-
-    let list = data || ujianHasilList;
-
-    // Jika login sebagai siswa, hanya tampilkan nilai miliknya
-    if (currentUser && currentUser.role === 'Siswa') {
-      list = list.filter(u => u.namaSiswa.toLowerCase() === currentUser.nama.toLowerCase());
-    }
-
-    if (list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">Belum ada data nilai ujian peserta didik.</td></tr>';
-      return;
-    }
-
-    const isPetugas = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin' || currentUser.role === 'Guru');
-
-    tbody.innerHTML = list.map((u, idx) => {
-      const nilaiColor = u.nilai >= 75 ? '#15803d' : (u.nilai >= 60 ? '#b45309' : '#b91c1c');
-      const badgeBg = u.nilai >= 75 ? '#dcfce7' : (u.nilai >= 60 ? '#fef3c7' : '#fee2e2');
-
-      return `
+    return `
       <tr>
         <td>${idx + 1}</td>
         <td><small>${u.tanggal || '-'}</small></td>
@@ -5702,39 +6084,39 @@ let pendingPdfPage = null;
         </td>
       </tr>
     `;
-    }).join('');
+  }).join('');
 
-    if (window.lucide && typeof window.lucide.createIcons === 'function') {
-      window.lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+function hapusNilaiUjian(id) {
+  Swal.fire({
+    title: 'Hapus Nilai Ujian?',
+    text: 'Data nilai ujian siswa ini akan dihapus permanen.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    confirmButtonColor: 'var(--danger-color)',
+    cancelButtonText: 'Batal'
+  }).then(res => {
+    if (res.isConfirmed) {
+      ujianHasilList = ujianHasilList.filter(x => x.id !== id);
+      saveUjianListToStorage();
+      renderUjianTable();
+      Swal.fire('Terhapus', 'Nilai ujian telah dihapus.', 'success');
     }
-  }
+  });
+}
 
-  function hapusNilaiUjian(id) {
-    Swal.fire({
-      title: 'Hapus Nilai Ujian?',
-      text: 'Data nilai ujian siswa ini akan dihapus permanen.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Ya, Hapus',
-      confirmButtonColor: 'var(--danger-color)',
-      cancelButtonText: 'Batal'
-    }).then(res => {
-      if (res.isConfirmed) {
-        ujianHasilList = ujianHasilList.filter(x => x.id !== id);
-        saveUjianListToStorage();
-        renderUjianTable();
-        Swal.fire('Terhapus', 'Nilai ujian telah dihapus.', 'success');
-      }
-    });
-  }
+function cetakSertifikatUjian(id) {
+  const u = ujianHasilList.find(x => x.id === id);
+  if (!u) return;
 
-  function cetakSertifikatUjian(id) {
-    const u = ujianHasilList.find(x => x.id === id);
-    if (!u) return;
-
-    Swal.fire({
-      title: 'Transkrip Kelulusan Modul Pembelajaran',
-      html: `
+  Swal.fire({
+    title: 'Transkrip Kelulusan Modul Pembelajaran',
+    html: `
       <div style="border: 2px solid var(--primary-color); padding: 18px; border-radius: 10px; text-align: center; background: #fff; color: #1e293b;">
         <h4 style="margin: 0; color: #0f5c7a; text-transform: uppercase;">PKBM Aura Anugerah</h4>
         <div style="font-size: 11px; color: #64748b; margin-bottom: 12px;">Sentani, Jayapura · Sistem Pendidikan Kesetaraan Terpadu</div>
@@ -5755,3 +6137,910 @@ let pendingPdfPage = null;
     confirmButtonColor: 'var(--primary-color)'
   });
 }
+
+// =========================================================================
+// ==================== FITUR: INFORMASI KEGIATAN & WARTA ==================
+// =========================================================================
+
+// Data awal default kegiatan
+const DEFAULT_KEGIATAN = [
+  {
+    id: "keg-1",
+    judul: "Orientasi Belajar & Pembagian Modul Pendidikan Kesetaraan 2026",
+    tanggal: "2026-10-20",
+    kategori: "Akademik",
+    deskripsi: "Kegiatan orientasi tatap muka perdana bagi warga belajar Paket A, B, dan C Aura Anugerah Sentani. Peserta diberikan penjelasan mengenai kurikulum merdeka kesetaraan serta tata cara asesmen modul daring dan tatap muka.",
+    gambar: "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80",
+    video: "",
+    author: "Admin Aura",
+    authorRole: "Super Admin",
+    target_display: "both", // 'portal' | 'public' | 'both'
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "keg-2",
+    judul: "Simulasi Ujian Berbasis Komputer (CBT) Modul IPA & IPS",
+    tanggal: "2026-10-22",
+    kategori: "Ujian / Evaluasi",
+    deskripsi: "Peserta didik Paket B dan Paket C melaksanakan tryout CBT online terpadu. Antusiasme tinggi terpancar dari para peserta dalam menjawab bank soal dan memahami materi pembelajaran digital.",
+    gambar: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80",
+    video: "",
+    author: "Ibu Guru Maria",
+    authorRole: "Guru",
+    target_display: "both",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "keg-3",
+    judul: "Pentas Seni & Gelar Karya Mandiri Warga Belajar PKBM Sentani",
+    tanggal: "2026-10-15",
+    kategori: "Pentas / Kreativitas",
+    deskripsi: "Pameran karya kerajinan tangan, olahan pangan lokal, serta pertunjukan seni budaya oleh siswa-siswi PKBM Aura Anugerah bersama anak-anak PAUD/TK Aura Anugerah dalam suasana yang hangat dan penuh kebersamaan.",
+    gambar: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80",
+    video: "",
+    author: "Admin Aura",
+    authorRole: "Admin",
+    target_display: "public",
+    createdAt: new Date().toISOString()
+  }
+];
+
+let kegiatanList = [];
+let kegiatanFilterActive = 'all';
+let kegiatanSearchKeyword = '';
+
+function getStoredKegiatan() {
+  try {
+    const raw = localStorage.getItem('ppdb_kegiatan_list');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn("Error read ppdb_kegiatan_list", e);
+  }
+  return DEFAULT_KEGIATAN;
+}
+
+function saveStoredKegiatan(data) {
+  try {
+    localStorage.setItem('ppdb_kegiatan_list', JSON.stringify(data));
+  } catch (e) {
+    console.warn("Error write ppdb_kegiatan_list", e);
+  }
+}
+
+function loadKegiatanData() {
+  kegiatanList = getStoredKegiatan();
+  renderDashboardKegiatan();
+}
+
+function filterKegiatan(mode) {
+  kegiatanFilterActive = mode;
+  ['all', 'portal', 'public'].forEach(m => {
+    const btn = document.getElementById(`btn-filter-keg-${m}`);
+    if (btn) {
+      if (m === mode) {
+        btn.classList.add('p', 'active');
+      } else {
+        btn.classList.remove('p', 'active');
+      }
+    }
+  });
+  renderDashboardKegiatan();
+}
+
+function handleSearchKegiatan(val) {
+  kegiatanSearchKeyword = (val || '').toLowerCase().trim();
+  renderDashboardKegiatan();
+}
+
+function renderDashboardKegiatan() {
+  const container = document.getElementById('dashboard-kegiatan-grid');
+  if (!container) return;
+
+  const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
+  const isGuru = currentUser && currentUser.role === 'Guru';
+  const isSiswa = currentUser && currentUser.role === 'Siswa';
+
+  // Sembunyikan tombol tambah kegiatan untuk siswa
+  const btnTambah = document.getElementById('btn-tambah-kegiatan');
+  if (btnTambah) {
+    if (isSiswa) {
+      btnTambah.style.display = 'none';
+    } else {
+      btnTambah.style.display = '';
+    }
+  }
+
+  // Filter berdasarkan target
+  let filtered = [...kegiatanList];
+  if (kegiatanFilterActive === 'portal') {
+    filtered = filtered.filter(k => k.target_display === 'portal' || k.target_display === 'both');
+  } else if (kegiatanFilterActive === 'public') {
+    filtered = filtered.filter(k => k.target_display === 'public' || k.target_display === 'both');
+  }
+
+  // Filter kata kunci
+  if (kegiatanSearchKeyword) {
+    filtered = filtered.filter(k =>
+      (k.judul && k.judul.toLowerCase().includes(kegiatanSearchKeyword)) ||
+      (k.deskripsi && k.deskripsi.toLowerCase().includes(kegiatanSearchKeyword)) ||
+      (k.kategori && k.kategori.toLowerCase().includes(kegiatanSearchKeyword)) ||
+      (k.author && k.author.toLowerCase().includes(kegiatanSearchKeyword))
+    );
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted); background: var(--surface-2); border-radius: 12px; border: 1px dashed var(--border-color);">
+        <i data-lucide="newspaper" style="width: 48px; height: 48px; opacity: 0.4; margin-bottom: 8px;"></i>
+        <h4 style="margin: 0; color: var(--text-color);">Belum Ada Informasi Kegiatan</h4>
+        <p style="margin: 6px 0 0 0; font-size: 0.85rem;">Tidak ada informasi kegiatan yang cocok dengan kriteria filter.</p>
+      </div>
+    `;
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = filtered.map(k => {
+    // Label visibilitas
+    let visBadge = '';
+    if (k.target_display === 'portal') {
+      visBadge = `<span style="font-size: 11px; font-weight: 700; background: rgba(59, 130, 246, 0.15); color: #2563eb; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+        <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Portal
+      </span>`;
+    } else if (k.target_display === 'public') {
+      visBadge = `<span style="font-size: 11px; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+        <i data-lucide="globe" style="width: 12px; height: 12px;"></i> Publik
+      </span>`;
+    } else {
+      visBadge = `<span style="font-size: 11px; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #d97706; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+        <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> Portal & Publik
+      </span>`;
+    }
+
+    // Tombol aksi (Edit & Hapus)
+    let actionButtons = '';
+    const canEdit = isAdmin || (isGuru && k.author === currentUser.nama);
+    if (canEdit) {
+      actionButtons = `
+        <div style="display: flex; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-color); justify-content: flex-end;">
+          ${isAdmin ? `
+            <button class="btn btn-sm" onclick="quickToggleVisibility('${k.id}')" title="Ubah visibilitas akses luar portal" style="font-size: 11px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 4px;">
+              <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Akses Publik
+            </button>
+          ` : ''}
+          <button class="btn btn-sm" onclick="editKegiatan('${k.id}')" style="font-size: 11px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 4px;">
+            <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i> Edit
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteKegiatan('${k.id}')" style="font-size: 11px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 4px; color: #ef4444;">
+            <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i> Hapus
+          </button>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="stat-card" style="flex-direction: column; align-items: stretch; padding: 0; overflow: hidden; border: 1px solid var(--border-color); border-radius: 14px; transition: transform 0.2s, box-shadow 0.2s;">
+        ${k.gambar ? `
+          <div style="height: 160px; overflow: hidden; position: relative; background: #0f172a;">
+            <img src="${k.gambar}" alt="${k.judul}" style="width: 100%; height: 100%; object-fit: cover;">
+            <div style="position: absolute; top: 10px; left: 10px;">${visBadge}</div>
+            <div style="position: absolute; bottom: 8px; right: 10px; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 4px;">
+              ${k.kategori || 'Kegiatan'}
+            </div>
+          </div>
+        ` : `
+          <div style="height: 90px; background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(2,132,199,0.2)); display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
+            <div>${visBadge}</div>
+            <span style="font-size: 11px; font-weight: 700; color: var(--primary-color); background: var(--surface-color); padding: 3px 8px; border-radius: 6px;">${k.kategori || 'Kegiatan'}</span>
+          </div>
+        `}
+        <div style="padding: 1rem; display: flex; flex-direction: column; flex: 1;">
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
+            <i data-lucide="calendar" style="width: 13px; height: 13px;"></i> ${k.tanggal || '-'} · 
+            <i data-lucide="user" style="width: 13px; height: 13px;"></i> ${k.author || 'Admin'}
+          </div>
+          <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-color); margin: 0 0 8px 0; line-height: 1.35;">
+            ${k.judul}
+          </h3>
+          <p style="font-size: 0.86rem; color: var(--text-muted); margin: 0; line-height: 1.5; flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+            ${k.deskripsi}
+          </p>
+          ${k.video ? `
+            <div style="margin-top: 8px;">
+              <a href="${k.video}" target="_blank" style="font-size: 12px; color: #ef4444; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                <i data-lucide="video" style="width: 14px; height: 14px;"></i> Tonton Video Terkait
+              </a>
+            </div>
+          ` : ''}
+          ${actionButtons}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+// Buka Modal Tambah/Edit Kegiatan dengan Kewenangan Guru vs Admin
+function openModalKegiatan(editId = null) {
+  const modal = document.getElementById('modal-kegiatan');
+  if (!modal) return;
+
+  const titleEl = document.getElementById('modal-kegiatan-title');
+  const badgeEl = document.getElementById('keg-vis-role-badge');
+  const targetSelect = document.getElementById('keg-target-display');
+  const hintEl = document.getElementById('keg-vis-hint');
+
+  const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
+  const isGuru = currentUser && currentUser.role === 'Guru';
+
+  document.getElementById('form-kegiatan').reset();
+  document.getElementById('keg-id').value = '';
+  document.getElementById('keg-tanggal').value = new Date().toISOString().split('T')[0];
+
+  if (isGuru && !isAdmin) {
+    badgeEl.textContent = "Kewenangan: Guru";
+    badgeEl.style.color = "#0284c7";
+    targetSelect.value = "portal";
+    targetSelect.disabled = true; // Guru hanya bisa portal
+    hintEl.textContent = "⚠️ Sebagai Guru, postingan Anda otomatis hanya tampil di Portal Dalam. Admin dapat mengubah aksesnya agar tampil ke publik.";
+  } else {
+    badgeEl.textContent = "Kewenangan: Admin (Bebas Akses)";
+    badgeEl.style.color = "var(--primary-color)";
+    targetSelect.disabled = false;
+    hintEl.textContent = "✅ Anda sebagai Admin memiliki akses penuh untuk menentukan apakah tampil di Portal, Publik Luar, atau Keduanya.";
+  }
+
+  if (editId) {
+    const k = kegiatanList.find(x => x.id === editId);
+    if (k) {
+      document.getElementById('keg-id').value = k.id;
+      document.getElementById('keg-judul').value = k.judul || '';
+      document.getElementById('keg-tanggal').value = k.tanggal || '';
+      document.getElementById('keg-kategori').value = k.kategori || 'Akademik';
+      document.getElementById('keg-deskripsi').value = k.deskripsi || '';
+      document.getElementById('keg-gambar').value = k.gambar || '';
+      document.getElementById('keg-video').value = k.video || '';
+      if (!isGuru || isAdmin) {
+        targetSelect.value = k.target_display || 'portal';
+      }
+      titleEl.innerHTML = `<i data-lucide="edit-3"></i> Edit Informasi Kegiatan`;
+    }
+  } else {
+    titleEl.innerHTML = `<i data-lucide="newspaper"></i> Tambah Informasi Kegiatan`;
+  }
+
+  modal.classList.remove('hidden');
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
+function closeModalKegiatan() {
+  const modal = document.getElementById('modal-kegiatan');
+  if (modal) modal.classList.add('hidden');
+}
+
+function saveKegiatan() {
+  const id = document.getElementById('keg-id').value;
+  const judul = document.getElementById('keg-judul').value.trim();
+  const tanggal = document.getElementById('keg-tanggal').value;
+  const kategori = document.getElementById('keg-kategori').value;
+  const deskripsi = document.getElementById('keg-deskripsi').value.trim();
+  const gambar = document.getElementById('keg-gambar').value.trim();
+  const video = document.getElementById('keg-video').value.trim();
+  const targetSelect = document.getElementById('keg-target-display');
+
+  const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
+  const isGuru = currentUser && currentUser.role === 'Guru';
+
+  let target_display = targetSelect.value;
+  if (isGuru && !isAdmin) {
+    target_display = 'portal'; // Pastikan proteksi server/logic: guru tetap portal
+  }
+
+  if (!judul || !deskripsi) {
+    Swal.fire('Peringatan', 'Judul dan isi deskripsi kegiatan wajib diisi!', 'warning');
+    return;
+  }
+
+  if (id) {
+    // Mode Update
+    const idx = kegiatanList.findIndex(x => x.id === id);
+    if (idx !== -1) {
+      kegiatanList[idx] = {
+        ...kegiatanList[idx],
+        judul,
+        tanggal,
+        kategori,
+        deskripsi,
+        gambar,
+        video,
+        target_display: isAdmin ? target_display : kegiatanList[idx].target_display,
+        updatedAt: new Date().toISOString()
+      };
+    }
+  } else {
+    // Mode Create Baru
+    const newKeg = {
+      id: "keg-" + Date.now(),
+      judul,
+      tanggal,
+      kategori,
+      deskripsi,
+      gambar: gambar || "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80",
+      video,
+      author: currentUser ? currentUser.nama : "Petugas",
+      authorRole: currentUser ? currentUser.role : "Petugas",
+      target_display,
+      createdAt: new Date().toISOString()
+    };
+    kegiatanList.unshift(newKeg);
+  }
+
+  saveStoredKegiatan(kegiatanList);
+  closeModalKegiatan();
+  renderDashboardKegiatan();
+  renderLandingKegiatan();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Berhasil Disimpan!',
+    text: `Warta kegiatan "${judul}" telah disimpan dengan visibilitas: ${target_display}.`,
+    timer: 1800,
+    showConfirmButton: false
+  });
+}
+
+function editKegiatan(id) {
+  openModalKegiatan(id);
+}
+
+function deleteKegiatan(id) {
+  const k = kegiatanList.find(x => x.id === id);
+  if (!k) return;
+
+  Swal.fire({
+    title: 'Hapus Kegiatan?',
+    text: `Apakah Anda yakin ingin menghapus "${k.judul}"?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    confirmButtonText: 'Ya, Hapus!',
+    cancelButtonText: 'Batal'
+  }).then((res) => {
+    if (res.isConfirmed) {
+      kegiatanList = kegiatanList.filter(x => x.id !== id);
+      saveStoredKegiatan(kegiatanList);
+      renderDashboardKegiatan();
+      renderLandingKegiatan();
+      Swal.fire('Terhapus', 'Warta kegiatan telah dihapus.', 'success');
+    }
+  });
+}
+
+// Fitur Admin Cepat Mengubah Visibilitas Akses Kegiatan
+function quickToggleVisibility(id) {
+  const k = kegiatanList.find(x => x.id === id);
+  if (!k) return;
+
+  Swal.fire({
+    title: 'Atur Akses Tampilan Kegiatan',
+    text: `Ubah hak akses visibilitas untuk "${k.judul}":`,
+    input: 'select',
+    inputOptions: {
+      'portal': '🔒 Hanya Portal Dalam (Siswa & Petugas)',
+      'public': '🌐 Tampil di Luar Portal (Landing Page Publik)',
+      'both': '🌟 Tampil di Keduanya (Portal & Landing Page)'
+    },
+    inputValue: k.target_display || 'portal',
+    showCancelButton: true,
+    confirmButtonText: 'Terapkan Akses',
+    confirmButtonColor: 'var(--primary-color)',
+    cancelButtonText: 'Batal'
+  }).then((res) => {
+    if (res.isConfirmed && res.value) {
+      k.target_display = res.value;
+      saveStoredKegiatan(kegiatanList);
+      renderDashboardKegiatan();
+      renderLandingKegiatan();
+      Swal.fire('Akses Diperbarui', `Visibilitas sekarang: ${res.value.toUpperCase()}`, 'success');
+    }
+  });
+}
+
+// Render Warta Kegiatan di Landing Page (Hanya yg berstatus 'public' atau 'both')
+function renderLandingKegiatan() {
+  const grid = document.getElementById('landing-kegiatan-grid');
+  if (!grid) return;
+
+  const publicList = (kegiatanList.length > 0 ? kegiatanList : getStoredKegiatan())
+    .filter(k => k.target_display === 'public' || k.target_display === 'both');
+
+  if (publicList.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted); background: var(--surface-color); border-radius: 12px; border: 1px dashed var(--border-color);">
+        <p style="margin: 0;">Belum ada pengumuman kegiatan yang dipublikasikan ke halaman utama.</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = publicList.map(k => `
+    <div class="landing-form-card" style="padding: 0; overflow: hidden; border-radius: 16px; border: 1px solid var(--border-color); display: flex; flex-direction: column; background: var(--surface-color); transition: transform 0.2s, box-shadow 0.2s;">
+      ${k.gambar ? `
+        <div style="height: 180px; overflow: hidden; position: relative;">
+          <img src="${k.gambar}" alt="${k.judul}" style="width: 100%; height: 100%; object-fit: cover;">
+          <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;">
+            ${k.kategori || 'Kegiatan'}
+          </div>
+        </div>
+      ` : ''}
+      <div style="padding: 1.5rem; display: flex; flex-direction: column; flex: 1;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">
+          📅 ${k.tanggal || '-'} · Oleh <b>${k.author || 'Admin'}</b>
+        </div>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-color); margin: 0 0 8px 0; line-height: 1.35;">
+          ${k.judul}
+        </h3>
+        <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.55; margin: 0; flex: 1; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">
+          ${k.deskripsi}
+        </p>
+        ${k.video ? `
+          <div style="margin-top: 12px;">
+            <a href="${k.video}" target="_blank" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem;">
+              ▶ Tonton Video
+            </a>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+
+// =========================================================================
+// ==================== FITUR: INFORMASI TK & MAPS LEAFLET =================
+// =========================================================================
+
+// Data Default Profil TK Aura Anugerah (Satu kompleks dengan PKBM di Sentani)
+const DEFAULT_TK_INFO = {
+  nama: "TK Aura Anugerah",
+  jalan: "JL. Yahim KOMP.Buton Samping Hotel Citra Buana",
+  kecamatan: "Sentani",
+  kabupaten: "Kabupaten Jayapura, Papua (99352)",
+  deskripsi: "TK Aura Anugerah adalah Satuan Pendidikan Anak Usia Dini yang berfokus pada pembentukan karakter mandiri, nilai-nilai moralitas, kreativitas, dan kesiapan transisi PAUD ke Sekolah Dasar yang menyenangkan dan berkualitas.",
+  visi: "Terwujudnya anak usia dini yang berakhlak mulia, cerdas, ceria, mandiri, dan berbudaya lokal Papua.",
+  misi: "1. Menumbuhkan nilai budi pekerti dan pembiasaan ibadah.\n2. Mengembangkan kemampuan motorik, kognitif, dan bahasa melalui bermain bermakna.\n3. Membangun kolaborasi sinergis antara pendidik, orang tua, dan masyarakat.",
+  wa: "628123456789",
+  wa_nama: "Sekretariat TK Aura Anugerah",
+  telepon: "0812-4800-0000",
+  email: "tk.auraanugerah@gmail.com",
+  latlong: "-2.566100,140.505700", // Koordinat Sentani Yahim Kompleks Citra Buana
+  target_display: "both" // 'portal' | 'public' | 'both'
+};
+
+let infoTKData = null;
+let leafletMapLanding = null;
+let leafletMapDashboard = null;
+
+function getStoredTKInfo() {
+  try {
+    const raw = localStorage.getItem('ppdb_tk_info');
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.warn("Error read ppdb_tk_info", e);
+  }
+  return DEFAULT_TK_INFO;
+}
+
+function saveStoredTKInfo(data) {
+  try {
+    localStorage.setItem('ppdb_tk_info', JSON.stringify(data));
+  } catch (e) {
+    console.warn("Error write ppdb_tk_info", e);
+  }
+}
+
+function loadTKData() {
+  infoTKData = getStoredTKInfo();
+  renderDashboardTK();
+}
+
+function renderDashboardTK() {
+  const container = document.getElementById('dashboard-tk-container');
+  if (!container) return;
+
+  const s = infoTKData || getStoredTKInfo();
+  const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
+
+  // Sembunyikan tombol edit untuk non-admin
+  const btnEdit = document.getElementById('btn-edit-tk-info');
+  if (btnEdit) {
+    btnEdit.style.display = isAdmin ? '' : 'none';
+  }
+
+  let visBadge = '';
+  if (s.target_display === 'portal') {
+    visBadge = `<span style="font-size: 11.5px; font-weight: 700; background: rgba(59, 130, 246, 0.15); color: #2563eb; padding: 4px 10px; border-radius: 999px;">🔒 Khusus Portal</span>`;
+  } else if (s.target_display === 'public') {
+    visBadge = `<span style="font-size: 11.5px; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #059669; padding: 4px 10px; border-radius: 999px;">🌐 Khusus Publik</span>`;
+  } else {
+    visBadge = `<span style="font-size: 11.5px; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #d97706; padding: 4px 10px; border-radius: 999px;">🌟 Tampil di Portal & Publik</span>`;
+  }
+
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- Header Info TK -->
+      <div class="stat-card" style="padding: 1.75rem; border: 1px solid var(--border-color); border-radius: 16px; flex-direction: column; align-items: stretch;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+          <div>
+            <span style="font-size: 0.78rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px;">PAUD Mitra Satu Kompleks</span>
+            <h2 style="font-size: 1.6rem; font-weight: 800; color: #0284c7; margin: 4px 0 6px 0;">${s.nama}</h2>
+            <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.9rem;">
+              <i data-lucide="map-pin" style="width: 15px; height: 15px; color: #0284c7;"></i>
+              <span>${s.jalan}, ${s.kecamatan}, ${s.kabupaten}</span>
+            </div>
+          </div>
+          <div>${visBadge}</div>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 12px 0 16px 0;">
+
+        <div style="margin-bottom: 1rem;">
+          <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--text-color); margin: 0 0 6px 0;">Deskripsi Profil:</h4>
+          <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; margin: 0; white-space: pre-wrap;">${s.deskripsi}</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-top: 8px;">
+          <div style="background: var(--surface-2); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--border-color);">
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--primary-color); margin: 0 0 6px 0; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="target" style="width: 16px; height: 16px;"></i> Visi Sekolah
+            </h4>
+            <p style="font-size: 0.86rem; color: var(--text-color); line-height: 1.5; margin: 0; white-space: pre-wrap;">${s.visi}</p>
+          </div>
+          <div style="background: var(--surface-2); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--border-color);">
+            <h4 style="font-size: 0.9rem; font-weight: 700; color: #0284c7; margin: 0 0 6px 0; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="compass" style="width: 16px; height: 16px;"></i> Misi Sekolah
+            </h4>
+            <p style="font-size: 0.86rem; color: var(--text-color); line-height: 1.5; margin: 0; white-space: pre-wrap;">${s.misi}</p>
+          </div>
+        </div>
+
+        <!-- Tombol Kontak Cepat -->
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.25rem;">
+          ${s.wa ? `
+            <a href="https://wa.me/${s.wa.replace(/\D/g, '')}" target="_blank" class="btn p" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem;">
+              <i data-lucide="message-circle" style="width: 15px; height: 15px;"></i> WhatsApp TK
+            </a>
+          ` : ''}
+          ${s.telepon ? `
+            <a href="tel:${s.telepon}" class="btn" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem;">
+              <i data-lucide="phone" style="width: 15px; height: 15px;"></i> ${s.telepon}
+            </a>
+          ` : ''}
+          ${s.email ? `
+            <a href="mailto:${s.email}" class="btn" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem;">
+              <i data-lucide="mail" style="width: 15px; height: 15px;"></i> ${s.email}
+            </a>
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- Card Peta Leaflet Lokasi Kompleks -->
+      <div class="stat-card" style="padding: 1.5rem; border: 1px solid var(--border-color); border-radius: 16px; flex-direction: column; align-items: stretch;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-color); margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="map" style="width: 18px; height: 18px; color: #0284c7;"></i> Peta Lokasi Sentani, Jayapura (Leaflet OSM)
+          </h3>
+          <span style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">${s.latlong}</span>
+        </div>
+        <div id="dashboard-tk-map" style="height: 380px; width: 100%; border-radius: 12px; border: 1px solid var(--border-color); z-index: 1;"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);">
+          <span>Titik lokasi terpadu TK & PKBM Aura Anugerah (Yahim, Sentani).</span>
+          <a href="https://www.google.com/maps?q=${s.latlong}" target="_blank" style="color: #0284c7; font-weight: 600; text-decoration: underline;">
+            Buka di Google Maps ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+
+  // Inisialisasi peta Leaflet untuk dashboard
+  setTimeout(() => {
+    initLeafletMap('dashboard-tk-map', s.latlong, s.nama, s.jalan);
+  }, 250);
+}
+
+// Variable penampung peta navigasi embedded
+let leafletMapNavigasi = null;
+
+// Buka Modal Navigasi Peta Embedded
+function openModalNavigasiPeta(latlongStr) {
+  const modal = document.getElementById('modal-navigasi-peta');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  const coords = (latlongStr || "-2.566100,140.505700").split(',');
+  const lat = parseFloat(coords[0]) || -2.5661;
+  const lng = parseFloat(coords[1]) || 140.5057;
+
+  const btnExternal = document.getElementById('btn-open-external-gmaps');
+  if (btnExternal) {
+    btnExternal.href = `https://www.google.com/maps?q=${lat},${lng}`;
+  }
+
+  setTimeout(() => {
+    initLeafletMap('embed-navigation-map', latlongStr || "-2.566100,140.505700", "PKBM Aura Anugerah", "JL. Yahim KOMP. Buton Samping Hotel Citra Buana, Sentani", true);
+  }, 250);
+}
+
+// Tutup Modal Navigasi Peta Embedded
+function closeModalNavigasiPeta() {
+  const modal = document.getElementById('modal-navigasi-peta');
+  if (modal) modal.classList.add('hidden');
+}
+
+// Inisialisasi Lokasi & Peta Geometri PKBM Aura Anugerah di Landing Page (Publik)
+function renderLandingTK() {
+  const container = document.getElementById('landing-tk-container');
+  if (!container) return;
+
+  const s = infoTKData || getStoredTKInfo();
+
+  // Data lokasi PKBM Aura Anugerah
+  const pkbmNama = "PKBM Aura Anugerah";
+  const pkbmAlamat = "JL. Yahim KOMP. Buton Samping Hotel Citra Buana, Sentani";
+  const pkbmKab = "Kabupaten Jayapura, Papua (99352)";
+  const pkbmDeskripsi = "Pusat Kegiatan Belajar Masyarakat (PKBM) Aura Anugerah menyelenggarakan program pendidikan kesetaraan Paket A (Setara SD), Paket B (Setara SMP), Paket C (Setara SMA), kursus keterampilan vokasi, keaksaraan, serta program pemberdayaan masyarakat terpadu di Sentani.";
+  const pkbmVisi = "Mewujudkan masyarakat yang cerdas, berdaya saing, berakhlak mulia, dan mandiri melalui layanan pendidikan non-formal yang inklusif dan berkualitas di tanah Papua.";
+  const pkbmLatlong = s.latlong || "-2.566100,140.505700";
+
+  container.innerHTML = `
+    <div style="display: grid; grid-template-columns: 1fr 1.35fr; gap: 2.5rem; align-items: stretch;">
+      <!-- Kolom Kiri: Detail Profil PKBM Aura Anugerah -->
+      <div style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <span style="font-size: 0.8rem; font-weight: 800; color: #16a34a; background: rgba(34, 197, 94, 0.14); padding: 5px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;">
+              Pendidikan Kesetaraan & Vokasi Terpadu
+            </span>
+          </div>
+          <h3 style="font-size: 1.85rem; font-weight: 800; color: var(--text-color); margin: 0 0 12px 0;">${pkbmNama}</h3>
+          <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.65; margin-bottom: 1.5rem;">${pkbmDeskripsi}</p>
+
+          <div style="margin-bottom: 1.5rem; font-size: 0.92rem; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <span style="font-size: 1.1rem; line-height: 1;">📍</span>
+              <div>
+                <b style="color: var(--text-color);">Alamat Kampus:</b>
+                <div style="color: var(--text-muted); margin-top: 2px;">${pkbmAlamat}, ${pkbmKab}</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <span style="font-size: 1.1rem; line-height: 1;">🎯</span>
+              <div>
+                <b style="color: var(--text-color);">Visi PKBM:</b>
+                <div style="color: var(--text-muted); margin-top: 2px;">${pkbmVisi}</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <span style="font-size: 1.1rem; line-height: 1;">🛰️</span>
+              <div>
+                <b style="color: var(--text-color);">Tampilan Peta:</b>
+                <div style="color: var(--text-muted); margin-top: 2px;">Citra Geometri Satelit Resolusi Tinggi (ESRI Satellite Hybrid)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 1rem;">
+          <button type="button" onclick="openModalNavigasiPeta('${pkbmLatlong}')" class="btn btn-landing-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; font-weight: 600; font-size: 0.9rem;">
+            <i data-lucide="navigation" style="width: 17px; height: 17px;"></i>
+            <span>Buka Navigasi Peta (Embedded)</span>
+          </button>
+          <a href="#kontak" onclick="document.getElementById('kontak').scrollIntoView({behavior: 'smooth'}); return false;" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; font-weight: 600; font-size: 0.9rem;">
+            <i data-lucide="phone-call" style="width: 17px; height: 17px;"></i>
+            <span>Lihat Kontak Kami</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Kolom Kanan: Peta Leaflet Geometri Satelit Interaktif -->
+      <div style="display: flex; flex-direction: column;">
+        <div id="landing-tk-map" style="height: 440px; width: 100%; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: var(--shadow-sm); z-index: 1;"></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);">
+          <span>🛰️ Tampilan Geometri Satelit & Bangunan Presisi</span>
+          <span style="font-weight: 600; color: var(--primary-color);">Sentani, Jayapura, Papua</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    initLeafletMap('landing-tk-map', pkbmLatlong, pkbmNama, pkbmAlamat, true);
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  }, 300);
+}
+
+// Inisialisasi Peta Leaflet Universal (Mendukung Tampilan Geometri Satelit)
+function initLeafletMap(containerId, latlongStr, title, subtitle, useGeometry = false) {
+  const mapEl = document.getElementById(containerId);
+  if (!mapEl || typeof L === 'undefined') return;
+
+  const parts = (latlongStr || "-2.566100,140.505700").split(',');
+  const lat = parseFloat(parts[0]) || -2.5661;
+  const lng = parseFloat(parts[1]) || 140.5057;
+
+  try {
+    // Hapus map lama jika sudah pernah dibuat di container ini
+    if (containerId === 'dashboard-tk-map' && leafletMapDashboard) {
+      leafletMapDashboard.remove();
+      leafletMapDashboard = null;
+    }
+    if (containerId === 'landing-tk-map' && leafletMapLanding) {
+      leafletMapLanding.remove();
+      leafletMapLanding = null;
+    }
+    if (containerId === 'embed-navigation-map' && leafletMapNavigasi) {
+      leafletMapNavigasi.remove();
+      leafletMapNavigasi = null;
+    }
+
+    const map = L.map(containerId).setView([lat, lng], 17);
+
+    // Layer Peta: Geometri Citra Satelit (ESRI World Imagery) + Jalan/Label
+    if (useGeometry) {
+      // 1. Base Layer Citra Satelit Resolusi Tinggi
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      }).addTo(map);
+
+      // 2. Overlay Garis Geometri Jalan & Batas Wilayah
+      L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: ''
+      }).addTo(map);
+    } else {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors | Aura Anugerah Sentani'
+      }).addTo(map);
+    }
+
+    // Marker Lokasi
+    const marker = L.marker([lat, lng]).addTo(map);
+    marker.bindPopup(`
+      <div style="font-family: inherit; font-size: 13px; min-width: 200px; padding: 4px;">
+        <b style="color: #16a34a; font-size: 14px;">${title}</b><br>
+        <span style="color: #475569; display: block; margin: 4px 0;">${subtitle}</span>
+        <span style="display: inline-block; background: #dcfce7; color: #16a34a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 4px;">
+          📍 Sentani, Jayapura, Papua
+        </span>
+      </div>
+    `).openPopup();
+
+    if (containerId === 'dashboard-tk-map') leafletMapDashboard = map;
+    if (containerId === 'landing-tk-map') leafletMapLanding = map;
+    if (containerId === 'embed-navigation-map') leafletMapNavigasi = map;
+
+    // Refresh ukuran peta bila render terjadi di container dinamis
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 350);
+  } catch (err) {
+    console.warn("Leaflet map initialization notice:", err);
+  }
+}
+
+// Buka Modal Edit Info TK untuk Admin
+function openModalEditTK() {
+  const modal = document.getElementById('modal-edit-tk');
+  if (!modal) return;
+
+  const s = infoTKData || getStoredTKInfo();
+
+  document.getElementById('tk-nama').value = s.nama || '';
+  document.getElementById('tk-jalan').value = s.jalan || '';
+  document.getElementById('tk-kecamatan').value = s.kecamatan || '';
+  document.getElementById('tk-kabupaten').value = s.kabupaten || '';
+  document.getElementById('tk-deskripsi').value = s.deskripsi || '';
+  document.getElementById('tk-visi').value = s.visi || '';
+  document.getElementById('tk-misi').value = s.misi || '';
+  document.getElementById('tk-wa').value = s.wa || '';
+  document.getElementById('tk-telepon').value = s.telepon || '';
+  document.getElementById('tk-latlong').value = s.latlong || '-2.566100,140.505700';
+  document.getElementById('tk-target-display').value = s.target_display || 'both';
+
+  modal.classList.remove('hidden');
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
+function closeModalEditTK() {
+  const modal = document.getElementById('modal-edit-tk');
+  if (modal) modal.classList.add('hidden');
+}
+
+function resetDefaultCoordinates() {
+  const input = document.getElementById('tk-latlong');
+  if (input) input.value = "-2.566100,140.505700";
+}
+
+function saveInfoTK() {
+  const nama = document.getElementById('tk-nama').value.trim();
+  const jalan = document.getElementById('tk-jalan').value.trim();
+  const kecamatan = document.getElementById('tk-kecamatan').value.trim();
+  const kabupaten = document.getElementById('tk-kabupaten').value.trim();
+  const deskripsi = document.getElementById('tk-deskripsi').value.trim();
+  const visi = document.getElementById('tk-visi').value.trim();
+  const misi = document.getElementById('tk-misi').value.trim();
+  const wa = document.getElementById('tk-wa').value.trim();
+  const telepon = document.getElementById('tk-telepon').value.trim();
+  const latlong = document.getElementById('tk-latlong').value.trim();
+  const target_display = document.getElementById('tk-target-display').value;
+
+  if (!nama || !jalan || !latlong) {
+    Swal.fire('Peringatan', 'Nama, alamat jalan, dan titik koordinat latlong wajib diisi!', 'warning');
+    return;
+  }
+
+  const updatedTK = {
+    nama,
+    jalan,
+    kecamatan,
+    kabupaten,
+    deskripsi,
+    visi,
+    misi,
+    wa,
+    telepon,
+    email: telepon.includes('@') ? telepon : 'tk.auraanugerah@gmail.com',
+    latlong,
+    target_display
+  };
+
+  infoTKData = updatedTK;
+  saveStoredTKInfo(infoTKData);
+  closeModalEditTK();
+  renderDashboardTK();
+  renderLandingTK();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Pengaturan Disimpan!',
+    text: `Informasi & peta ${nama} berhasil diperbarui.`,
+    timer: 1800,
+    showConfirmButton: false
+  });
+}
+
+// Ekspos fungsi ke global window agar onclick di markup HTML dapat memanggilnya
+window.openModalKegiatan = openModalKegiatan;
+window.closeModalKegiatan = closeModalKegiatan;
+window.saveKegiatan = saveKegiatan;
+window.editKegiatan = editKegiatan;
+window.deleteKegiatan = deleteKegiatan;
+window.filterKegiatan = filterKegiatan;
+window.handleSearchKegiatan = handleSearchKegiatan;
+window.quickToggleVisibility = quickToggleVisibility;
+window.renderLandingKegiatan = renderLandingKegiatan;
+
+window.openModalEditTK = openModalEditTK;
+window.closeModalEditTK = closeModalEditTK;
+window.saveInfoTK = saveInfoTK;
+window.resetDefaultCoordinates = resetDefaultCoordinates;
+window.renderLandingTK = renderLandingTK;
+window.loadKegiatanData = loadKegiatanData;
+window.loadTKData = loadTKData;
+window.openModalNavigasiPeta = openModalNavigasiPeta;
+window.closeModalNavigasiPeta = closeModalNavigasiPeta;
