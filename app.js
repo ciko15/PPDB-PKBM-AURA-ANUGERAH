@@ -5556,13 +5556,16 @@ async function loadPdfDocument(book, startPage = 1) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
     try {
+      // Timeout 3.5 detik untuk loading PDF native; jika server proxy offline (misal di Vercel), langsung alihkan ke Google Drive Preview
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('PDF proxy timeout')), 3500));
+
       const loadingTask = pdfjsLib.getDocument({
         url: pdfUrl,
         cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
         cMapPacked: true
       });
 
-      loadingTask.promise.then(pdf => {
+      Promise.race([loadingTask.promise, timeoutPromise]).then(pdf => {
         currentPdfDoc = pdf;
         const total = pdf.numPages;
         const safePage = Math.max(1, Math.min(total, startPage));
@@ -5582,7 +5585,7 @@ async function loadPdfDocument(book, startPage = 1) {
         calculateInitialScale();
         renderCurrentPdfPage();
       }).catch(err => {
-        console.error('Error loading PDF:', err);
+        console.warn('Menggunakan fallback Drive preview:', err.message);
         fallbackToTextViewer(book);
       });
     } catch (err) {
@@ -5610,11 +5613,39 @@ function fallbackToTextViewer(book) {
   const spinner = document.getElementById('reader-loading-spinner');
   const canvas = document.getElementById('pdf-page-canvas');
   const textViewerEl = document.getElementById('reader-text-viewer');
+  const iframeWrapper = document.getElementById('reader-iframe-wrapper');
+  const driveIframe = document.getElementById('reader-drive-iframe');
+
   if (spinner) spinner.style.display = 'none';
   if (canvas) canvas.style.display = 'none';
+
+  // 1. Jika buku memiliki link Google Drive atau ID file Drive, tampilkan preview Google Drive langsung (sangat responsif & stabil di HP)
+  let drivePreviewUrl = '';
+  if (book.file && book.file.includes('drive.google.com')) {
+    const driveMatch = book.file.match(/\/d\/([a-zA-Z0-9_-]+)/) || book.file.match(/id=([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+      drivePreviewUrl = `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+    } else {
+      drivePreviewUrl = book.file;
+    }
+  } else if (book.id && (book.id.length > 20 || !book.id.startsWith('BK-'))) {
+    drivePreviewUrl = `https://drive.google.com/file/d/${book.id}/preview`;
+  }
+
+  if (drivePreviewUrl && iframeWrapper && driveIframe) {
+    if (textViewerEl) textViewerEl.style.display = 'none';
+    iframeWrapper.style.display = 'block';
+    if (driveIframe.src !== drivePreviewUrl) {
+      driveIframe.src = drivePreviewUrl;
+    }
+    return;
+  }
+
+  // 2. Jika tidak ada link Drive, tampilkan Text Bab Pelajaran interaktif
+  if (iframeWrapper) iframeWrapper.style.display = 'none';
   if (textViewerEl) {
     textViewerEl.style.display = 'block';
-    renderBookChapterContent(document.getElementById('reader-chapter-content'), book, 1);
+    renderBookChapterContent(document.getElementById('reader-chapter-content'), book, activeBelajarSession ? activeBelajarSession.halamanSekarang : 1);
   }
 }
 

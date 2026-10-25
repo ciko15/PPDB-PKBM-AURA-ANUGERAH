@@ -47,22 +47,27 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Menangani klik notifikasi pada HP
+// Menangani klik notifikasi pada HP (Android & iOS)
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/portal';
+
+  const rawUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/portal';
+  const fullTargetUrl = new URL(rawUrl, self.location.origin).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Jika tab/aplikasi sudah terbuka, bawa ke depan
+      // 1. Jika ada tab / window SIGAP AURA yang sedang terbuka di browser / PWA HP
       for (const client of clientList) {
-        if (client.url && 'focus' in client) {
+        if ('focus' in client) {
+          if ('navigate' in client && client.url !== fullTargetUrl) {
+            client.navigate(fullTargetUrl);
+          }
           return client.focus();
         }
       }
-      // Jika belum terbuka, buka window baru
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(targetUrl);
+      // 2. Jika belum ada jendela aktif, buka window baru ke target URL
+      if (self.clients && self.clients.openWindow) {
+        return self.clients.openWindow(fullTargetUrl);
       }
     })
   );
