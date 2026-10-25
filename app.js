@@ -5777,58 +5777,105 @@ function startLiveTimer() {
   }, 1000);
 }
 
-function closeReaderModal() {
+function closeReaderModal(triggerConfirm = true) {
   if (activeBelajarSession) {
     activeBelajarSession.status = 'Selesai Belajar';
     updateLogBelajarSession(activeBelajarSession);
 
-    // 🔔 Kirim Notifikasi Push ke Admin & Super Admin saat siswa selesai belajar
-    const durasiMnt = Math.max(1, Math.ceil((activeBelajarSession.durasiDetik || 0) / 60));
+    const session = { ...activeBelajarSession };
+    const durasiMnt = Math.max(1, Math.ceil((session.durasiDetik || 0) / 60));
+    const halTerbaca = session.halamanSekarang || 1;
+    const totalHal = session.totalHalaman || 28;
+    const persenSelesai = Math.min(100, Math.round((halTerbaca / totalHal) * 100));
+
+    // 🔔 Kirim Notifikasi Push Detail ke Admin & Super Admin saat siswa selesai belajar
     if (typeof sendAppPushNotification === 'function') {
       sendAppPushNotification({
-        title: 'Selesai Belajar ✅',
-        body: `Siswa "${activeBelajarSession.namaSiswa}" telah menyelesaikan belajar materi ${activeBelajarSession.bukuJudul} (Durasi: ${durasiMnt} menit).`,
+        title: 'Selesai Belajar Modul 🎓',
+        body: `Siswa ${session.namaSiswa} telah tuntas belajar ${session.bukuJudul}. Resume: Hal. 1 s/d ${halTerbaca} (${persenSelesai}% materi), Durasi: ${durasiMnt} menit.`,
         url: '/portal',
         targetRole: 'Admin',
-        tag: 'selesai-belajar-' + activeBelajarSession.sessionId
+        tag: 'selesai-belajar-' + session.sessionId
       });
     }
+
+    if (liveTimerInterval) clearInterval(liveTimerInterval);
+    activeBelajarSession = null;
+    currentPdfDoc = null;
+
+    const modalReader = document.getElementById('modal-reader');
+    if (modalReader) modalReader.classList.add('hidden');
+    renderBelajarLogTable();
+    updateBelajarStats();
+
+    // Tampilkan Dialog Resume Selesai Belajar kepada Siswa
+    if (triggerConfirm) {
+      tampilkanResumeSelesaiBelajar(session, durasiMnt, halTerbaca, totalHal, persenSelesai);
+    }
+    return;
   }
+
   if (liveTimerInterval) clearInterval(liveTimerInterval);
   activeBelajarSession = null;
   currentPdfDoc = null;
-
   const modalReader = document.getElementById('modal-reader');
   if (modalReader) modalReader.classList.add('hidden');
   renderBelajarLogTable();
   updateBelajarStats();
 }
 
-function selesaiBelajarDanUjian() {
-  if (!activeBelajarSession) return;
-  const session = { ...activeBelajarSession };
-  closeReaderModal();
-
-  // Buka konfirmasi langsung untuk ujian
+// Modal dialog resume hasil belajar siswa
+function tampilkanResumeSelesaiBelajar(session, durasiMnt, halTerbaca, totalHal, persenSelesai) {
   Swal.fire({
-    title: 'Selesai Belajar! Lanjut ke Ujian?',
+    title: 'Resume Selesai Belajar 📖',
     html: `
       <div style="text-align: left; font-size: 13.5px; color: var(--text-color);">
-        <p>Selamat <b>${session.namaSiswa}</b>, Anda telah tuntas membaca <b>${session.bukuJudul}</b> (Hingga Hal. ${session.halamanSekarang}) dengan durasi <b>${Math.max(1, Math.ceil(session.durasiDetik / 60))} menit</b>.</p>
-        <p>Apakah Anda ingin membuka lembar ujian evaluasi sekarang untuk dinilai oleh Tutor / Guru?</p>
+        <p style="margin-top: 0;">Kerja bagus <b>${session.namaSiswa}</b>! Kehadiran dan aktivitas belajar Anda telah tercatat otomatis di sistem PKBM Aura Anugerah.</p>
+        
+        <!-- Kartu Rangkuman Detail -->
+        <div style="background: var(--surface-2); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin: 14px 0;">
+          <div style="font-weight: 700; font-size: 14.5px; color: var(--primary-color); margin-bottom: 8px;">
+            📚 ${session.bukuJudul}
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+            <div style="background: var(--surface-color); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <span style="font-size: 11px; color: var(--text-muted); display: block;">Halaman Dipelajari</span>
+              <b style="font-size: 14px; color: var(--text-color);">Hal. 1 - ${halTerbaca}</b>
+              <span style="font-size: 11px; color: var(--primary-color);"> (${persenSelesai}%)</span>
+            </div>
+
+            <div style="background: var(--surface-color); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <span style="font-size: 11px; color: var(--text-muted); display: block;">Durasi Belajar</span>
+              <b style="font-size: 14px; color: var(--text-color);">${durasiMnt} Menit</b>
+              <span style="font-size: 11px; color: #16a34a;"> (${session.jamMulai} - ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })})</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 10px; font-size: 12px; line-height: 1.45; color: var(--text-muted); padding-top: 8px; border-top: 1px dashed var(--border-color);">
+            💡 <b>Kesimpulan:</b> Peserta telah mempelajari materi modul sebanyak <b>${halTerbaca} dari ${totalHal} halaman</b> dan siap melanjutkan ke evaluasi pemahaman (Ujian CBT).
+          </div>
+        </div>
+
+        <p style="margin-bottom: 0; font-size: 12.5px; color: var(--text-muted);">
+          Laporan sesi ini telah otomatis terkirim ke pengelola & guru. Apakah Anda ingin langsung melaksanakan ujian kompetensi sekarang?
+        </p>
       </div>
     `,
     icon: 'success',
     showCancelButton: true,
-    confirmButtonText: 'Ya, Laksanakan Ujian 📝',
-    cancelButtonText: 'Nanti Saja',
+    confirmButtonText: 'Laksanakan Ujian Sekarang 📝',
+    cancelButtonText: 'Tutup & Istirahat',
     confirmButtonColor: 'var(--primary-color)'
   }).then(res => {
     if (res.isConfirmed) {
-      // Buka modal input ujian dengan preset buku & siswa
       showInputNilaiModal(session.bukuId, session.namaSiswa);
     }
   });
+}
+
+function selesaiBelajarDanUjian() {
+  closeReaderModal(true);
 }
 
 function catatLogBelajarBaru(session) {
