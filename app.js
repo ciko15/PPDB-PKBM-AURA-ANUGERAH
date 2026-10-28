@@ -1377,17 +1377,49 @@ async function cekNotifikasiBaruLintasPerangkat() {
     if (latest && latest.timestamp && latest.timestamp !== lastKnownNotifTimestamp) {
       if (lastKnownNotifTimestamp !== '') {
         // Ada aktivitas belajar / ujian baru dari siswa di perangkat lain!
-        // Munculkan notifikasi banner langsung di HP Admin
-        if (Notification.permission === 'granted' && swRegistration && swRegistration.showNotification) {
-          const iconFull = window.location.origin + '/icon-192.png';
-          swRegistration.showNotification(latest.title || 'SIGAP AURA', {
-            body: latest.body || 'Aktivitas belajar baru terdeteksi.',
-            icon: iconFull,
-            badge: iconFull,
-            tag: latest.tag || 'notif-' + Date.now(),
-            data: { url: latest.url || '/portal' },
-            vibrate: [100, 50, 100]
+        
+        // 1. Munculkan Toast Popup mengambang di layar HP (In-App Toast Popup)
+        if (typeof Swal !== 'undefined') {
+          const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 6000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+              toast.addEventListener('mouseenter', Swal.stopTimer);
+              toast.addEventListener('mouseleave', Swal.resumeTimer);
+            }
           });
+          Toast.fire({
+            icon: 'info',
+            title: latest.title || 'Pemberitahuan Aktivitas Siswa',
+            text: latest.body || ''
+          });
+        }
+
+        // 2. Munculkan Notifikasi Banner Sistem HP (jika izin notifikasi browser telah diizinkan)
+        try {
+          if (Notification.permission === 'granted') {
+            if (swRegistration && swRegistration.showNotification) {
+              const iconFull = window.location.origin + '/icon-192.png';
+              swRegistration.showNotification(latest.title || 'SIGAP AURA', {
+                body: latest.body || 'Aktivitas belajar baru terdeteksi.',
+                icon: iconFull,
+                badge: iconFull,
+                tag: latest.tag || 'notif-' + Date.now(),
+                data: { url: latest.url || '/portal' },
+                vibrate: [100, 50, 100]
+              });
+            } else if (typeof Notification !== 'undefined') {
+              new Notification(latest.title || 'SIGAP AURA', {
+                body: latest.body || '',
+                icon: window.location.origin + '/icon-192.png'
+              });
+            }
+          }
+        } catch (notifErr) {
+          console.debug('System notification skipped:', notifErr.message);
         }
       }
       lastKnownNotifTimestamp = latest.timestamp;
