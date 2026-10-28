@@ -5594,42 +5594,31 @@ async function loadPdfDocument(book, startPage = 1) {
     }
   }
 
-  // Jika ada link Google Drive (seperti buku modul PKBM), langsung buka Iframe Preview (100% cepat & langsung tampil di HP)
-  if (drivePreviewUrl && iframeWrapper && driveIframe) {
-    if (spinner) spinner.style.display = 'none';
-    if (canvas) canvas.style.display = 'none';
-    if (renderWrapper) renderWrapper.style.display = 'none';
-    if (textViewerEl) textViewerEl.style.display = 'none';
-    if (iframeTip) iframeTip.style.display = 'inline';
-    iframeWrapper.style.display = 'block';
-    if (driveIframe.src !== drivePreviewUrl) {
-      driveIframe.src = drivePreviewUrl;
-    }
-    return;
-  }
-  if (iframeTip) iframeTip.style.display = 'none';
-  if (renderWrapper) renderWrapper.style.display = 'flex';
-
-  // Tentukan URL PDF untuk mode PDF.js (jika file lokal)
+  // Tentukan URL PDF untuk mode Native PDF.js Reader
   let pdfUrl = '';
-  if (book.file && book.file.startsWith('http') && !book.file.includes('drive.google.com')) {
-    pdfUrl = book.file;
+  if (book.id && (book.id.length > 20 || !book.id.startsWith('BK-'))) {
+    pdfUrl = `https://drive.usercontent.google.com/download?id=${book.id}&export=download`;
+  } else if (book.file && book.file.startsWith('http')) {
+    const driveMatch = book.file.match(/\/d\/([a-zA-Z0-9_-]+)/) || book.file.match(/id=([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+      pdfUrl = `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download`;
+    } else {
+      pdfUrl = book.file;
+    }
   }
 
-  // Jika tidak ada URL PDF, gunakan Fallback Chapter Text
+  if (iframeTip) iframeTip.style.display = 'none';
+
+  // Jika tidak ada URL PDF sama sekali, langsung ke text / iframe
   if (!pdfUrl) {
-    if (spinner) spinner.style.display = 'none';
-    if (canvas) canvas.style.display = 'none';
-    if (iframeWrapper) iframeWrapper.style.display = 'none';
-    if (textViewerEl) {
-      textViewerEl.style.display = 'block';
-      renderBookChapterContent(document.getElementById('reader-chapter-content'), book, startPage);
-    }
+    fallbackToTextViewer(book);
     return;
   }
 
+  // Tampilkan container mode baca PDF Native (Canvas)
   if (spinner) spinner.style.display = 'flex';
   if (canvas) canvas.style.display = 'block';
+  if (renderWrapper) renderWrapper.style.display = 'flex';
   if (textViewerEl) textViewerEl.style.display = 'none';
   if (iframeWrapper) iframeWrapper.style.display = 'none';
 
@@ -5645,8 +5634,8 @@ async function loadPdfDocument(book, startPage = 1) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
     try {
-      // Timeout 3.5 detik untuk loading PDF native; jika server proxy offline (misal di Vercel), langsung alihkan ke Google Drive Preview
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('PDF proxy timeout')), 3500));
+      // Timeout 8 detik untuk loading PDF native; jika jaringan sangat lambat, alihkan ke fallback preview
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('PDF loading timeout')), 8000));
 
       const loadingTask = pdfjsLib.getDocument({
         url: pdfUrl,
@@ -7935,9 +7924,9 @@ function bukaModalNotifikasiDashboard() {
   const popupList = document.getElementById('popup-notifikasi-list');
   if (modal) modal.classList.remove('hidden');
 
-  if (popupList) {
-    const logs = ambilNotifikasiLokal();
-    if (logs.length === 0) {
+  function renderList(logs) {
+    if (!popupList) return;
+    if (!logs || logs.length === 0) {
       popupList.innerHTML = `
         <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px;">
           Belum ada riwayat notifikasi baru.
@@ -7949,18 +7938,36 @@ function bukaModalNotifikasiDashboard() {
         return `
           <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="font-size: 13.5px; color: var(--text-color);">🔔 ${item.title}</strong>
+              <strong style="font-size: 13.5px; color: var(--text-color);">🔔 ${item.title || 'Pemberitahuan'}</strong>
               <small style="color: var(--text-muted);">${dateStr}</small>
             </div>
-            <p style="margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.4;">${item.body}</p>
+            <p style="margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.4;">${item.body || ''}</p>
           </div>
         `;
       }).join('');
     }
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
   }
 
-  if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    window.lucide.createIcons();
+  // Tampilkan data lokal terlebih dahulu secara instan
+  const lokalLogs = ambilNotifikasiLokal();
+  renderList(lokalLogs);
+
+  // Ambil data terbaru secara background jika ada API
+  if (typeof callAPI === 'function') {
+    callAPI({ action: 'getNotificationLogs', limit: 25 }).then(res => {
+      if (res && Array.isArray(res) && res.length > 0) {
+        try {
+          localStorage.setItem('ppdb_notif_logs', JSON.stringify(res));
+        } catch (e) { }
+        renderList(res);
+        updateNotifikasiBadgeUI();
+      }
+    }).catch(err => {
+      console.warn('Gagal memuat notifikasi online saat popup dibuka:', err.message);
+    });
   }
 }
 
