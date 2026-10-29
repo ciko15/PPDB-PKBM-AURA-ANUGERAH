@@ -1392,7 +1392,10 @@ async function cekNotifikasiBaruLintasPerangkat() {
             }
           });
           Toast.fire({
-            icon: 'info',
+            imageUrl: window.location.origin + '/icon-192.png',
+            imageWidth: 42,
+            imageHeight: 42,
+            imageAlt: 'Logo SIGAP AURA',
             title: latest.title || 'Pemberitahuan Aktivitas Siswa',
             text: latest.body || ''
           });
