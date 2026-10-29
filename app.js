@@ -7471,7 +7471,10 @@ async function initServiceWorkerAndPush() {
   }
 
   try {
-    swRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    swRegistration = await navigator.serviceWorker.register('/sw.js?v=2', { scope: '/' });
+    if (swRegistration && typeof swRegistration.update === 'function') {
+      swRegistration.update();
+    }
     console.log('✅ Service Worker berhasil didaftarkan:', swRegistration.scope);
 
     // Periksa status langganan saat ini

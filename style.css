@@ -1212,9 +1212,9 @@ main.main-content {
   }
   .tabs button i,
   .tabs button svg {
-    width: 27px !important;
-    height: 27px !important;
-    stroke-width: 2.2 !important;
+    width: 20px !important;
+    height: 20px !important;
+    stroke-width: 2 !important;
     transition: transform 0.2s ease;
   }
   .tabs button span {
@@ -1229,8 +1229,8 @@ main.main-content {
   .tabs button.on i,
   .tabs button.on svg {
     color: var(--primary-color) !important;
-    transform: scale(1.1);
-    stroke-width: 2.4 !important;
+    transform: scale(1.06);
+    stroke-width: 2.2 !important;
   }
   .grid, .two, .form {
     grid-template-columns: 1fr;
