@@ -36,7 +36,6 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body,
     icon: iconUrl,
-    badge: badgeUrl,
     tag: data.tag || 'sigap-' + Date.now(),
     data: {
       url: data.url || '/portal',

@@ -1409,7 +1409,6 @@ async function cekNotifikasiBaruLintasPerangkat() {
               swRegistration.showNotification(latest.title || 'SIGAP AURA', {
                 body: latest.body || 'Aktivitas belajar baru terdeteksi.',
                 icon: iconFull,
-                badge: iconFull,
                 tag: latest.tag || 'notif-' + Date.now(),
                 data: { url: latest.url || '/portal' },
                 vibrate: [100, 50, 100]
@@ -5669,38 +5668,49 @@ async function loadPdfDocument(book, startPage = 1) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
     try {
-      // Timeout 8 detik untuk loading PDF native; jika jaringan sangat lambat, alihkan ke fallback preview
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('PDF loading timeout')), 8000));
+      // Ambil file PDF secara langsung sebagai ArrayBuffer (menghindari limitasi stream / CORS range request worker)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 detik untuk file modul
 
-      const loadingTask = pdfjsLib.getDocument({
-        url: pdfUrl,
-        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-        cMapPacked: true
-      });
+      const fetchPromise = fetch(pdfUrl, { signal: controller.signal })
+        .then(res => {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.arrayBuffer();
+        });
 
-      Promise.race([loadingTask.promise, timeoutPromise]).then(pdf => {
-        currentPdfDoc = pdf;
-        const total = pdf.numPages;
-        const safePage = Math.max(1, Math.min(total, startPage));
-        currentPdfPage = safePage;
+      fetchPromise
+        .then(async (arrayBuffer) => {
+          clearTimeout(timeoutId);
+          const loadingTask = pdfjsLib.getDocument({
+            data: arrayBuffer,
+            cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+            cMapPacked: true
+          });
 
-        if (activeBelajarSession) {
-          activeBelajarSession.totalHalaman = total;
-          activeBelajarSession.halamanSekarang = safePage;
-          saveActiveBelajarSessionToStorage();
-        }
+          const pdf = await loadingTask.promise;
+          currentPdfDoc = pdf;
+          const total = pdf.numPages;
+          const safePage = Math.max(1, Math.min(total, startPage));
+          currentPdfPage = safePage;
 
-        document.getElementById('reader-total-page').textContent = total;
-        document.getElementById('reader-page-input').max = total;
-        document.getElementById('reader-page-input').value = safePage;
+          if (activeBelajarSession) {
+            activeBelajarSession.totalHalaman = total;
+            activeBelajarSession.halamanSekarang = safePage;
+            saveActiveBelajarSessionToStorage();
+          }
 
-        // Auto scale: sesuaikan lebar layar (HP = fit width)
-        calculateInitialScale();
-        renderCurrentPdfPage();
-      }).catch(err => {
-        console.warn('Menggunakan fallback Drive preview:', err.message);
-        fallbackToTextViewer(book);
-      });
+          document.getElementById('reader-total-page').textContent = total;
+          document.getElementById('reader-page-input').max = total;
+          document.getElementById('reader-page-input').value = safePage;
+
+          calculateInitialScale();
+          renderCurrentPdfPage();
+        })
+        .catch(err => {
+          clearTimeout(timeoutId);
+          console.warn('PDF.js arrayBuffer loading failed, beralih ke fallback preview:', err.message);
+          fallbackToTextViewer(book);
+        });
     } catch (err) {
       console.error('PDF.js init error:', err);
       fallbackToTextViewer(book);
@@ -7740,7 +7750,6 @@ async function handleSendTestPush() {
       await swRegistration.showNotification('SIGAP AURA • Tes Notifikasi Berhasil ✅', {
         body: `Halo ${currentUser ? currentUser.nama : 'Peserta'}, notifikasi HP Anda sudah aktif dan terhubung ke PKBM Aura Anugerah!`,
         icon: iconFull,
-        badge: iconFull,
         tag: 'tes-notifikasi-' + Date.now(),
         data: { url: '/portal' },
         vibrate: [100, 50, 100]
@@ -7863,7 +7872,6 @@ async function sendAppPushNotification(options = {}) {
           swRegistration.showNotification(notifItem.title, {
             body: notifItem.body,
             icon: iconFull,
-            badge: iconFull,
             tag: notifItem.tag,
             data: { url: notifItem.url },
             vibrate: [100, 50, 100]
