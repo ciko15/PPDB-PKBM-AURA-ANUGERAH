@@ -2878,9 +2878,9 @@
 
         <!-- Canvas Container untuk PDF.js Native Reader -->
         <div id="pdf-render-wrapper"
-          style="display: flex; justify-content: center; align-items: flex-start; min-height: 100%; width: 100%; overflow: auto; padding: 16px; box-sizing: border-box; position: relative; z-index: 10; background: #525659;">
+          style="display: block; text-align: center; min-height: 100%; width: 100%; overflow: auto; padding: 16px; box-sizing: border-box; position: relative; z-index: 10; background: #525659;">
           <canvas id="pdf-page-canvas"
-            style="box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); border-radius: 4px; background: #fff; max-width: 100%; height: auto; display: block; margin: 0 auto;"></canvas>
+            style="box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); border-radius: 4px; background: #fff; height: auto; display: inline-block; margin: 0 auto; vertical-align: top;"></canvas>
         </div>
 
         <!-- Fallback Text Viewer (Jika file lokal atau fallback) -->
@@ -3864,7 +3864,7 @@
 
   <!-- SheetJS Library for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=20261102e"></script>
+  <script src="app.js?v=20261102g"></script>
   <script src="cbt-engine.js?v=20261102c"></script>
 </body>
 

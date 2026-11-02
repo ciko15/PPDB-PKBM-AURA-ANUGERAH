@@ -1369,23 +1369,25 @@ async function cekNotifikasiBaruLintasPerangkat() {
     const logs = await callAPI({ action: 'getNotificationLogs', limit: 10 });
     if (!logs || !Array.isArray(logs) || logs.length === 0) return;
 
-    // Simpan ke log lokal dan update panel dashboard
+    // Simpan ke log lokal dengan mempertahankan status isRead yang sudah dibaca
     simpanDaftarNotifikasiOnline(logs);
-    renderLogNotifikasiDashboard(logs);
+    renderLogNotifikasiDashboard();
     updateNotifikasiBadgeUI();
 
     const latest = logs[0];
     if (latest && latest.timestamp && latest.timestamp !== lastKnownNotifTimestamp) {
       if (lastKnownNotifTimestamp !== '') {
-        // Ada aktivitas belajar / ujian baru dari siswa di perangkat lain!
-        
-        // 1. Munculkan Toast Popup mengambang di layar HP (In-App Toast Popup)
-        if (typeof Swal !== 'undefined') {
+        // Cek apakah modal reader sedang terbuka atau layar HP sedang aktif
+        const isReaderOpen = document.getElementById('modal-reader') && !document.getElementById('modal-reader').classList.contains('hidden');
+        const isMobileScreen = window.innerWidth <= 768;
+
+        // 1. Munculkan Toast Popup di layar HANYA jika TIDAK sedang membaca buku dan bukan di layar HP yang mengganggu UX
+        if (typeof Swal !== 'undefined' && !isReaderOpen && !isMobileScreen) {
           const Toast = Swal.mixin({
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
-            timer: 6000,
+            timer: 5000,
             timerProgressBar: true,
             didOpen: (toast) => {
               toast.addEventListener('mouseenter', Swal.stopTimer);
@@ -1394,8 +1396,8 @@ async function cekNotifikasiBaruLintasPerangkat() {
           });
           Toast.fire({
             imageUrl: window.location.origin + '/icon-192.png',
-            imageWidth: 42,
-            imageHeight: 42,
+            imageWidth: 38,
+            imageHeight: 38,
             imageAlt: 'Logo SIGAP AURA',
             title: latest.title || 'Pemberitahuan Aktivitas Siswa',
             text: latest.body || ''
@@ -1433,7 +1435,26 @@ async function cekNotifikasiBaruLintasPerangkat() {
 
 function simpanDaftarNotifikasiOnline(onlineLogs) {
   try {
-    localStorage.setItem('ppdb_notif_logs', JSON.stringify(onlineLogs));
+    if (!onlineLogs || !Array.isArray(onlineLogs)) return;
+    const currentLocal = ambilNotifikasiLokal();
+    const readIds = getGlobalReadNotificationIds();
+
+    const merged = onlineLogs.map((item, idx) => {
+      const stableId = item.id || ('NOTIF-SVR-' + (item.timestamp || idx));
+      return {
+        id: stableId,
+        timestamp: item.timestamp || new Date().toISOString(),
+        title: item.title || 'Pemberitahuan',
+        body: item.body || '',
+        url: item.url || '/portal',
+        targetRole: item.targetRole || 'Semua',
+        targetUsername: item.targetUsername || '',
+        tag: item.tag || '',
+        isRead: Boolean(readIds[stableId] || item.isRead)
+      };
+    });
+
+    localStorage.setItem('ppdb_notif_logs', JSON.stringify(merged));
   } catch (e) { }
 }
 
@@ -6915,7 +6936,6 @@ async function loadPdfDocument(book, startPage = 1) {
 async function calculateInitialScale() {
   const container = document.getElementById('pdf-render-wrapper') || document.getElementById('reader-viewport-container');
   const isMobile = window.innerWidth <= 768;
-  // Di layar HP, kurangi margin/padding seminimal mungkin (4px) agar buku pas tepi kiri dan kanan (fit width halaman 1)
   const availableWidth = isMobile
     ? (window.innerWidth - 6)
     : (container ? (container.clientWidth - 32) : (window.innerWidth - 32));
@@ -6925,9 +6945,20 @@ async function calculateInitialScale() {
       const page = await currentPdfDoc.getPage(currentPdfPage || 1);
       const unscaledViewport = page.getViewport({ scale: 1.0 });
       if (unscaledViewport && unscaledViewport.width > 0) {
-        // Skala tepat agar lebar halaman pas dengan lebar frame reader (fit kiri-kanan)
-        const fitScale = Math.max(0.35, Math.min(3.5, availableWidth / unscaledViewport.width));
-        currentPdfScale = fitScale;
+        const isLandscape = unscaledViewport.width > unscaledViewport.height * 1.25;
+
+        let fitScale;
+        if (isMobile && isLandscape) {
+          // Jika PDF berorientasi Landscape (misal 2 halaman kiri & kanan jadi 1 lembar),
+          // skala dibuat agar separuh halaman (sisi kiri) pas dengan lebar layar HP (~1.8x - 2.0x dari fit width penuh).
+          // Dengan begitu siswa langsung bisa membaca halaman kiri tanpa font terlalu kecil.
+          fitScale = Math.max(0.65, Math.min(3.5, (availableWidth * 1.95) / unscaledViewport.width));
+        } else {
+          // Orientasi Portrait atau di layar Desktop: fit selebar layar
+          fitScale = Math.max(0.35, Math.min(3.5, availableWidth / unscaledViewport.width));
+        }
+
+        currentPdfScale = Number(fitScale.toFixed(2));
         updateZoomDisplay(currentPdfScale);
         return;
       }
@@ -7110,9 +7141,17 @@ function renderCurrentPdfPage() {
       if (btnPrev) btnPrev.disabled = (currentPdfPage <= 1);
       if (btnNext) btnNext.disabled = (currentPdfPage >= currentPdfDoc.numPages);
 
-      // Gulir ke atas viewport container setiap ganti halaman
-      const container = document.getElementById('reader-viewport-container');
-      if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+      // Gulir ke ujung kiri atas (scrollLeft: 0, scrollTop: 0) agar halaman sisi kiri langsung terlihat penuh
+      const viewportContainer = document.getElementById('reader-viewport-container');
+      const renderWrapper = document.getElementById('pdf-render-wrapper');
+      if (viewportContainer) {
+        viewportContainer.scrollLeft = 0;
+        viewportContainer.scrollTop = 0;
+      }
+      if (renderWrapper) {
+        renderWrapper.scrollLeft = 0;
+        renderWrapper.scrollTop = 0;
+      }
 
       if (pendingPdfPage !== null) {
         currentPdfPage = pendingPdfPage;
@@ -9280,16 +9319,58 @@ function simpanNotifikasiKeLokal(notifItem) {
   } catch (e) { }
 }
 
+// Helper ID stabil & pelacakan status baca global
+function getNotificationStableId(item, idx = 0) {
+  if (item && item.id && !item.id.startsWith('NOTIF-OLD-') && !item.id.startsWith('NOTIF-SVR-')) {
+    return String(item.id);
+  }
+  const ts = item.timestamp ? String(item.timestamp).trim() : '';
+  const title = item.title ? String(item.title).trim() : '';
+  if (ts) {
+    return 'NOTIF-' + ts.replace(/[^a-zA-Z0-9]/g, '_');
+  }
+  return 'NOTIF-ROW-' + idx + '-' + title.replace(/[^a-zA-Z0-9]/g, '_');
+}
+
+function getGlobalReadNotificationIds() {
+  try {
+    const raw = localStorage.getItem('ppdb_read_notif_ids');
+    if (!raw) return {};
+    return JSON.parse(raw) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function setGlobalNotificationAsRead(id) {
+  try {
+    const map = getGlobalReadNotificationIds();
+    map[String(id)] = true;
+    localStorage.setItem('ppdb_read_notif_ids', JSON.stringify(map));
+  } catch (e) { }
+}
+
+function setAllGlobalNotificationsAsRead(ids) {
+  try {
+    const map = getGlobalReadNotificationIds();
+    ids.forEach(id => { map[String(id)] = true; });
+    localStorage.setItem('ppdb_read_notif_ids', JSON.stringify(map));
+  } catch (e) { }
+}
+
 function ambilNotifikasiLokal() {
   try {
     const raw = localStorage.getItem('ppdb_notif_logs');
     if (!raw) return [];
     let list = JSON.parse(raw);
     if (!Array.isArray(list)) return [];
-    // Migrasi data lama jika belum punya ID atau status isRead
+    const readIds = getGlobalReadNotificationIds();
+
     return list.map((item, idx) => {
+      const stableId = getNotificationStableId(item, idx);
+      const isRead = Boolean(readIds[stableId] || item.isRead);
       return {
-        id: item.id || ('NOTIF-OLD-' + idx),
+        id: stableId,
         timestamp: item.timestamp || new Date().toISOString(),
         title: item.title || 'Pemberitahuan',
         body: item.body || '',
@@ -9297,7 +9378,7 @@ function ambilNotifikasiLokal() {
         targetRole: item.targetRole || 'Semua',
         targetUsername: item.targetUsername || '',
         tag: item.tag || '',
-        isRead: Boolean(item.isRead)
+        isRead: isRead
       };
     });
   } catch (e) {
@@ -9327,20 +9408,25 @@ function tandaiSemuaNotifikasiDibaca() {
   try {
     const logs = ambilNotifikasiLokal();
     if (logs.length === 0) return;
+    const allIds = logs.map(item => item.id);
+    setAllGlobalNotificationsAsRead(allIds);
+
     const updated = logs.map(item => ({ ...item, isRead: true }));
     localStorage.setItem('ppdb_notif_logs', JSON.stringify(updated));
     updateNotifikasiBadgeUI();
     renderLogNotifikasiDashboard();
     renderPopupNotifikasiList(updated);
 
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'Semua notifikasi ditandai sudah dibaca',
-      showConfirmButton: false,
-      timer: 2000
-    });
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Semua notifikasi ditandai sudah dibaca',
+        showConfirmButton: false,
+        timer: 2000
+      });
+    }
   } catch (e) {
     console.warn('Gagal menandai semua dibaca:', e);
   }
@@ -9353,14 +9439,13 @@ function klikItemNotifikasi(notifId) {
     const item = logs.find(x => String(x.id) === String(notifId));
     if (!item) return;
 
-    // 1. Tandai item ini sebagai sudah dibaca
-    if (!item.isRead) {
-      item.isRead = true;
-      localStorage.setItem('ppdb_notif_logs', JSON.stringify(logs));
-      updateNotifikasiBadgeUI();
-      renderLogNotifikasiDashboard();
-      renderPopupNotifikasiList(logs);
-    }
+    // 1. Tandai item ini sebagai sudah dibaca secara global & persisten
+    setGlobalNotificationAsRead(item.id);
+    item.isRead = true;
+    localStorage.setItem('ppdb_notif_logs', JSON.stringify(logs));
+    updateNotifikasiBadgeUI();
+    renderLogNotifikasiDashboard();
+    renderPopupNotifikasiList(logs);
 
     // 2. Tutup popup notifikasi jika sedang terbuka
     tutupModalNotifikasiDashboard();
@@ -9525,21 +9610,9 @@ function bukaModalNotifikasiDashboard() {
   if (typeof callAPI === 'function') {
     callAPI({ action: 'getNotificationLogs', limit: 25 }).then(res => {
       if (res && Array.isArray(res) && res.length > 0) {
-        // Sinkronkan status isRead yang sudah ada di lokal
-        const currentLocal = ambilNotifikasiLokal();
-        const readMap = {};
-        currentLocal.forEach(x => { if (x.isRead) readMap[x.id] = true; });
-
-        const merged = res.map((item, idx) => ({
-          ...item,
-          id: item.id || ('NOTIF-SVR-' + idx + '-' + (item.timestamp || '')),
-          isRead: Boolean(readMap[item.id] || item.isRead)
-        }));
-
-        try {
-          localStorage.setItem('ppdb_notif_logs', JSON.stringify(merged));
-        } catch (e) { }
-        renderPopupNotifikasiList(merged);
+        simpanDaftarNotifikasiOnline(res);
+        const updated = ambilNotifikasiLokal();
+        renderPopupNotifikasiList(updated);
         updateNotifikasiBadgeUI();
       }
     }).catch(err => {
@@ -9561,20 +9634,9 @@ async function muatLogNotifikasiDashboard() {
   try {
     const res = await callAPI({ action: 'getNotificationLogs', limit: 25 });
     if (res && Array.isArray(res) && res.length > 0) {
-      const currentLocal = ambilNotifikasiLokal();
-      const readMap = {};
-      currentLocal.forEach(x => { if (x.isRead) readMap[x.id] = true; });
-
-      const merged = res.map((item, idx) => ({
-        ...item,
-        id: item.id || ('NOTIF-SVR-' + idx + '-' + (item.timestamp || '')),
-        isRead: Boolean(readMap[item.id] || item.isRead)
-      }));
-
-      renderLogNotifikasiDashboard(merged);
-      try {
-        localStorage.setItem('ppdb_notif_logs', JSON.stringify(merged));
-      } catch (e) { }
+      simpanDaftarNotifikasiOnline(res);
+      const updated = ambilNotifikasiLokal();
+      renderLogNotifikasiDashboard(updated);
       updateNotifikasiBadgeUI();
     }
   } catch (err) {

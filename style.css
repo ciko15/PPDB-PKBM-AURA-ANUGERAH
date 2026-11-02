@@ -951,9 +951,8 @@ aside .brand {
 }
 
 #pdf-render-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  display: block;
+  text-align: center;
   width: 100%;
   max-width: 100%;
   min-height: 100%;
@@ -968,8 +967,9 @@ aside .brand {
   transition: transform 0.15s ease-out;
   transform-origin: top center;
   height: auto;
-  display: block;
+  display: inline-block;
   margin: 0 auto;
+  vertical-align: top;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
   border-radius: 4px;
   background: #ffffff;
@@ -1041,11 +1041,13 @@ aside .brand {
 
   /* Kontainer Baca Modul di HP: padding minim agar modul tampil maksimal & pas tepi kiri-kanan */
   #pdf-render-wrapper {
-    padding: 6px 2px 70px 2px !important; /* Beri ruang ekstra bawah agar tidak tertutup sticky bar */
+    padding: 6px 4px 70px 4px !important; /* Beri ruang ekstra bawah agar tidak tertutup sticky bar */
     overflow-x: auto !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-x pan-y pinch-zoom;
+    text-align: left !important; /* Agar sisi kiri canvas selalu menempel di scrollLeft 0 dan tidak terpotong */
+    white-space: nowrap !important;
   }
 
   #pdf-page-canvas {
@@ -1053,6 +1055,9 @@ aside .brand {
     border-radius: 2px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
     touch-action: pan-x pan-y pinch-zoom;
+    display: inline-block !important;
+    margin: 0 !important;
+    vertical-align: top !important;
   }
 
   /* Sticky Bottom Navigation Bar di HP (Nyaman disentuh & tidak menutupi isi buku) */
@@ -1121,6 +1126,29 @@ aside .brand {
   .reader-footer-toolbar .btn-label-nav {
     display: inline !important; /* Tetap tampilkan teks 'Sebelumnya' / 'Berikutnya' agar jelas */
     font-size: 11.5px !important;
+  }
+
+  /* Modal Notifikasi Popup di Mode HP: Desain Bottom Sheet Elegan & Aksesibel */
+  #modal-notifikasi-popup {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  #modal-notifikasi-popup .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 80vh !important;
+    max-height: 80dvh !important;
+    border-radius: 20px 20px 0 0 !important;
+    padding: 16px 14px calc(16px + env(safe-area-inset-bottom, 0px)) 14px !important;
+    margin: 0 !important;
+    box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.3) !important;
+    animation: slideUpSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  @keyframes slideUpSheet {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
   }
 }
 
