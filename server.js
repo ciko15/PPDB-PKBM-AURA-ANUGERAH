@@ -130,8 +130,16 @@ async function handleLogin(username, password) {
       const yyyymmdd = parts.join('');
       const last6Nik = sNik.length >= 6 ? sNik.slice(-6) : '';
 
+      // Cek apakah siswa ini sudah pernah membuat password khusus di tabel Users
+      const customUserRow = userRows.find(u => {
+        const uRaw = u.toObject();
+        return (String(uRaw['Username'] || '').trim() === sNik || (sNisn && String(uRaw['Username'] || '').trim() === sNisn));
+      });
+      const customPass = customUserRow ? String(customUserRow.get('Password') || '').trim() : '';
+
       const matchUser = (cleanUser === sNik || (sNisn && cleanUser === sNisn));
       const matchPass = (
+        (customPass && cleanPass === customPass) ||
         cleanPass === sTglLahir ||
         (ddmmyyyy && cleanPass === ddmmyyyy) ||
         (yyyymmdd && cleanPass === yyyymmdd) ||
@@ -141,18 +149,23 @@ async function handleLogin(username, password) {
       if (matchUser && matchPass) {
         return {
           username: sNik || sNisn,
-          nama: sNama,
+          nama: (customUserRow && customUserRow.get('Nama Lengkap')) ? customUserRow.get('Nama Lengkap') : sNama,
           role: 'Siswa',
           dataSiswa: {
             id: raw['No.'] || '',
             nik: sNik,
             nisn: sNisn,
-            nama: sNama,
+            nama: (customUserRow && customUserRow.get('Nama Lengkap')) ? customUserRow.get('Nama Lengkap') : sNama,
             program: raw['Jenjang'] || '',
             tempatLahir: raw['Tempat Lahir'] || '',
             tglLahir: sTglLahir,
             namaIbu: raw['Nama Ibu Kandung'] || '',
+            desaKelurahan: raw['Desa Kelurahan'] || '',
+            kecamatan: raw['Kecamatan'] || '',
+            kabKota: raw['Kabupaten/Kota'] || '',
             alamat: `${raw['Desa Kelurahan'] || ''}, ${raw['Kecamatan'] || ''}, ${raw['Kabupaten/Kota'] || ''}`.replace(/^,\s*|,\s*$/g, ''),
+            noHp: raw['No. HP'] || raw['Telepon'] || raw['No HP'] || '',
+            foto: raw['Foto'] || '',
             statusValidasi: raw['Status Validasi'] || 'Pending',
             catatanAI: raw['Catatan AI'] || '',
             statusAktif: raw['Status Aktif'] || 'Aktif'
@@ -168,16 +181,58 @@ async function handleLogin(username, password) {
 }
 
 async function handleGetUsers() {
-  const sheet = await getSheet('Users');
-  const rows = await sheet.getRows();
-  return rows.map(r => {
+  const userSheet = await getSheet('Users');
+  const userRows = await userSheet.getRows();
+  const result = [];
+  const registeredUsernames = new Set();
+
+  userRows.forEach(r => {
     const raw = r.toObject();
-    return {
-      username: raw['Username'],
-      nama: raw['Nama Lengkap'],
-      role: raw['Role']
-    };
+    const uname = String(raw['Username'] || '').trim();
+    if (uname) {
+      registeredUsernames.add(uname);
+      result.push({
+        username: uname,
+        nama: raw['Nama Lengkap'] || '',
+        role: raw['Role'] || 'Guru',
+        source: 'Users'
+      });
+    }
   });
+
+  // Tambahkan Peserta Didik (Siswa) yang terdaftar di Data_Siswa
+  try {
+    const siswaSheet = await getSheet('Data_Siswa');
+    const siswaRows = await siswaSheet.getRows();
+
+    siswaRows.forEach(r => {
+      const raw = r.toObject();
+      const sNik = String(raw['NIK'] || '').trim();
+      const sNisn = String(raw['NISN'] || '').trim();
+      const sNama = raw['Nama Lengkap'] || 'Peserta Didik';
+      const username = sNik || sNisn || `siswa_${raw['No.'] || ''}`;
+
+      if (username && !registeredUsernames.has(username)) {
+        registeredUsernames.add(username);
+        result.push({
+          username: username,
+          nama: sNama,
+          role: 'Siswa',
+          program: raw['Jenjang'] || 'Kesetaraan',
+          noHp: raw['No. HP'] || raw['Telepon'] || raw['No HP'] || '',
+          alamat: `${raw['Desa Kelurahan'] || ''}, ${raw['Kecamatan'] || ''}, ${raw['Kabupaten/Kota'] || ''}`.replace(/^,\s*|,\s*$/g, ''),
+          foto: raw['Foto'] || '',
+          tglLahir: raw['Tanggal Lahir'] || '',
+          idSiswa: raw['No.'] || '',
+          source: 'Data_Siswa'
+        });
+      }
+    });
+  } catch (err) {
+    console.warn('Gagal memuat daftar siswa untuk kelola pengguna:', err.message);
+  }
+
+  return result;
 }
 
 async function handleAddUser(username, password, nama, role) {
@@ -195,24 +250,65 @@ async function handleAddUser(username, password, nama, role) {
   return { message: 'Pengguna berhasil ditambahkan.' };
 }
 
-async function handleUpdateUser(username, nama, password) {
+async function handleUpdateUser(username, nama, password, extraData = {}) {
+  const cleanUser = String(username || '').trim();
   const sheet = await getSheet('Users');
   const rows = await sheet.getRows();
-  const target = rows.find(r => r.get('Username') === username);
-  if (!target) throw new Error('User tidak ditemukan.');
+  let target = rows.find(r => String(r.get('Username') || '').trim() === cleanUser);
 
-  if (nama) target.set('Nama Lengkap', nama);
-  if (password) target.set('Password', password);
-  await target.save();
-  return { message: 'Data profil berhasil diperbarui.' };
+  // Jika belum ada di tabel Users (misal Siswa dari Data_Siswa), buat record baru di Users
+  if (!target) {
+    await sheet.addRow({
+      'Username': cleanUser,
+      'Password': password || 'pkbm123456',
+      'Nama Lengkap': nama || cleanUser,
+      'Role': extraData.role || 'Siswa'
+    });
+  } else {
+    if (nama) target.set('Nama Lengkap', nama);
+    if (password) target.set('Password', password);
+    await target.save();
+  }
+
+  // Jika ada pembaruan data pendukung siswa (No HP, Alamat, Foto)
+  try {
+    const siswaSheet = await getSheet('Data_Siswa');
+    const siswaRows = await siswaSheet.getRows();
+    const siswaTarget = siswaRows.find(r => {
+      const sNik = String(r.get('NIK') || '').trim();
+      const sNisn = String(r.get('NISN') || '').trim();
+      const sId = String(r.get('No.') || '').trim();
+      return (cleanUser === sNik || (sNisn && cleanUser === sNisn) || (extraData.idSiswa && String(extraData.idSiswa) === sId));
+    });
+
+    if (siswaTarget) {
+      if (nama) siswaTarget.set('Nama Lengkap', nama);
+      if (extraData.noHp !== undefined) {
+        try { siswaTarget.set('No. HP', extraData.noHp); } catch (e) { }
+      }
+      if (extraData.alamat !== undefined) {
+        // Simpan ke Desa Kelurahan atau field alamat
+        try { siswaTarget.set('Desa Kelurahan', extraData.alamat); } catch (e) { }
+      }
+      if (extraData.foto !== undefined) {
+        try { siswaTarget.set('Foto', extraData.foto); } catch (e) { }
+      }
+      await siswaTarget.save();
+    }
+  } catch (err) {
+    console.warn('Gagal sinkronisasi data siswa di Data_Siswa:', err.message);
+  }
+
+  return { message: 'Data profil & password pengguna berhasil diperbarui.' };
 }
 
 async function handleDeleteUser(username) {
   const sheet = await getSheet('Users');
   const rows = await sheet.getRows();
   const target = rows.find(r => r.get('Username') === username);
-  if (!target) throw new Error('User tidak ditemukan.');
-  await target.delete();
+  if (target) {
+    await target.delete();
+  }
   return { message: 'Pengguna berhasil dihapus.' };
 }
 
@@ -612,7 +708,7 @@ app.post('/api', async (req, res) => {
         result = await handleAddUser(req.body.username, req.body.password, req.body.nama, req.body.role);
         break;
       case 'updateUser':
-        result = await handleUpdateUser(req.body.username, req.body.nama, req.body.password);
+        result = await handleUpdateUser(req.body.username, req.body.nama, req.body.password, req.body.extraData || {});
         break;
       case 'deleteUser':
         result = await handleDeleteUser(req.body.username);
@@ -826,6 +922,149 @@ app.post('/api/send-push', async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+// ==================== READING HISTORIES STORAGE & API ====================
+const READING_HISTORIES_FILE = path.join(__dirname, 'server', 'data', 'reading_histories.json');
+
+function getStoredReadingHistories() {
+  try {
+    if (fs.existsSync(READING_HISTORIES_FILE)) {
+      const data = fs.readFileSync(READING_HISTORIES_FILE, 'utf8');
+      return JSON.parse(data) || [];
+    }
+  } catch (err) {
+    console.error('Gagal membaca reading_histories.json:', err.message);
+  }
+  return [];
+}
+
+function saveReadingHistories(histories) {
+  try {
+    const dir = path.dirname(READING_HISTORIES_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(READING_HISTORIES_FILE, JSON.stringify(histories, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Gagal menyimpan reading_histories.json:', err.message);
+  }
+}
+
+// 1. Simpan / perbarui riwayat baca buku
+app.post('/api/reading-history', (req, res) => {
+  try {
+    const { user_id, userId, book_id, bookId, last_page, lastPage, total_pages, totalPages, book_title, bookTitle, cover } = req.body;
+    const finalUserId = String(user_id || userId || 'guest').trim();
+    const finalBookId = String(book_id || bookId || '').trim();
+    const finalPage = parseInt(last_page || lastPage || 1, 10);
+    const finalTotal = parseInt(total_pages || totalPages || 28, 10);
+    const finalTitle = book_title || bookTitle || '';
+
+    if (!finalBookId) {
+      return res.status(400).json({ status: 'ERROR', message: 'book_id wajib diisi' });
+    }
+
+    const histories = getStoredReadingHistories();
+    const nowIso = new Date().toISOString();
+    
+    // Cari apakah sudah pernah dibaca oleh user_id dan book_id ini
+    const existingIndex = histories.findIndex(h => String(h.user_id) === finalUserId && String(h.book_id) === finalBookId);
+
+    let savedRecord = null;
+    if (existingIndex >= 0) {
+      histories[existingIndex].last_page = finalPage;
+      if (finalTotal) histories[existingIndex].total_pages = finalTotal;
+      if (finalTitle) histories[existingIndex].book_title = finalTitle;
+      if (cover) histories[existingIndex].cover = cover;
+      histories[existingIndex].updated_at = nowIso;
+      savedRecord = histories[existingIndex];
+    } else {
+      savedRecord = {
+        id: 'RH-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+        user_id: finalUserId,
+        book_id: finalBookId,
+        last_page: finalPage,
+        total_pages: finalTotal,
+        book_title: finalTitle,
+        cover: cover || '',
+        created_at: nowIso,
+        updated_at: nowIso
+      };
+      histories.unshift(savedRecord);
+    }
+
+    saveReadingHistories(histories);
+    return res.json({ status: 'SUCCESS', data: savedRecord });
+  } catch (err) {
+    console.error('Error simpan reading history:', err.message);
+    res.status(500).json({ status: 'ERROR', message: err.message });
+  }
+});
+
+// 2. Ambil riwayat baca spesifik untuk satu buku (Resume Quick Check)
+app.get('/api/reading-history/:userId/:bookId', (req, res) => {
+  try {
+    const { userId, bookId } = req.params;
+    const histories = getStoredReadingHistories();
+    const record = histories.find(h => String(h.user_id) === String(userId) && String(h.book_id) === String(bookId));
+    if (record) {
+      return res.json({ status: 'SUCCESS', data: record });
+    }
+    return res.json({ status: 'SUCCESS', data: null });
+  } catch (err) {
+    res.status(500).json({ status: 'ERROR', message: err.message });
+  }
+});
+
+// 3. Ambil semua daftar riwayat buku yang pernah dibaca oleh user
+app.get('/api/reading-history/:userId', (req, res) => {
+  try {
+    const { userId } = req.params;
+    const histories = getStoredReadingHistories();
+    const userHistories = histories
+      .filter(h => String(h.user_id) === String(userId))
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+    return res.json({ status: 'SUCCESS', data: userHistories });
+  } catch (err) {
+    console.error('Error get reading history:', err.message);
+    res.status(500).json({ status: 'ERROR', message: err.message });
+  }
+});
+
+// 4. Proxy PDF Streamer (Membypass CORS & X-Frame-Options Google Drive agar PDF.js Canvas aktif 100%)
+app.get('/api/pdf-proxy', async (req, res) => {
+  try {
+    const { id, url } = req.query;
+    let targetUrl = '';
+
+    if (id) {
+      targetUrl = `https://drive.usercontent.google.com/download?id=${id}&export=download`;
+    } else if (url) {
+      targetUrl = url;
+    } else {
+      return res.status(400).send('Parameter id atau url diperlukan');
+    }
+
+    const driveRes = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+      }
+    });
+
+    if (!driveRes.ok) {
+      return res.status(driveRes.status).send(`Google Drive HTTP ${driveRes.status}`);
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+
+    const arrayBuffer = await driveRes.arrayBuffer();
+    return res.send(Buffer.from(arrayBuffer));
+  } catch (err) {
+    console.error('Error proxy PDF:', err.message);
+    res.status(500).send('Gagal memuat PDF: ' + err.message);
+  }
+});
+
 // Rute frontend
 app.get(['/', '/pkbm', '/portal', '/portal-pkbm', '/login'], (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));

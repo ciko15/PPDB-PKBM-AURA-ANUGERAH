@@ -91,15 +91,61 @@ function doLogin(username, password) {
 }
 
 function getUsers() {
-  const sheet = getDB('Users');
-  if (!sheet) return [];
-  const data = sheet.getDataRange().getValues();
   const users = [];
-  for (let i = 1; i < data.length; i++) {
-    // Sembunyikan user 'super' agar tidak muncul di data/tabel
-    if (String(data[i][0]).toLowerCase() === "super") continue;
-    users.push({ username: data[i][0], nama: data[i][2], role: data[i][3] });
+  const registeredUsernames = {};
+
+  // 1. Ambil dari sheet Users
+  const userSheet = getDB('Users');
+  if (userSheet) {
+    const data = userSheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).toLowerCase() === "super") continue;
+      const uname = String(data[i][0] || '').trim();
+      if (uname) {
+        registeredUsernames[uname] = true;
+        users.push({
+          username: uname,
+          nama: data[i][2],
+          role: data[i][3],
+          source: 'Users'
+        });
+      }
+    }
   }
+
+  // 2. Ambil dari sheet Data_Siswa
+  try {
+    const siswaSheet = getDB('Data_Siswa');
+    if (siswaSheet) {
+      const sData = siswaSheet.getDataRange().getValues();
+      for (let j = 1; j < sData.length; j++) {
+        const row = sData[j];
+        const sNik = String(row[3] || '').trim();
+        const sNisn = String(row[2] || '').trim();
+        const sNama = row[9] || 'Peserta Didik';
+        const uname = sNik || sNisn || `siswa_${row[0]}`;
+
+        if (uname && !registeredUsernames[uname]) {
+          registeredUsernames[uname] = true;
+          users.push({
+            username: uname,
+            nama: sNama,
+            role: 'Siswa',
+            program: row[18] || 'Kesetaraan',
+            noHp: row[33] || row[34] || '',
+            alamat: `${row[8] || ''}, ${row[7] || ''}, ${row[6] || ''}`.replace(/^,\s*|,\s*$/g, ''),
+            foto: row[22] || '',
+            statusAktif: row[28] || 'Aktif',
+            idSiswa: row[0] || '',
+            source: 'Data_Siswa'
+          });
+        }
+      }
+    }
+  } catch (err) {
+    Logger.log("getUsers siswa check error: " + err.toString());
+  }
+
   return users;
 }
 

@@ -481,6 +481,10 @@ function setupEventListeners() {
       }
       if (targetId === 'section-list') loadAllSiswa();
       if (targetId === 'section-materi') loadBukuData();
+      if (targetId === 'section-riwayat-baca') {
+        loadBukuData();
+        loadRiwayatBacaData();
+      }
       if (targetId === 'section-ujian') loadUjianData();
       if (targetId === 'section-users') loadAllUsers();
       if (targetId === 'section-api-keys') loadApiKeys();
@@ -957,8 +961,8 @@ function generateCaptchaLogin() {
   const captchaInput = document.getElementById('login-captcha-input');
   if (captchaInput) captchaInput.value = '';
 
-  canvas.width = 130;
-  canvas.height = 42;
+  canvas.width = 110;
+  canvas.height = 38;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
@@ -981,7 +985,7 @@ function generateCaptchaLogin() {
   }
 
   // Noise Dots
-  for (let i = 0; i < 22; i++) {
+  for (let i = 0; i < 18; i++) {
     ctx.fillStyle = `rgba(${Math.floor(Math.random() * 100)},${Math.floor(Math.random() * 100)},${Math.floor(Math.random() * 100)},0.25)`;
     ctx.beginPath();
     ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 1.2, 0, Math.PI * 2);
@@ -989,7 +993,7 @@ function generateCaptchaLogin() {
   }
 
   // Noise Lines
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     ctx.strokeStyle = `rgba(${Math.floor(Math.random() * 100)},${Math.floor(Math.random() * 100)},${Math.floor(Math.random() * 100)},0.3)`;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -998,18 +1002,18 @@ function generateCaptchaLogin() {
     ctx.stroke();
   }
 
-  // Render teks 5 karakter dengan warna elegan & sedikit rotasi
+  // Render teks 5 karakter dengan ukuran proporsional
   const colors = ['#1e3a8a', '#15803d', '#b91c1c', '#7c3aed', '#0f766e', '#0369a1'];
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
-    const x = 16 + i * 22;
-    const y = 26 + (Math.random() * 4 - 2);
-    const angle = (Math.random() - 0.5) * 0.35;
+    const x = 12 + i * 19;
+    const y = 20 + (Math.random() * 3 - 1.5);
+    const angle = (Math.random() - 0.5) * 0.3;
 
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
-    ctx.font = 'bold 22px monospace, "Courier New", sans-serif';
+    ctx.font = 'bold 18px monospace, "Courier New", sans-serif';
     ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
     ctx.textBaseline = 'middle';
     ctx.fillText(char, 0, 0);
@@ -1260,7 +1264,6 @@ function showDashboard() {
 
   const mobileTabDashboard = document.querySelector('.mobile-tab-btn[data-target="section-dashboard"]');
   const mobileTabList = document.querySelector('.mobile-tab-btn[data-target="section-list"]');
-  const mobileTabAiReg = document.querySelector('.mobile-tab-btn[data-target="section-ai-reg"]');
   const mobileSheetValidasi = document.querySelector('button[onclick*="section-validasi"]');
   const mobileSheetUsers = document.getElementById('mobile-sheet-btn-users');
   const mobileSheetApi = document.getElementById('mobile-sheet-btn-api');
@@ -1268,14 +1271,12 @@ function showDashboard() {
   if (currentUser.role === 'Siswa') {
     if (mobileTabDashboard) mobileTabDashboard.style.display = 'none';
     if (mobileTabList) mobileTabList.style.display = 'none';
-    if (mobileTabAiReg) mobileTabAiReg.style.display = 'none';
     if (mobileSheetValidasi) mobileSheetValidasi.style.display = 'none';
     if (mobileSheetUsers) mobileSheetUsers.style.display = 'none';
     if (mobileSheetApi) mobileSheetApi.style.display = 'none';
   } else {
     if (mobileTabDashboard) mobileTabDashboard.style.display = '';
     if (mobileTabList) mobileTabList.style.display = '';
-    if (mobileTabAiReg) mobileTabAiReg.style.display = '';
     if (mobileSheetValidasi) mobileSheetValidasi.style.display = '';
 
     if (currentUser.role === 'Super Admin') {
@@ -1863,12 +1864,126 @@ function cancelEdit() {
   const modalReg = document.getElementById('modal-register');
   if (modalReg) modalReg.classList.add('hidden');
 
-  // Bersihkan preview file
-  ['preview-reg-ijazah', 'preview-reg-kk', 'preview-reg-bayar', 'preview-reg-foto'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.innerHTML = ''; el.style.display = 'none'; }
-  });
+  // Kembalikan wizard form ke Step 1
+  goToRegisterStep(1);
 }
+
+// Wizard Stepper Navigasi Formulir Pendaftaran Siswa (Step 1, 2, 3)
+function goToRegisterStep(stepNum) {
+  const step1 = document.getElementById('reg-form-step-1');
+  const step2 = document.getElementById('reg-form-step-2');
+  const step3 = document.getElementById('reg-form-step-3');
+
+  const btnStep1 = document.getElementById('btn-tab-step-1');
+  const btnStep2 = document.getElementById('btn-tab-step-2');
+  const btnStep3 = document.getElementById('btn-tab-step-3');
+
+  if (!step1 || !step2 || !step3) return;
+
+  // Bersihkan penanda error sebelumnya jika ada
+  const inputProgram = document.getElementById('reg-program');
+  const inputNama = document.getElementById('reg-nama');
+  if (inputProgram) { inputProgram.style.borderColor = ''; inputProgram.style.boxShadow = ''; }
+  if (inputNama) { inputNama.style.borderColor = ''; inputNama.style.boxShadow = ''; }
+
+  // Validasi wajib isi pada step 1 sebelum lanjut ke step 2/3
+  if (stepNum > 1) {
+    const programVal = (inputProgram?.value || '').trim();
+    const namaVal = (inputNama?.value || '').trim();
+
+    const missingFields = [];
+    if (!programVal) {
+      missingFields.push('Program / Jenjang');
+      if (inputProgram) {
+        inputProgram.style.borderColor = '#ef4444';
+        inputProgram.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+      }
+    }
+    if (!namaVal) {
+      missingFields.push('Nama Lengkap Siswa');
+      if (inputNama) {
+        inputNama.style.borderColor = '#ef4444';
+        inputNama.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.2)';
+      }
+    }
+
+    if (missingFields.length > 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Lengkapi Data Utama',
+        html: `Kolom berikut wajib diisi pada <b>Langkah 1</b>:<br><br>
+               <div style="text-align: left; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; font-size: 13.5px; color: #b91c1c;">
+                 ${missingFields.map(f => `• <b>${f}</b> (ditandai merah)`).join('<br>')}
+               </div>`,
+        confirmButtonColor: '#16a34a',
+        confirmButtonText: 'Isi Sekarang',
+        didClose: () => {
+          // Fokuskan kursor langsung ke field pertama yang belum diisi
+          if (!programVal && inputProgram) {
+            inputProgram.focus();
+          } else if (!namaVal && inputNama) {
+            inputNama.focus();
+          }
+        }
+      });
+
+      // Hilangkan border merah saat user mulai memilih/mengetik
+      if (inputProgram) {
+        inputProgram.addEventListener('change', () => {
+          if (inputProgram.value) { inputProgram.style.borderColor = ''; inputProgram.style.boxShadow = ''; }
+        }, { once: true });
+      }
+      if (inputNama) {
+        inputNama.addEventListener('input', () => {
+          if (inputNama.value.trim()) { inputNama.style.borderColor = ''; inputNama.style.boxShadow = ''; }
+        }, { once: true });
+      }
+
+      stepNum = 1;
+    }
+  }
+
+  // Tampilkan panel yang sesuai
+  step1.style.display = stepNum === 1 ? 'block' : 'none';
+  step2.style.display = stepNum === 2 ? 'block' : 'none';
+  step3.style.display = stepNum === 3 ? 'block' : 'none';
+
+  // Update styling tombol stepper
+  const updateBtnStyle = (btn, num, active) => {
+    if (!btn) return;
+    const badge = btn.querySelector('span');
+    if (active) {
+      btn.style.borderColor = 'var(--primary-color)';
+      btn.style.background = 'rgba(22, 163, 74, 0.1)';
+      btn.style.color = 'var(--primary-color)';
+      btn.style.fontWeight = '700';
+      if (badge) badge.style.background = 'var(--primary-color)';
+    } else {
+      btn.style.borderColor = 'var(--border-color)';
+      btn.style.background = 'var(--surface-color)';
+      btn.style.color = 'var(--text-muted)';
+      btn.style.fontWeight = '600';
+      if (badge) badge.style.background = '#94a3b8';
+    }
+  };
+
+  updateBtnStyle(btnStep1, 1, stepNum === 1);
+  updateBtnStyle(btnStep2, 2, stepNum === 2);
+  updateBtnStyle(btnStep3, 3, stepNum === 3);
+
+  // Scroll popup ke paling atas
+  const modalReg = document.getElementById('modal-register');
+  if (modalReg) {
+    const modalContent = modalReg.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
+  }
+
+  if (window.lucide && typeof lucide.createIcons === 'function') {
+    lucide.createIcons();
+  }
+}
+
+window.goToRegisterStep = goToRegisterStep;
 
 const toBase64 = file => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -3227,21 +3342,618 @@ function showUserProfileModal() {
   });
 }
 
+let allUsersDataList = [];
+let currentUserRoleFilter = 'all';
+
 async function loadAllUsers() {
-  tableUsersBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>';
+  tableUsersBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Memuat data pengguna & peserta didik...</td></tr>';
   try {
-    const data = await callAPI({ action: "getUsers" });
-    tableUsersBody.innerHTML = '';
-    data.forEach(u => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${u.username}</td><td>${u.nama}</td><td>${u.role}</td>
-        <td><button class="btn btn-danger" onclick="deleteUser('${u.username}')" style="padding:4px 8px; font-size:0.8rem;">Hapus</button></td>
-      `;
-      tableUsersBody.appendChild(tr);
-    });
+    let data = [];
+    try {
+      const res = await callAPI({ action: "getUsers" });
+      if (Array.isArray(res)) data = res;
+    } catch (e) {
+      console.warn("Gagal mengambil data dari endpoint getUsers, menggunakan fallback lokal:", e);
+    }
+
+    // Gabungkan siswaDataList lokal / cache jika ada siswa yang belum masuk list (atau jika API hanya mengembalikan petugas)
+    let localSiswa = siswaDataList || [];
+    if (!localSiswa.length) {
+      try {
+        const cached = localStorage.getItem('ppdb_siswa_cache');
+        if (cached) localSiswa = JSON.parse(cached);
+      } catch (err) {}
+    }
+
+    if (Array.isArray(localSiswa) && localSiswa.length > 0) {
+      localSiswa.forEach(s => {
+        const username = String(s.nik || s.nisn || s.id || '').trim();
+        if (username && !data.some(u => String(u.username).trim() === username)) {
+          data.push({
+            username: username,
+            nama: s.nama || 'Siswa',
+            role: 'Siswa',
+            statusAktif: s.statusAktif || 'Tidak Aktif',
+            program: s.program || 'Paket C',
+            noHp: s.noHp || '',
+            alamat: s.alamat || '',
+            foto: s.urlFoto || s.foto || '',
+            idSiswa: s.id || ''
+          });
+        }
+      });
+    }
+
+    allUsersDataList = data;
+    
+    // Update badge counters
+    const countAll = allUsersDataList.length;
+    const countStaff = allUsersDataList.filter(u => u.role !== 'Siswa').length;
+    const countSiswa = allUsersDataList.filter(u => u.role === 'Siswa').length;
+
+    const elAll = document.getElementById('count-users-all');
+    const elStaff = document.getElementById('count-users-staff');
+    const elSiswa = document.getElementById('count-users-siswa');
+    if (elAll) elAll.textContent = countAll;
+    if (elStaff) elStaff.textContent = countStaff;
+    if (elSiswa) elSiswa.textContent = countSiswa;
+
+    renderUsersTable();
   } catch (err) {
-    tableUsersBody.innerHTML = `<tr><td colspan="4">${err.message}</td></tr>`;
+    tableUsersBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger-color); padding: 16px;">${err.message}</td></tr>`;
+  }
+}
+
+function setUserRoleFilter(filterRole, btnEl) {
+  currentUserRoleFilter = filterRole;
+  document.querySelectorAll('.user-filter-btn').forEach(btn => {
+    btn.classList.remove('active');
+    btn.classList.add('btn-outline');
+  });
+  if (btnEl) {
+    btnEl.classList.add('active');
+    btnEl.classList.remove('btn-outline');
+  }
+  filterUsersTable();
+}
+
+function filterUsersTable() {
+  const kw = (document.getElementById('search-users')?.value || '').toLowerCase().trim();
+  renderUsersTable(kw);
+}
+
+function renderUsersTable(keyword = '') {
+  const kw = (keyword || '').toLowerCase().trim();
+  let list = [...allUsersDataList];
+
+  // Filter role tab
+  if (currentUserRoleFilter === 'staff') {
+    list = list.filter(u => u.role !== 'Siswa');
+  } else if (currentUserRoleFilter === 'siswa') {
+    list = list.filter(u => u.role === 'Siswa');
+  }
+
+  // Filter kata kunci pencarian
+  if (kw) {
+    list = list.filter(u => {
+      return (u.nama && u.nama.toLowerCase().includes(kw)) ||
+        (u.username && u.username.toLowerCase().includes(kw)) ||
+        (u.role && u.role.toLowerCase().includes(kw)) ||
+        (u.noHp && u.noHp.toLowerCase().includes(kw)) ||
+        (u.alamat && u.alamat.toLowerCase().includes(kw)) ||
+        (u.program && u.program.toLowerCase().includes(kw));
+    });
+  }
+
+  if (list.length === 0) {
+    tableUsersBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--text-muted); padding: 24px;">Tidak ada pengguna atau siswa yang sesuai kriteria pencarian.</td></tr>';
+    return;
+  }
+
+  tableUsersBody.innerHTML = list.map(u => {
+    const isSiswa = (u.role === 'Siswa');
+    const isSuperAdminOrSelf = (currentUser && currentUser.username === u.username);
+    const avatarUrl = u.foto && u.foto.startsWith('data:image') 
+      ? u.foto 
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(u.nama)}&background=${isSiswa ? '059669' : '1e40af'}&color=fff&size=80`;
+
+    const isAktif = (String(u.statusAktif).toLowerCase() === 'aktif');
+    const statusBadge = isSiswa 
+      ? `<button class="btn btn-sm" onclick="toggleStatusSiswaFromUsers('${u.idSiswa || u.username}', '${isAktif ? 'Tidak Aktif' : 'Aktif'}')" 
+          style="padding: 2px 8px; font-size: 11px; font-weight: 700; border-radius: 6px; cursor: pointer; border: 1px solid ${isAktif ? '#10b981' : '#f59e0b'}; background: ${isAktif ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)'}; color: ${isAktif ? '#059669' : '#d97706'};"
+          title="Klik untuk ${isAktif ? 'Nonaktifkan Akun' : 'Aktifkan Akun Siswa'}">
+          ${isAktif ? '● Aktif' : '○ Tidak Aktif'}
+        </button>`
+      : `<span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 6px;">● Aktif</span>`;
+
+    const roleBadge = isSiswa 
+      ? `<div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+          <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 6px;">🎓 Siswa · ${u.program || 'Paket C'}</span>
+          <div>${statusBadge}</div>
+        </div>`
+      : `<span class="badge" style="background: rgba(30, 64, 175, 0.12); color: #1e40af; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 6px;">${u.role}</span>`;
+
+    const contactInfo = isSiswa 
+      ? `
+        <div style="font-size: 12px; line-height: 1.35;">
+          ${u.noHp ? `<div style="font-weight: 600; color: var(--text-color);">📱 ${u.noHp}</div>` : '<div style="color: var(--text-muted); font-style: italic;">No HP: Belum diisi</div>'}
+          <div style="color: var(--text-muted); font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${u.alamat || '-'}">
+            📍 ${u.alamat || 'Alamat belum diatur'}
+          </div>
+        </div>
+      `
+      : '<span style="color: var(--text-muted); font-size: 11.5px;">Akun Internal Sistem</span>';
+
+    return `
+      <tr>
+        <td>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <img src="${avatarUrl}" alt="${u.nama}" 
+              style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border-color); flex-shrink: 0;"
+              onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(u.nama)}&background=0284c7&color=fff'">
+            <div>
+              <strong style="color: var(--text-color); font-size: 13.5px; display: block;">${u.nama}</strong>
+              <small style="color: var(--text-muted); font-size: 11px;">${isSiswa ? (isAktif ? 'Akun Siswa Aktif' : 'Akun Siswa Belum Aktif') : 'Akses Manajemen'}</small>
+            </div>
+          </div>
+        </td>
+        <td>
+          <code style="background: var(--surface-2); padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: 700; color: var(--text-color); border: 1px solid var(--border-color);">
+            ${u.username}
+          </code>
+        </td>
+        <td>${roleBadge}</td>
+        <td>${contactInfo}</td>
+        <td style="text-align: center;">
+          <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;">
+            ${isSiswa ? `
+              <button class="btn btn-sm ${isAktif ? 'btn-outline' : 'btn-primary'}" onclick="toggleStatusSiswaFromUsers('${u.idSiswa || u.username}', '${isAktif ? 'Tidak Aktif' : 'Aktif'}')"
+                style="padding: 4px 8px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px;"
+                title="${isAktif ? 'Nonaktifkan Akun Siswa' : 'Aktifkan Akun Siswa'}">
+                <i data-lucide="${isAktif ? 'user-x' : 'user-check'}" style="width: 12px; height: 12px;"></i> ${isAktif ? 'Nonaktifkan' : 'Aktifkan Akun'}
+              </button>
+              <button class="btn btn-sm btn-outline" onclick="showAdminEditSiswaModal('${encodeURIComponent(JSON.stringify(u))}')"
+                style="padding: 4px 8px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px; border-color: var(--primary-color); color: var(--primary-color);" 
+                title="Sesuaikan Profil Siswa (No HP, Foto, Alamat, Sandi)">
+                <i data-lucide="edit-3" style="width: 12px; height: 12px;"></i> Edit Profil
+              </button>
+            ` : ''}
+            <button class="btn btn-sm btn-outline" onclick="resetUserPassword('${u.username}', '${encodeURIComponent(u.nama)}', ${isSiswa})" 
+              style="padding: 4px 8px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px; border-color: #d97706; color: #d97706;" 
+              title="Reset Password Akun">
+              <i data-lucide="key-round" style="width: 12px; height: 12px;"></i> Reset Sandi
+            </button>
+            ${!isSiswa ? `
+              <button class="btn btn-danger" onclick="deleteUser('${u.username}')" 
+                style="padding: 4px 8px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px;"
+                ${isSuperAdminOrSelf ? 'disabled title="Akun sendiri tidak dapat dihapus"' : ''}>
+                <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i> Hapus
+              </button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+// Fungsi toggle status aktif siswa langsung dari Kelola Pengguna
+async function toggleStatusSiswaFromUsers(idOrUsername, newStatus) {
+  // Cari ID siswa sebenarnya jika idOrUsername adalah username (NIK)
+  let targetId = idOrUsername;
+  const found = (siswaDataList || []).find(s => String(s.id) === String(idOrUsername) || String(s.nik) === String(idOrUsername) || String(s.nisn) === String(idOrUsername));
+  if (found && found.id) {
+    targetId = found.id;
+  }
+
+  Swal.fire({
+    title: 'Konfirmasi Status Siswa',
+    html: `Apakah Anda yakin ingin mengubah status akun siswa menjadi <b>${newStatus}</b>?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: newStatus === 'Aktif' ? '#10b981' : '#d33',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: `Ya, ${newStatus === 'Aktif' ? 'Aktifkan Akun' : 'Nonaktifkan Akun'}`,
+    cancelButtonText: 'Batal'
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      showLoader("Menyimpan Status...");
+      try {
+        await callAPI({ action: "updateStatusAktif", idSiswa: targetId, statusAktif: newStatus });
+        
+        // Update di cache lokal
+        if (Array.isArray(siswaDataList)) {
+          const idx = siswaDataList.findIndex(s => String(s.id) === String(targetId) || String(s.nik) === String(targetId));
+          if (idx !== -1) {
+            siswaDataList[idx].statusAktif = newStatus;
+            try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) {}
+          }
+        }
+        
+        hideLoader();
+        loadAllUsers();
+        if (typeof loadAllSiswa === 'function') loadAllSiswa();
+        
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: `Akun siswa berhasil diubah menjadi ${newStatus}`,
+          showConfirmButton: false,
+          timer: 2500
+        });
+      } catch (err) {
+        hideLoader();
+        Swal.fire('Gagal Mengubah Status', err.message, 'error');
+      }
+    }
+  });
+}
+
+// Dialog Admin untuk Menyesuaikan Profil Siswa (HP, Foto, Alamat, Password Baru)
+async function showAdminEditSiswaModal(encodedObj) {
+  let userObj;
+  try {
+    userObj = JSON.parse(decodeURIComponent(encodedObj));
+  } catch (e) {
+    return;
+  }
+
+  let photoBase64 = userObj.foto || '';
+
+  const { value: formValues } = await Swal.fire({
+    title: 'Sesuaikan Profil Peserta Didik',
+    html: `
+      <div style="text-align: left; font-size: 0.9rem; line-height: 1.5;">
+        <div style="display: flex; align-items: center; gap: 12px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px; padding: 12px; margin-bottom: 16px;">
+          <div style="position: relative; width: 56px; height: 56px; flex-shrink: 0;">
+            <img id="admin-preview-siswa-foto" src="${photoBase64 || `https://ui-avatars.com/api/?name=${encodeURIComponent(userObj.nama)}&background=059669&color=fff`}"
+              style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
+            <label for="admin-input-siswa-foto" style="position: absolute; bottom: -2px; right: -2px; width: 22px; height: 22px; background: var(--primary-color); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="Ganti Foto Siswa">
+              <i data-lucide="camera" style="width: 12px; height: 12px;"></i>
+            </label>
+            <input type="file" id="admin-input-siswa-foto" accept="image/*" style="display: none;" onchange="previewAdminSiswaFoto(event)">
+          </div>
+          <div>
+            <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">${userObj.nama}</div>
+            <div style="font-size: 11.5px; color: var(--text-muted);">NIK/Username: <b>${userObj.username}</b> · ${userObj.program || 'Paket C'}</div>
+            <div style="font-size: 10.5px; color: var(--primary-color); margin-top: 2px;">Klik ikon kamera untuk ganti foto profil</div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px;">Nama Lengkap Siswa</label>
+          <input type="text" id="admin-siswa-nama" value="${userObj.nama || ''}" class="form-control" style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px;">Nomor WhatsApp / HP Aktif</label>
+          <input type="text" id="admin-siswa-hp" value="${userObj.noHp || ''}" placeholder="Contoh: 0812-3456-7890" class="form-control" style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px;">Alamat Domisili Saat Ini</label>
+          <textarea id="admin-siswa-alamat" rows="2" class="form-control" style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; resize: vertical;" placeholder="Kelurahan, Kecamatan, Kota/Kabupaten...">${userObj.alamat || ''}</textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 4px; background: var(--surface-2); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px; color: var(--text-color);">
+            🔑 Atur Password Baru Siswa (Opsional)
+          </label>
+          <input type="password" id="admin-siswa-pass" placeholder="Kosongkan jika tetap menggunakan sandi saat ini" class="form-control" style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px;">
+          <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;">
+            Siswa tidak lagi terkunci hanya dengan tanggal lahir jika password baru ini disimpan.
+          </small>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Simpan Penyesuaian Profil',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#10b981',
+    didOpen: () => {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+      window.previewAdminSiswaFoto = function(event) {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            photoBase64 = e.target.result;
+            const imgEl = document.getElementById('admin-preview-siswa-foto');
+            if (imgEl) imgEl.src = photoBase64;
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+    },
+    preConfirm: () => {
+      const nama = document.getElementById('admin-siswa-nama')?.value.trim();
+      const noHp = document.getElementById('admin-siswa-hp')?.value.trim();
+      const alamat = document.getElementById('admin-siswa-alamat')?.value.trim();
+      const newPass = document.getElementById('admin-siswa-pass')?.value.trim();
+
+      if (!nama) {
+        Swal.showValidationMessage('Nama lengkap siswa tidak boleh kosong.');
+        return false;
+      }
+      if (newPass && newPass.length < 6) {
+        Swal.showValidationMessage('Password baru minimal 6 karakter.');
+        return false;
+      }
+
+      return {
+        nama,
+        noHp,
+        alamat,
+        newPass,
+        photoBase64
+      };
+    }
+  });
+
+  if (formValues) {
+    showLoader("Menyimpan Penyesuaian Siswa...");
+    try {
+      await callAPI({
+        action: "updateUser",
+        username: userObj.username,
+        nama: formValues.nama,
+        password: formValues.newPass || undefined,
+        extraData: {
+          role: 'Siswa',
+          noHp: formValues.noHp,
+          alamat: formValues.alamat,
+          foto: formValues.photoBase64,
+          idSiswa: userObj.idSiswa
+        }
+      });
+      hideLoader();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Profil Berhasil Diperbarui',
+        text: `Data profil dan sandi akun siswa ${formValues.nama} berhasil disesuaikan.`,
+        timer: 2500,
+        showConfirmButton: false
+      });
+      loadAllUsers();
+    } catch (err) {
+      hideLoader();
+      Swal.fire('Gagal Menyimpan', err.message, 'error');
+    }
+  }
+}
+
+// Dialog Siswa Mandiri untuk Menyesuaikan Nomor HP, Alamat, Foto, dan Ganti Password
+async function showEditProfilSiswaModal() {
+  if (!currentUser || currentUser.role !== 'Siswa') return;
+  const siswa = currentUser.dataSiswa || {};
+  let photoBase64 = siswa.foto || '';
+
+  const { value: formValues } = await Swal.fire({
+    title: 'Sesuaikan Profil Mandiri',
+    html: `
+      <div style="text-align: left; font-size: 0.9rem; line-height: 1.5;">
+        <div style="display: flex; align-items: center; gap: 12px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px; padding: 12px; margin-bottom: 16px;">
+          <div style="position: relative; width: 56px; height: 56px; flex-shrink: 0;">
+            <img id="mandiri-preview-siswa-foto" src="${photoBase64 || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=059669&color=fff`}"
+              style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
+            <label for="mandiri-input-siswa-foto" style="position: absolute; bottom: -2px; right: -2px; width: 22px; height: 22px; background: var(--primary-color); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="Pilih Pas Foto">
+              <i data-lucide="camera" style="width: 12px; height: 12px;"></i>
+            </label>
+            <input type="file" id="mandiri-input-siswa-foto" accept="image/*" style="display: none;" onchange="previewMandiriSiswaFoto(event)">
+          </div>
+          <div>
+            <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">${currentUser.nama}</div>
+            <div style="font-size: 11.5px; color: var(--text-muted);">NIK: <b>${siswa.nik || currentUser.username}</b> · ${siswa.program || 'Paket C'}</div>
+            <div style="font-size: 10.5px; color: var(--primary-color); margin-top: 2px;">Klik kamera untuk memperbarui pas foto</div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px;">Nomor HP / WhatsApp Aktif</label>
+          <input type="text" id="mandiri-siswa-hp" value="${siswa.noHp || ''}" placeholder="Contoh: 0812-xxxx-xxxx" class="form-control" style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px;">Alamat Domisili Tinggal Sekarang</label>
+          <textarea id="mandiri-siswa-alamat" rows="2" class="form-control" style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; resize: vertical;" placeholder="Tuliskan nama jalan, kelurahan, kecamatan tempat tinggal saat ini...">${siswa.alamat || ''}</textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 4px; background: var(--surface-2); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px; color: var(--text-color);">
+            🔒 Ubah Password Pribadi (Bebas, Tidak Harus Tanggal Lahir)
+          </label>
+          <input type="password" id="mandiri-siswa-pass" placeholder="Ketik kata sandi baru (minimal 6 karakter)" class="form-control" style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px;">
+          <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;">
+            Kosongkan jika tetap ingin menggunakan kata sandi saat ini.
+          </small>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Simpan Perubahan',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#10b981',
+    didOpen: () => {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+      window.previewMandiriSiswaFoto = function(event) {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            photoBase64 = e.target.result;
+            const imgEl = document.getElementById('mandiri-preview-siswa-foto');
+            if (imgEl) imgEl.src = photoBase64;
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+    },
+    preConfirm: () => {
+      const noHp = document.getElementById('mandiri-siswa-hp')?.value.trim();
+      const alamat = document.getElementById('mandiri-siswa-alamat')?.value.trim();
+      const newPass = document.getElementById('mandiri-siswa-pass')?.value.trim();
+
+      if (newPass && newPass.length < 6) {
+        Swal.showValidationMessage('Password baru minimal 6 karakter.');
+        return false;
+      }
+
+      return {
+        noHp,
+        alamat,
+        newPass,
+        photoBase64
+      };
+    }
+  });
+
+  if (formValues) {
+    showLoader("Menyimpan Profil Mandiri...");
+    try {
+      await callAPI({
+        action: "updateUser",
+        username: currentUser.username,
+        nama: currentUser.nama,
+        password: formValues.newPass || undefined,
+        extraData: {
+          role: 'Siswa',
+          noHp: formValues.noHp,
+          alamat: formValues.alamat,
+          foto: formValues.photoBase64,
+          idSiswa: siswa.id
+        }
+      });
+
+      // Update session lokal
+      currentUser.dataSiswa.noHp = formValues.noHp;
+      currentUser.dataSiswa.alamat = formValues.alamat;
+      if (formValues.photoBase64) currentUser.dataSiswa.foto = formValues.photoBase64;
+      localStorage.setItem('ppdb_session', JSON.stringify(currentUser));
+
+      renderPortalSiswaData(currentUser.dataSiswa);
+      hideLoader();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Profil Berhasil Diperbarui',
+        text: 'Data kontak, alamat, dan kata sandi baru Anda telah berhasil disimpan.',
+        timer: 2500,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      hideLoader();
+      Swal.fire('Gagal Menyimpan', err.message, 'error');
+    }
+  }
+}
+
+// Dialog Admin untuk Reset Password Pengguna (Bisa Custom atau Default Sistem)
+async function resetUserPassword(username, encodedNama, isSiswa = false) {
+  const nama = decodeURIComponent(encodedNama || username);
+  const defaultPass = isSiswa ? 'siswa123456' : 'pkbm123456';
+
+  const { value: formValues } = await Swal.fire({
+    title: 'Reset Password Pengguna',
+    html: `
+      <div style="text-align: left; font-size: 0.9rem; line-height: 1.5;">
+        <div style="background: rgba(30, 64, 175, 0.08); border: 1px solid rgba(30, 64, 175, 0.2); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;">
+          <div style="font-size: 11px; color: var(--text-muted);">${isSiswa ? 'Akun Peserta Didik (Siswa):' : 'Akun Pengguna:'}</div>
+          <div style="font-weight: 700; color: var(--text-color); font-size: 14px;">${nama} (@${username})</div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="font-weight: 600; display: block; margin-bottom: 6px; font-size: 12.5px;">Pilih Opsi Reset:</label>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: var(--surface-2); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12.5px;">
+              <input type="radio" name="reset-option" value="default" checked onchange="toggleResetInput(false)">
+              <span>Kembalikan ke Password Standar: <b style="color: #b45309;">${defaultPass}</b></span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: var(--surface-2); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 12.5px;">
+              <input type="radio" name="reset-option" value="custom" onchange="toggleResetInput(true)">
+              <span>Tentukan Password Baru Khusus (Bebas)</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="wrapper-custom-password" style="display: none; margin-top: 10px;">
+          <label style="font-weight: 600; display: block; margin-bottom: 4px; font-size: 12px;">Password Baru (Minimal 6 Karakter):</label>
+          <input type="password" id="input-reset-pass" placeholder="Ketik kata sandi baru..." class="form-control" style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px;">
+        </div>
+
+        <div style="margin-top: 12px; font-size: 11.5px; color: var(--text-muted); line-height: 1.4;">
+          ℹ️ Setelah berhasil di-reset, beritahukan password baru ini kepada yang bersangkutan agar dapat login tanpa tergantung pada tanggal lahir.
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Reset Password Sekarang',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#16a34a',
+    didOpen: () => {
+      window.toggleResetInput = function(isCustom) {
+        const wrap = document.getElementById('wrapper-custom-password');
+        const inp = document.getElementById('input-reset-pass');
+        if (wrap) wrap.style.display = isCustom ? 'block' : 'none';
+        if (isCustom && inp) inp.focus();
+      };
+    },
+    preConfirm: () => {
+      const selected = document.querySelector('input[name="reset-option"]:checked')?.value;
+      if (selected === 'custom') {
+        const customPass = document.getElementById('input-reset-pass')?.value || '';
+        if (!customPass || customPass.length < 6) {
+          Swal.showValidationMessage('Password baru khusus minimal 6 karakter.');
+          return false;
+        }
+        return customPass;
+      }
+      return defaultPass;
+    }
+  });
+
+  if (formValues) {
+    showLoader("Mereset Password Akun...");
+    try {
+      await callAPI({
+        action: "updateUser",
+        username: username,
+        nama: nama,
+        password: formValues,
+        extraData: {
+          role: isSiswa ? 'Siswa' : 'Guru'
+        }
+      });
+      hideLoader();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Password Berhasil Direset!',
+        html: `
+          <div style="text-align: left; font-size: 13px; line-height: 1.5;">
+            <p>Password untuk akun <b>${nama}</b> (@${username}) telah berhasil diperbarui.</p>
+            <div style="background: var(--surface-2); border: 1px dashed var(--border-color); padding: 10px 14px; border-radius: 8px; margin: 10px 0;">
+              <div>Password Baru: <code style="font-size: 15px; font-weight: 700; color: var(--primary-color);">${formValues}</code></div>
+            </div>
+            <small style="color: var(--text-muted);">Silakan infokan password baru ini ke pengguna / siswa terkait.</small>
+          </div>
+        `,
+        confirmButtonText: 'Selesai'
+      });
+      loadAllUsers();
+    } catch (err) {
+      hideLoader();
+      Swal.fire('Gagal Reset', err.message, 'error');
+    }
   }
 }
 
@@ -3254,8 +3966,19 @@ async function handleAddUser() {
   // Langsung tampilkan user baru ke tabel seketika (Optimistic UI)
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td>${u}</td><td>${n}</td><td>${r}</td>
-    <td><button class="btn btn-danger" onclick="deleteUser('${u}')" style="padding:4px 8px; font-size:0.8rem;">Hapus</button></td>
+    <td><strong>${u}</strong></td>
+    <td>${n}</td>
+    <td><span class="badge" style="background: rgba(30, 64, 175, 0.12); color: #1e40af; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 6px;">${r}</span></td>
+    <td style="text-align: center;">
+      <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: center;">
+        <button class="btn btn-sm btn-outline" onclick="resetUserPassword('${u}', '${encodeURIComponent(n)}')" style="padding: 4px 10px; font-size: 0.8rem; border-color: #d97706; color: #d97706;">
+          <i data-lucide="key-round" style="width: 13px; height: 13px;"></i> Reset Sandi
+        </button>
+        <button class="btn btn-danger" onclick="deleteUser('${u}')" style="padding:4px 10px; font-size:0.8rem;">
+          <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i> Hapus
+        </button>
+      </div>
+    </td>
   `;
   tableUsersBody.appendChild(tr);
 
@@ -3273,19 +3996,27 @@ async function handleAddUser() {
     timer: 2500
   });
 
-  // Kirim data ke Google Sheets di background tanpa memblokir layar
+  // Kirim data ke backend di background
   callAPI({ action: "addUser", username: u, password: p, nama: n, role: r })
     .then(() => {
-      loadAllUsers(true);
+      loadAllUsers();
     })
     .catch(err => {
       console.error(err);
       Swal.fire('Error Sync', err.message, 'error');
-      loadAllUsers(true);
+      loadAllUsers();
     });
 }
 
 async function deleteUser(username) {
+  if (currentUser && currentUser.username === username) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Tidak Diizinkan',
+      text: 'Anda tidak dapat menghapus akun Anda sendiri yang sedang aktif digunakan.'
+    });
+    return;
+  }
   if (!confirm("Hapus pengguna " + username + "?")) return;
   showLoader("Menghapus user...");
   try {
@@ -3786,12 +4517,8 @@ if (btnCloseRegister && modalRegister) {
   });
 }
 
-// Klik luar overlay Modal Formulir Pendaftaran Siswa
-if (registerModalOverlay && modalRegister) {
-  registerModalOverlay.addEventListener('click', () => {
-    cancelEdit();
-  });
-}
+// Overlay modal formulir tidak lagi menutup form saat klik di luar popup (mencegah data terhapus/hilang tanpa sengaja)
+
 
 // ======================= PENDAFTARAN CEPAT AI (GEMINI) =======================
 
@@ -4153,8 +4880,9 @@ async function handleAISiswaSubmit() {
     renderDashboardUI(siswaDataList);
     if (typeof renderSiswaTable === 'function') renderSiswaTable(siswaDataList);
 
-    // Langsung reset formulir agar user bisa langsung mendaftarkan siswa baru lagi
+    // Langsung reset formulir dan tutup modal popup
     resetAIRegForm();
+    closeAIRegModal();
 
     // Notifikasi Toast Instan (Non-blocking, tidak menahan layar)
     Swal.fire({
@@ -4236,6 +4964,29 @@ function resetAIRegForm() {
   aiValidationResult = null;
 }
 
+// Kontrol Popup Modal Pendaftaran Cepat AI
+function openAIRegModal() {
+  const modal = document.getElementById('modal-ai-reg');
+  if (modal) {
+    modal.classList.remove('hidden');
+    // Refresh ikon lucide di dalam modal jika tersedia
+    if (window.lucide && typeof lucide.createIcons === 'function') {
+      lucide.createIcons();
+    }
+  }
+}
+
+function closeAIRegModal() {
+  const modal = document.getElementById('modal-ai-reg');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+window.openAIRegModal = openAIRegModal;
+window.closeAIRegModal = closeAIRegModal;
+window.resetAIRegForm = resetAIRegForm;
+
 // ======================= FITUR PORTAL SISWA & AKADEMIK (MYAURA) =======================
 function renderPortalSiswaData(siswa) {
   if (!siswa) return;
@@ -4270,6 +5021,15 @@ function renderPortalSiswaData(siswa) {
       if (elCatatan) elCatatan.textContent = 'Dokumen Anda sedang dalam antrean pemeriksaan oleh tim verifikator.';
     }
   }
+  const elNoHp = document.getElementById('siswa-portal-nohp');
+  if (elNoHp) elNoHp.textContent = siswa.noHp || '-';
+
+  if (activeUserAvatar && siswa.foto && siswa.foto.startsWith('data:image')) {
+    activeUserAvatar.src = siswa.foto;
+  }
+
+  // Muat riwayat bacaan siswa di portal
+  loadRiwayatBacaData();
 }
 
 function cetakKartuPendaftaranSiswa() {
@@ -5213,6 +5973,375 @@ let bukuList = [
 
 let sesiBelajarLog = [];
 let ujianHasilList = [];
+let readingHistoriesList = [];
+let saveHistoryDebounceTimer = null;
+
+// Helper: Dapatkan identitas User ID saat ini
+function getCurrentUserId() {
+  if (currentUser) {
+    return String(currentUser.username || currentUser.id || currentUser.nisn || 'guest').trim();
+  }
+  return 'guest';
+}
+
+// ==================== BUKU & READING HISTORIES SYNC ====================
+
+// Kirim request ke backend Node.js untuk menyimpan last_page
+async function saveReadingHistoryBackend(bookId, lastPage, totalPages = 28, bookTitle = '', cover = '') {
+  const userId = getCurrentUserId();
+  if (!bookId) return;
+
+  // Update memori lokal & localStorage segera untuk responsivitas instan
+  try {
+    const existingIdx = readingHistoriesList.findIndex(h => String(h.user_id) === String(userId) && String(h.book_id) === String(bookId));
+    const nowIso = new Date().toISOString();
+    if (existingIdx >= 0) {
+      readingHistoriesList[existingIdx].last_page = lastPage;
+      if (totalPages) readingHistoriesList[existingIdx].total_pages = totalPages;
+      if (bookTitle) readingHistoriesList[existingIdx].book_title = bookTitle;
+      readingHistoriesList[existingIdx].updated_at = nowIso;
+    } else {
+      readingHistoriesList.unshift({
+        id: 'RH-' + Date.now(),
+        user_id: userId,
+        book_id: bookId,
+        last_page: lastPage,
+        total_pages: totalPages,
+        book_title: bookTitle,
+        cover: cover,
+        updated_at: nowIso
+      });
+    }
+    localStorage.setItem(`ppdb_reading_histories_${userId}`, JSON.stringify(readingHistoriesList));
+  } catch (e) { }
+
+  // Kirim ke backend Node.js
+  try {
+    await fetch('/api/reading-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        bookId,
+        lastPage,
+        totalPages,
+        bookTitle,
+        cover
+      })
+    });
+  } catch (err) {
+    console.warn('Gagal simpan riwayat baca ke backend:', err.message);
+  }
+}
+
+// Debounced save untuk perpindahan halaman saat membaca
+function debouncedSaveReadingHistory(bookId, lastPage, totalPages = 28, bookTitle = '', cover = '') {
+  if (saveHistoryDebounceTimer) clearTimeout(saveHistoryDebounceTimer);
+  saveHistoryDebounceTimer = setTimeout(() => {
+    saveReadingHistoryBackend(bookId, lastPage, totalPages, bookTitle, cover);
+  }, 400);
+}
+
+// Ambil riwayat baca spesifik untuk 1 buku (Check Resume)
+async function fetchBookReadingHistory(bookId) {
+  const userId = getCurrentUserId();
+  // 1. Cek dari memori lokal / cache terlebih dahulu
+  let localRecord = readingHistoriesList.find(h => String(h.user_id) === String(userId) && String(h.book_id) === String(bookId));
+  if (!localRecord) {
+    try {
+      const cached = localStorage.getItem(`ppdb_reading_histories_${userId}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        localRecord = parsed.find(h => String(h.user_id) === String(userId) && String(h.book_id) === String(bookId));
+      }
+    } catch (e) { }
+  }
+
+  // 2. Fetch ke backend Node.js
+  try {
+    const res = await fetch(`/api/reading-history/${encodeURIComponent(userId)}/${encodeURIComponent(bookId)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.status === 'SUCCESS' && json.data) {
+        return json.data;
+      }
+    }
+  } catch (e) {
+    console.warn('Backend reading history offline, gunakan data lokal:', e.message);
+  }
+
+  return localRecord || null;
+}
+
+// Ambil semua riwayat baca untuk user saat ini & render UI
+async function loadRiwayatBacaData() {
+  const userId = getCurrentUserId();
+
+  // Load dari localStorage dulu agar tidak kosong saat rendering awal
+  try {
+    const cached = localStorage.getItem(`ppdb_reading_histories_${userId}`);
+    if (cached) {
+      readingHistoriesList = JSON.parse(cached);
+      renderRiwayatBacaSection();
+    }
+  } catch (e) { }
+
+  try {
+    const res = await fetch(`/api/reading-history/${encodeURIComponent(userId)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.status === 'SUCCESS' && Array.isArray(json.data)) {
+        readingHistoriesList = json.data;
+        try {
+          localStorage.setItem(`ppdb_reading_histories_${userId}`, JSON.stringify(readingHistoriesList));
+        } catch (e) { }
+      }
+    }
+  } catch (err) {
+    console.warn('Gagal memuat riwayat baca dari backend:', err.message);
+  }
+
+  renderRiwayatBacaSection();
+}
+
+// Render daftar buku & riwayat baca ke halaman khusus History Baca Buku (section-riwayat-baca)
+// Render daftar buku & riwayat baca ke halaman khusus History Baca Buku (section-riwayat-baca)
+function renderRiwayatBacaSection() {
+  const summaryCard = document.getElementById('history-resume-summary-card');
+  const modulBadge = document.getElementById('history-total-modul-badge');
+
+  // Render modul pembelajaran sisi kiri (hanya buku yang pernah dibaca)
+  renderHistoryModulKiri();
+
+  // Urutkan riwayat secara descending (terbaru di atas)
+  const sortedHistories = [...(readingHistoriesList || [])].sort((a, b) => {
+    const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+    const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+    return timeB - timeA;
+  });
+
+  if (modulBadge) {
+    modulBadge.textContent = `${sortedHistories.length} Buku`;
+  }
+
+  // 1. Render Summary Card Resume Belajar Terkini (Sisi Kiri Atas)
+  if (summaryCard) {
+    if (sortedHistories.length > 0) {
+      const latest = sortedHistories[0];
+      const latestBook = bukuList.find(b => String(b.id) === String(latest.book_id)) || {
+        nama: latest.book_title || 'Modul Pelajaran',
+        jenjang: 'Kesetaraan',
+        totalHal: latest.total_pages || 28
+      };
+      const lastPage = parseInt(latest.last_page, 10) || 1;
+      const totalPages = parseInt(latest.total_pages || latestBook.totalHal, 10) || 28;
+      const pct = Math.min(100, Math.round((lastPage / totalPages) * 100));
+      const lastTime = latest.updated_at ? new Date(latest.updated_at).toLocaleDateString('id-ID', {
+        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      }) : '-';
+
+      summaryCard.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: 700; font-size: 11px; padding: 3px 10px; border-radius: 99px;">
+              ⭐ Modul Yang Sedang Anda Pelajari
+            </span>
+            <h3 style="margin: 8px 0 4px 0; font-size: 17px; font-weight: 700; color: var(--text-color);">${latestBook.nama}</h3>
+            <p style="margin: 0; font-size: 12.5px; color: var(--text-muted);">
+              ${latestBook.jenjang} · Terakhir aktif pada <b>${lastTime}</b>
+            </p>
+          </div>
+          <button class="btn btn-primary" onclick="lanjutkanBacaBuku('${latest.book_id}', ${lastPage})"
+            style="font-size: 13px; font-weight: 700; padding: 9px 18px; border-radius: 8px; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.25);">
+            <i data-lucide="play" style="width: 15px; height: 15px; fill: currentColor;"></i> Lanjutkan Membaca (Hal. ${lastPage})
+          </button>
+        </div>
+
+        <div style="margin-top: 14px; background: var(--surface-color); padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.06);">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+            <span style="color: var(--text-muted);">Resume Progress Membaca</span>
+            <span style="font-weight: 700; color: var(--primary-color);">Hal. ${lastPage} dari ${totalPages} (${pct}%)</span>
+          </div>
+          <div style="width: 100%; height: 7px; background: rgba(0,0,0,0.06); border-radius: 99px; overflow: hidden;">
+            <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, var(--primary-color) 0%, #10b981 100%); border-radius: 99px;"></div>
+          </div>
+        </div>
+      `;
+    } else {
+      summaryCard.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(30, 64, 175, 0.1); color: var(--primary-color); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="book-open" style="width: 22px; height: 22px;"></i>
+          </div>
+          <div>
+            <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: var(--text-color);">Belum Ada Modul Yang Dibaca</h4>
+            <p style="margin: 2px 0 0 0; font-size: 12.5px; color: var(--text-muted);">
+              Buka menu Materi & Buku Pelajaran dan pilih modul untuk mulai membaca mandiri.
+            </p>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // 2. Render Log Presensi Belajar Siswa (Real-Time) Sisi Kanan
+  renderBelajarLogTable();
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+// Render modul belajar pada kolom sebelah kiri di menu History Baca Buku
+// HANYA menampilkan buku/modul yang pernah dibaca oleh siswa
+function renderHistoryModulKiri(keyword = '') {
+  const container = document.getElementById('grid-history-modul-kiri');
+  if (!container) return;
+
+  const kw = keyword.toLowerCase().trim();
+
+  // Ambil hanya buku yang pernah dibaca (ada dalam readingHistoriesList)
+  const historyMap = new Map();
+  (readingHistoriesList || []).forEach(h => {
+    historyMap.set(String(h.book_id), h);
+  });
+
+  // Urutkan buku berdasarkan waktu update riwayat (descending / terbaru di atas)
+  const readBooks = [];
+  const sortedHistories = [...(readingHistoriesList || [])].sort((a, b) => {
+    const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+    const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+    return timeB - timeA;
+  });
+
+  sortedHistories.forEach(hist => {
+    const found = bukuList.find(b => String(b.id) === String(hist.book_id));
+    if (found) {
+      readBooks.push({ ...found, history: hist });
+    } else {
+      readBooks.push({
+        id: hist.book_id,
+        nama: hist.book_title || 'Modul Pembelajaran',
+        jenjang: 'Kesetaraan',
+        mapel: 'Umum',
+        kelas: '',
+        cover: hist.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80',
+        totalHal: hist.total_pages || 28,
+        history: hist
+      });
+    }
+  });
+
+  const list = readBooks.filter(b => {
+    if (!kw) return true;
+    return (b.nama && b.nama.toLowerCase().includes(kw)) ||
+      (b.mapel && b.mapel.toLowerCase().includes(kw)) ||
+      (b.jenjang && b.jenjang.toLowerCase().includes(kw)) ||
+      (b.kelas && b.kelas.toLowerCase().includes(kw));
+  });
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--text-muted); font-size: 13px; background: var(--surface-color); border-radius: 12px; border: 1px dashed var(--border-color);">
+        <i data-lucide="book" style="width: 36px; height: 36px; margin-bottom: 10px; opacity: 0.4;"></i>
+        <div style="font-weight: 600; font-size: 14px; color: var(--text-color);">
+          ${kw ? 'Tidak ditemukan modul yang sesuai kata kunci' : 'Belum Ada Buku Yang Pernah Dibaca'}
+        </div>
+        <p style="margin: 6px 0 0 0; font-size: 12px;">
+          ${kw ? 'Coba gunakan kata kunci pencarian yang lain.' : 'Buka menu Materi & Buku Pelajaran dan mulailah membaca modul yang Anda sukai.'}
+        </p>
+      </div>
+    `;
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+    return;
+  }
+
+  container.innerHTML = list.map(b => {
+    const hist = b.history;
+    const lastPage = hist ? parseInt(hist.last_page, 10) : 1;
+    const totalHal = parseInt(hist?.total_pages || b.totalHal || 28, 10);
+    const percentage = Math.min(100, Math.round((lastPage / totalHal) * 100));
+    const lastTime = hist?.updated_at ? new Date(hist.updated_at).toLocaleDateString('id-ID', {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }) : '-';
+
+    return `
+      <div class="card" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; gap: 12px;">
+          <img src="${b.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80'}" alt="${b.nama}"
+            style="width: 52px; height: 72px; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex-shrink: 0;"
+            onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80'">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--primary-color);">${b.jenjang} ${b.kelas ? '· ' + b.kelas : ''}</div>
+            <h4 style="font-size: 13.5px; margin: 3px 0 4px 0; color: var(--text-color); line-height: 1.3; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.nama}">${b.nama}</h4>
+            <div style="font-size: 11px; color: var(--text-muted);">${totalHal} Halaman</div>
+            <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">🕒 ${lastTime}</div>
+          </div>
+        </div>
+
+        <!-- Resume Belajar per Modul -->
+        <div style="background: var(--surface-2); border-radius: 8px; padding: 8px 10px; border: 1px solid var(--border-color);">
+          <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 5px;">
+            <span style="color: var(--text-muted); font-weight: 500;">Resume Belajar:</span>
+            <span style="font-weight: 700; color: var(--primary-color);">Hal. ${lastPage} / ${totalHal} (${percentage}%)</span>
+          </div>
+          <div style="width: 100%; height: 5px; background: rgba(0,0,0,0.08); border-radius: 99px; overflow: hidden;">
+            <div style="width: ${percentage}%; height: 100%; background: linear-gradient(90deg, var(--primary-color) 0%, #10b981 100%); border-radius: 99px;"></div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="lanjutkanBacaBuku('${b.id}', ${lastPage})"
+          style="width: 100%; justify-content: center; font-size: 12px; font-weight: 600; padding: 7px 10px; margin-top: auto; border-radius: 6px;">
+          <i data-lucide="play" style="width: 13px; height: 13px; fill: currentColor;"></i>
+          Lanjutkan Membaca (Hal. ${lastPage})
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+// Filter modul di sebelah kiri
+function filterHistoryModulList() {
+  const kw = document.getElementById('search-history-modul')?.value || '';
+  renderHistoryModulKiri(kw);
+}
+
+// Navigasi fokus ke section Riwayat Bacaan dari sidebar
+function fokusKeRiwayatBaca() {
+  const contentSections = document.querySelectorAll('.content-section');
+  contentSections.forEach(sec => sec.classList.add('hidden'));
+  const targetEl = document.getElementById('section-riwayat-baca');
+  if (targetEl) targetEl.classList.remove('hidden');
+  try { localStorage.setItem('ppdb_last_section', 'section-riwayat-baca'); } catch (e) { }
+
+  document.querySelectorAll('#main-menu li.nav-item').forEach(li => li.classList.remove('active'));
+  const activeLi = document.getElementById('menu-riwayat-baca') || document.getElementById('menu-siswa-riwayat-baca');
+  if (activeLi) activeLi.classList.add('active');
+
+  loadBukuData();
+  loadRiwayatBacaData();
+}
+
+// Lanjutkan membaca langsung dari kartu Riwayat Bacaan
+function lanjutkanBacaBuku(bukuId, targetPage = 1) {
+  const book = bukuList.find(b => String(b.id) === String(bukuId));
+  if (!book) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Buku Sedang Diperbarui',
+      text: 'Modul ini sedang disinkronkan ke katalog. Silakan coba sesaat lagi.'
+    });
+    return;
+  }
+  const studentName = currentUser ? currentUser.nama : "Peserta Didik Mandiri";
+  launchReaderSession(book, studentName, targetPage, false);
+}
 
 // State Aktif Sesi Belajar
 let activeBelajarSession = null;
@@ -5261,6 +6390,7 @@ function loadBukuData() {
   updateBelajarStats();
   renderUjianTable();
   populateUjianSelectOptions();
+  loadRiwayatBacaData(); // Ambil riwayat baca buku
 }
 
 function onJenjangFilterChange() {
@@ -5473,35 +6603,60 @@ function renderBukuGrid(data) {
 
 // ==================== LIVE BELAJAR, ABSENSI, & READER ====================
 
-function mulaiBelajarBuku(bukuId) {
-  const book = bukuList.find(b => b.id === bukuId);
+async function mulaiBelajarBuku(bukuId, explicitStartPage = null) {
+  const book = bukuList.find(b => String(b.id) === String(bukuId));
   if (!book) return;
 
   // Nama siswa yang belajar
   const studentName = currentUser ? currentUser.nama : "Peserta Didik Mandiri";
 
+  // Cek riwayat baca dari backend / local storage
+  let savedHistory = null;
+  if (!explicitStartPage) {
+    try {
+      savedHistory = await fetchBookReadingHistory(book.id);
+    } catch (e) { }
+  }
+
+  const lastSavedPage = explicitStartPage || (savedHistory ? parseInt(savedHistory.last_page, 10) : 1);
+  const totalPages = parseInt(book.totalHal || (savedHistory?.total_pages) || 28, 10);
+  const hasHistory = lastSavedPage > 1;
+
   // Buka dialog konfirmasi presensi belajar (Absen Belajar Otomatis)
   Swal.fire({
-    title: 'Mulai Sesi Belajar Mandiri?',
+    title: hasHistory ? 'Lanjutkan Membaca Modul?' : 'Mulai Sesi Belajar Mandiri?',
     html: `
       <div style="text-align: left; font-size: 13.5px; line-height: 1.5; color: var(--text-color);">
-        <p>Halo <b>${studentName}</b>, sistem akan mencatat kehadiran dan absensi belajar Anda secara otomatis:</p>
+        <p>Halo <b>${studentName}</b>, sistem akan mencatat kehadiran dan progres belajar Anda secara otomatis:</p>
         <div style="background: var(--surface-2); padding: 12px; border-radius: 8px; margin: 10px 0; border: 1px solid var(--border-color);">
           <div>📚 <b>Buku:</b> ${book.nama}</div>
-          <div style="margin-top: 4px;">🎯 <b>Program:</b> ${book.jenjang} - ${book.kategori}</div>
-          <div style="margin-top: 4px;">⏱️ <b>Pelacak:</b> Timer durasi dan halaman akan direkam ke log guru.</div>
+          <div style="margin-top: 4px;">🎯 <b>Program:</b> ${book.jenjang} - ${book.kategori || book.mapel || ''}</div>
+          ${hasHistory ? `
+            <div style="margin-top: 6px; padding: 6px 10px; background: rgba(30, 64, 175, 0.08); border-radius: 6px; border: 1px solid rgba(30, 64, 175, 0.2); color: var(--primary-color); font-weight: 600;">
+              🔖 Ditemukan Riwayat Baca: Anda sebelumnya membaca sampai <b>Halaman ${lastSavedPage}</b> (dari ${totalPages} hal).
+            </div>
+          ` : `
+            <div style="margin-top: 4px;">⏱️ <b>Pelacak:</b> Timer durasi dan halaman akan direkam ke log guru.</div>
+          `}
         </div>
-        <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Setelah membaca modul, Anda dapat langsung menuntaskan ke sesi Ujian & Penilaian.</p>
+        <p style="margin: 0; font-size: 12px; color: var(--text-muted);">
+          ${hasHistory ? 'Pilih tombol untuk langsung melanjutkan ke halaman terakhir atau mulai ulang dari awal.' : 'Setelah membaca modul, Anda dapat langsung menuntaskan ke sesi Ujian & Penilaian.'}
+        </p>
       </div>
     `,
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'Ya, Mulai Belajar Sekarang 📖',
-    cancelButtonText: 'Nanti Dulu',
-    confirmButtonColor: 'var(--primary-color)'
+    showDenyButton: hasHistory,
+    confirmButtonText: hasHistory ? `Lanjutkan (Hal. ${lastSavedPage}) 📖` : 'Ya, Mulai Belajar Sekarang 📖',
+    denyButtonText: 'Mulai dari Hal. 1',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: 'var(--primary-color)',
+    denyButtonColor: '#64748b'
   }).then(res => {
     if (res.isConfirmed) {
-      launchReaderSession(book, studentName);
+      launchReaderSession(book, studentName, lastSavedPage);
+    } else if (res.isDenied) {
+      launchReaderSession(book, studentName, 1);
     }
   });
 }
@@ -5563,6 +6718,7 @@ function launchReaderSession(book, studentName, initialPage = null, isResumed = 
   document.getElementById('reader-total-page').textContent = book.totalHal || 28;
   document.getElementById('reader-active-student').textContent = studentName;
   updateZoomDisplay(1.0);
+  updateReaderNavButtonStates();
 
   // Buka modal reader
   const modalReader = document.getElementById('modal-reader');
@@ -5616,28 +6772,18 @@ async function loadPdfDocument(book, startPage = 1) {
     drivePreviewUrl = `https://drive.google.com/file/d/${book.id}/preview`;
   }
 
-  // Tautkan tombol eksternal Google Drive di header jika siswa ingin membuka di tab/aplikasi Google Drive langsung
-  const btnExternal = document.getElementById('btn-reader-external');
   const iframeTip = document.getElementById('reader-iframe-tip');
-  if (btnExternal) {
-    if (drivePreviewUrl) {
-      btnExternal.href = drivePreviewUrl.replace('/preview', '/view');
-      btnExternal.style.display = 'inline-flex';
-    } else {
-      btnExternal.style.display = 'none';
-    }
-  }
 
-  // Tentukan URL PDF untuk mode Native PDF.js Reader
+  // Tentukan URL PDF untuk mode Native PDF.js Reader (Menggunakan /api/pdf-proxy server lokal untuk bebas CORS 100%)
   let pdfUrl = '';
   if (book.id && (book.id.length > 20 || !book.id.startsWith('BK-'))) {
-    pdfUrl = `https://drive.usercontent.google.com/download?id=${book.id}&export=download`;
+    pdfUrl = `/api/pdf-proxy?id=${encodeURIComponent(book.id)}`;
   } else if (book.file && book.file.startsWith('http')) {
     const driveMatch = book.file.match(/\/d\/([a-zA-Z0-9_-]+)/) || book.file.match(/id=([a-zA-Z0-9_-]+)/);
     if (driveMatch) {
-      pdfUrl = `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download`;
+      pdfUrl = `/api/pdf-proxy?id=${encodeURIComponent(driveMatch[1])}`;
     } else {
-      pdfUrl = book.file;
+      pdfUrl = `/api/pdf-proxy?url=${encodeURIComponent(book.file)}`;
     }
   }
 
@@ -5693,6 +6839,12 @@ async function loadPdfDocument(book, startPage = 1) {
           const safePage = Math.max(1, Math.min(total, startPage));
           currentPdfPage = safePage;
 
+          // Pastikan canvas ditampilkan dan iframe disembunyikan
+          if (renderWrapper) renderWrapper.style.display = 'flex';
+          if (canvas) canvas.style.display = 'block';
+          if (iframeWrapper) iframeWrapper.style.display = 'none';
+          if (textViewerEl) textViewerEl.style.display = 'none';
+
           if (activeBelajarSession) {
             activeBelajarSession.totalHalaman = total;
             activeBelajarSession.halamanSekarang = safePage;
@@ -5703,8 +6855,9 @@ async function loadPdfDocument(book, startPage = 1) {
           document.getElementById('reader-page-input').max = total;
           document.getElementById('reader-page-input').value = safePage;
 
-          calculateInitialScale();
+          await calculateInitialScale();
           renderCurrentPdfPage();
+          updateReaderNavButtonStates();
         })
         .catch(err => {
           clearTimeout(timeoutId);
@@ -5720,14 +6873,32 @@ async function loadPdfDocument(book, startPage = 1) {
   }
 }
 
-function calculateInitialScale() {
-  const container = document.getElementById('reader-viewport-container');
+async function calculateInitialScale() {
+  const container = document.getElementById('pdf-render-wrapper') || document.getElementById('reader-viewport-container');
+  const availableWidth = container ? (container.clientWidth - 32) : (window.innerWidth - 32);
+
+  if (currentPdfDoc) {
+    try {
+      const page = await currentPdfDoc.getPage(currentPdfPage || 1);
+      const unscaledViewport = page.getViewport({ scale: 1.0 });
+      if (unscaledViewport && unscaledViewport.width > 0) {
+        // Skala tepat agar lebar halaman pas dengan lebar frame reader
+        const fitScale = Math.max(0.4, Math.min(2.5, availableWidth / unscaledViewport.width));
+        currentPdfScale = fitScale;
+        updateZoomDisplay(currentPdfScale);
+        return;
+      }
+    } catch (e) {
+      console.warn('Gagal menghitung fit-width dinamis dari halaman PDF:', e.message);
+    }
+  }
+
+  // Fallback jika dokumen belum siap
   const screenWidth = container ? container.clientWidth : window.innerWidth;
   if (screenWidth <= 768) {
-    // Di HP, sesuaikan skala agar memenuhi lebar layar HP dengan padding minimal
-    currentPdfScale = Math.max(0.65, (screenWidth - 24) / 595); // 595 adalah standard A4 pt
+    currentPdfScale = Math.max(0.65, (screenWidth - 24) / 595);
   } else {
-    currentPdfScale = Math.min(1.35, (screenWidth - 60) / 750);
+    currentPdfScale = Math.max(0.8, Math.min(2.0, (screenWidth - 48) / 720));
   }
   updateZoomDisplay(currentPdfScale);
 }
@@ -5739,8 +6910,11 @@ function fallbackToTextViewer(book) {
   const iframeWrapper = document.getElementById('reader-iframe-wrapper');
   const driveIframe = document.getElementById('reader-drive-iframe');
 
+  const renderWrapper = document.getElementById('pdf-render-wrapper');
+
   if (spinner) spinner.style.display = 'none';
   if (canvas) canvas.style.display = 'none';
+  if (renderWrapper) renderWrapper.style.display = 'none';
 
   // 1. Jika buku memiliki link Google Drive atau ID file Drive, tampilkan preview Google Drive langsung (sangat responsif & stabil di HP)
   let drivePreviewUrl = '';
@@ -5877,6 +7051,40 @@ function navigasiHalamanBuku(step) {
   // Update Log Belajar & Auto-save Session
   updateLogBelajarSession(activeBelajarSession);
   saveActiveBelajarSessionToStorage();
+  updateReaderNavButtonStates();
+
+  // 📖 Otomatis simpan last_page ke backend Node.js
+  if (activeBelajarSession && activeBelajarSession.bukuId) {
+    debouncedSaveReadingHistory(
+      activeBelajarSession.bukuId,
+      activeBelajarSession.halamanSekarang,
+      activeBelajarSession.totalHalaman,
+      activeBelajarSession.bukuJudul
+    );
+  }
+}
+
+// Update status tombol Previous & Next (disable di ujung batas halaman)
+function updateReaderNavButtonStates() {
+  const btnPrev = document.getElementById('btn-reader-prev');
+  const btnNext = document.getElementById('btn-reader-next');
+  if (!activeBelajarSession) return;
+
+  const current = activeBelajarSession.halamanSekarang || 1;
+  const total = activeBelajarSession.totalHalaman || 28;
+
+  if (btnPrev) {
+    const isFirst = current <= 1;
+    btnPrev.disabled = isFirst;
+    btnPrev.style.opacity = isFirst ? '0.45' : '1';
+    btnPrev.style.cursor = isFirst ? 'not-allowed' : 'pointer';
+  }
+  if (btnNext) {
+    const isLast = current >= total;
+    btnNext.disabled = isLast;
+    btnNext.style.opacity = isLast ? '0.45' : '1';
+    btnNext.style.cursor = isLast ? 'not-allowed' : 'pointer';
+  }
 }
 
 // Lompat ke Halaman tertentu melalui input
@@ -5904,6 +7112,17 @@ function lompatHalamanBuku(val) {
   }
   updateLogBelajarSession(activeBelajarSession);
   saveActiveBelajarSessionToStorage();
+  updateReaderNavButtonStates();
+
+  // 📖 Otomatis simpan last_page ke backend Node.js
+  if (activeBelajarSession && activeBelajarSession.bukuId) {
+    debouncedSaveReadingHistory(
+      activeBelajarSession.bukuId,
+      activeBelajarSession.halamanSekarang,
+      activeBelajarSession.totalHalaman,
+      activeBelajarSession.bukuJudul
+    );
+  }
 }
 
 // Zoom In / Out Handlers
@@ -5915,8 +7134,8 @@ function zoomBuku(delta) {
   }
 }
 
-function zoomFitWidth() {
-  calculateInitialScale();
+async function zoomFitWidth() {
+  await calculateInitialScale();
   if (currentPdfDoc) {
     renderCurrentPdfPage();
   }
@@ -5992,6 +7211,9 @@ function closeReaderModal(triggerConfirm = true) {
     const totalHal = session.totalHalaman || 28;
     const persenSelesai = Math.min(100, Math.round((halTerbaca / totalHal) * 100));
 
+    // 📖 Simpan halaman terakhir ke backend Node.js saat sesi ditutup/selesai
+    saveReadingHistoryBackend(session.bukuId, halTerbaca, totalHal, session.bukuJudul);
+
     // 🔔 Kirim Notifikasi Push Detail ke Admin & Super Admin saat siswa selesai belajar
     if (typeof sendAppPushNotification === 'function') {
       sendAppPushNotification({
@@ -6012,6 +7234,7 @@ function closeReaderModal(triggerConfirm = true) {
     if (modalReader) modalReader.classList.add('hidden');
     renderBelajarLogTable();
     updateBelajarStats();
+    loadRiwayatBacaData(); // Perbarui kartu riwayat buku yang baru saja dibaca
 
     // Tampilkan Dialog Resume Selesai Belajar kepada Siswa
     if (triggerConfirm) {
@@ -6149,20 +7372,22 @@ function renderBelajarLogTable() {
   if (!tbody) return;
 
   if (sesiBelajarLog.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Belum ada riwayat aktivitas belajar siswa.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px 8px;">Belum ada riwayat aktivitas belajar siswa.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = sesiBelajarLog.slice(0, 10).map((log, idx) => {
+  tbody.innerHTML = sesiBelajarLog.map((log) => {
     const menit = Math.ceil((log.durasiDetik || 0) / 60);
     return `
       <tr>
-        <td><small>${log.tanggal || '-'} ${log.jamMulai || ''}</small></td>
-        <td><strong>${log.namaSiswa || 'Siswa'}</strong></td>
-        <td>${log.bukuJudul || '-'}</td>
-        <td><span style="background: var(--surface-2); padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">${log.halamanTerbaca || 'Hal. 1'}</span></td>
-        <td>${menit} Menit</td>
-        <td><span style="font-size: 12px; font-weight: 600;">${log.status || 'Aktif'}</span></td>
+        <td style="padding: 8px 6px; white-space: nowrap;"><small style="color: var(--text-muted);">${log.jamMulai || ''}</small><div style="font-size: 10.5px;">${log.tanggal || '-'}</div></td>
+        <td style="padding: 8px 6px;"><strong>${log.namaSiswa || 'Siswa'}</strong></td>
+        <td style="padding: 8px 6px;">
+          <div style="font-weight: 600; line-height: 1.25; margin-bottom: 2px;">${log.bukuJudul || '-'}</div>
+          <span style="background: var(--surface-2); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; color: var(--primary-color); border: 1px solid var(--border-color);">${log.halamanTerbaca || 'Hal. 1'}</span>
+        </td>
+        <td style="padding: 8px 6px; white-space: nowrap; font-size: 11.5px;">${menit} Mnt</td>
+        <td style="padding: 8px 6px; white-space: nowrap;"><span style="font-size: 11.5px; font-weight: 600;">${log.status || 'Aktif'}</span></td>
       </tr>
     `;
   }).join('');
