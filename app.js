@@ -6897,6 +6897,7 @@ async function loadPdfDocument(book, startPage = 1) {
         await calculateInitialScale();
         renderCurrentPdfPage();
         updateReaderNavButtonStates();
+        initPinchToZoomReader();
       } else {
         // Fallback jika fetch arrayBuffer tidak dapat diakses
         console.warn('Tidak dapat memuat binary PDF, beralih ke preview viewer');
@@ -6913,15 +6914,19 @@ async function loadPdfDocument(book, startPage = 1) {
 
 async function calculateInitialScale() {
   const container = document.getElementById('pdf-render-wrapper') || document.getElementById('reader-viewport-container');
-  const availableWidth = container ? (container.clientWidth - 32) : (window.innerWidth - 32);
+  const isMobile = window.innerWidth <= 768;
+  // Di layar HP, kurangi margin/padding seminimal mungkin (4px) agar buku pas tepi kiri dan kanan (fit width halaman 1)
+  const availableWidth = isMobile
+    ? (window.innerWidth - 6)
+    : (container ? (container.clientWidth - 32) : (window.innerWidth - 32));
 
   if (currentPdfDoc) {
     try {
       const page = await currentPdfDoc.getPage(currentPdfPage || 1);
       const unscaledViewport = page.getViewport({ scale: 1.0 });
       if (unscaledViewport && unscaledViewport.width > 0) {
-        // Skala tepat agar lebar halaman pas dengan lebar frame reader
-        const fitScale = Math.max(0.4, Math.min(2.5, availableWidth / unscaledViewport.width));
+        // Skala tepat agar lebar halaman pas dengan lebar frame reader (fit kiri-kanan)
+        const fitScale = Math.max(0.35, Math.min(3.5, availableWidth / unscaledViewport.width));
         currentPdfScale = fitScale;
         updateZoomDisplay(currentPdfScale);
         return;
@@ -6934,11 +6939,83 @@ async function calculateInitialScale() {
   // Fallback jika dokumen belum siap
   const screenWidth = container ? container.clientWidth : window.innerWidth;
   if (screenWidth <= 768) {
-    currentPdfScale = Math.max(0.65, (screenWidth - 24) / 595);
+    currentPdfScale = Math.max(0.65, (screenWidth - 8) / 595);
   } else {
-    currentPdfScale = Math.max(0.8, Math.min(2.0, (screenWidth - 48) / 720));
+    currentPdfScale = Math.max(0.8, Math.min(2.5, (screenWidth - 48) / 720));
   }
   updateZoomDisplay(currentPdfScale);
+}
+
+// Zoom In / Out Handlers
+function zoomBuku(delta) {
+  currentPdfScale = Math.max(0.4, Math.min(4.0, Number((currentPdfScale + delta).toFixed(2))));
+  updateZoomDisplay(currentPdfScale);
+  if (currentPdfDoc) {
+    renderCurrentPdfPage();
+  }
+}
+
+async function zoomFitWidth() {
+  await calculateInitialScale();
+  if (currentPdfDoc) {
+    renderCurrentPdfPage();
+  }
+}
+
+function updateZoomDisplay(scale) {
+  const el = document.getElementById('reader-zoom-level');
+  if (el) el.textContent = `${Math.round(scale * 100)}%`;
+}
+
+// Inisialisasi Gestur Cubit (Pinch to Zoom) pada layar sentuh HP
+let pinchInitialDist = null;
+let pinchStartScale = null;
+let pinchDebounceTimer = null;
+
+function initPinchToZoomReader() {
+  const wrapper = document.getElementById('pdf-render-wrapper');
+  if (!wrapper || wrapper._pinchInitialized) return;
+  wrapper._pinchInitialized = true;
+
+  const getDistance = (touch1, touch2) => {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  wrapper.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      pinchInitialDist = getDistance(e.touches[0], e.touches[1]);
+      pinchStartScale = currentPdfScale || 1.0;
+    }
+  }, { passive: true });
+
+  wrapper.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && pinchInitialDist) {
+      const currentDist = getDistance(e.touches[0], e.touches[1]);
+      const factor = currentDist / pinchInitialDist;
+      let newScale = Math.max(0.4, Math.min(4.0, pinchStartScale * factor));
+      
+      // Update visual zoom text secara real-time
+      updateZoomDisplay(newScale);
+
+      // Debounce render canvas PDF agar tetap halus dan responsif di HP
+      clearTimeout(pinchDebounceTimer);
+      pinchDebounceTimer = setTimeout(() => {
+        currentPdfScale = Number(newScale.toFixed(2));
+        if (currentPdfDoc) {
+          renderCurrentPdfPage();
+        }
+      }, 120);
+    }
+  }, { passive: true });
+
+  wrapper.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) {
+      pinchInitialDist = null;
+      pinchStartScale = null;
+    }
+  }, { passive: true });
 }
 
 function fallbackToTextViewer(book) {
@@ -7190,26 +7267,6 @@ function lompatHalamanBuku(val) {
   }
 }
 
-// Zoom In / Out Handlers
-function zoomBuku(delta) {
-  currentPdfScale = Math.max(0.4, Math.min(3.0, currentPdfScale + delta));
-  updateZoomDisplay(currentPdfScale);
-  if (currentPdfDoc) {
-    renderCurrentPdfPage();
-  }
-}
-
-async function zoomFitWidth() {
-  await calculateInitialScale();
-  if (currentPdfDoc) {
-    renderCurrentPdfPage();
-  }
-}
-
-function updateZoomDisplay(scale) {
-  const el = document.getElementById('reader-zoom-level');
-  if (el) el.textContent = `${Math.round(scale * 100)}%`;
-}
 
 function renderBookChapterContent(container, book, pageNum) {
   container.innerHTML = `
@@ -8761,11 +8818,27 @@ async function initServiceWorkerAndPush() {
   }
 
   try {
-    swRegistration = await navigator.serviceWorker.register('/sw.js?v=2', { scope: '/' });
+    swRegistration = await navigator.serviceWorker.register('/sw.js?v=3', { scope: '/' });
     if (swRegistration && typeof swRegistration.update === 'function') {
       swRegistration.update();
     }
     console.log('✅ Service Worker berhasil didaftarkan:', swRegistration.scope);
+
+    // Pasang listener pesan dari Service Worker (misal saat notifikasi sistem diklik di HP)
+    if (!window._swMessageListenerAttached) {
+      window._swMessageListenerAttached = true;
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.action === 'HANDLE_NOTIFICATION_CLICK') {
+          console.log('📬 Menerima event klik notifikasi dari Service Worker:', event.data);
+          const notifData = event.data.data || {};
+          if (notifData.id) {
+            klikItemNotifikasi(notifData.id);
+          } else {
+            navigasikanKePeruntukanNotifikasi(notifData);
+          }
+        }
+      });
+    }
 
     // Periksa status langganan saat ini
     const sub = await swRegistration.pushManager.getSubscription();
@@ -9184,13 +9257,23 @@ async function sendAppPushNotification(options = {}) {
   }
 }
 
-// Simpan notifikasi ke localStorage
+// Simpan notifikasi ke localStorage dengan status isRead default false
 function simpanNotifikasiKeLokal(notifItem) {
   try {
-    let logs = [];
-    const raw = localStorage.getItem('ppdb_notif_logs');
-    if (raw) logs = JSON.parse(raw);
-    logs.unshift(notifItem);
+    let logs = ambilNotifikasiLokal();
+    // Tambahkan properti id & isRead jika belum ada
+    const newItem = {
+      id: notifItem.id || ('NOTIF-' + Date.now() + '-' + Math.floor(Math.random() * 1000)),
+      timestamp: notifItem.timestamp || new Date().toISOString(),
+      title: notifItem.title || 'Pemberitahuan',
+      body: notifItem.body || '',
+      url: notifItem.url || '/portal',
+      targetRole: notifItem.targetRole || 'Semua',
+      targetUsername: notifItem.targetUsername || '',
+      tag: notifItem.tag || '',
+      isRead: false
+    };
+    logs.unshift(newItem);
     // Batasi 40 notifikasi terakhir
     logs = logs.slice(0, 40);
     localStorage.setItem('ppdb_notif_logs', JSON.stringify(logs));
@@ -9200,23 +9283,148 @@ function simpanNotifikasiKeLokal(notifItem) {
 function ambilNotifikasiLokal() {
   try {
     const raw = localStorage.getItem('ppdb_notif_logs');
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    let list = JSON.parse(raw);
+    if (!Array.isArray(list)) return [];
+    // Migrasi data lama jika belum punya ID atau status isRead
+    return list.map((item, idx) => {
+      return {
+        id: item.id || ('NOTIF-OLD-' + idx),
+        timestamp: item.timestamp || new Date().toISOString(),
+        title: item.title || 'Pemberitahuan',
+        body: item.body || '',
+        url: item.url || '/portal',
+        targetRole: item.targetRole || 'Semua',
+        targetUsername: item.targetUsername || '',
+        tag: item.tag || '',
+        isRead: Boolean(item.isRead)
+      };
+    });
   } catch (e) {
     return [];
   }
 }
 
-// Update icon lonceng & badge jumlah notifikasi di header
+// Update icon lonceng & badge jumlah notifikasi BELUM DIBACA di header
 function updateNotifikasiBadgeUI() {
   const badge = document.getElementById('badge-notif-count');
   if (!badge) return;
   const logs = ambilNotifikasiLokal();
-  if (logs.length > 0) {
-    badge.textContent = logs.length > 99 ? '99+' : String(logs.length);
+  // Hanya hitung yang BELUM dibaca (isRead !== true)
+  const unreadCount = logs.filter(item => !item.isRead).length;
+
+  if (unreadCount > 0) {
+    badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
     badge.style.display = 'inline-flex';
   } else {
+    badge.textContent = '0';
     badge.style.display = 'none';
   }
+}
+
+// Tandai SEMUA notifikasi sudah dibaca
+function tandaiSemuaNotifikasiDibaca() {
+  try {
+    const logs = ambilNotifikasiLokal();
+    if (logs.length === 0) return;
+    const updated = logs.map(item => ({ ...item, isRead: true }));
+    localStorage.setItem('ppdb_notif_logs', JSON.stringify(updated));
+    updateNotifikasiBadgeUI();
+    renderLogNotifikasiDashboard();
+    renderPopupNotifikasiList(updated);
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Semua notifikasi ditandai sudah dibaca',
+      showConfirmButton: false,
+      timer: 2000
+    });
+  } catch (e) {
+    console.warn('Gagal menandai semua dibaca:', e);
+  }
+}
+
+// Aksi ketika salah satu notifikasi di-klik: Tandai dibaca & arahkan ke modul terkait
+function klikItemNotifikasi(notifId) {
+  try {
+    const logs = ambilNotifikasiLokal();
+    const item = logs.find(x => String(x.id) === String(notifId));
+    if (!item) return;
+
+    // 1. Tandai item ini sebagai sudah dibaca
+    if (!item.isRead) {
+      item.isRead = true;
+      localStorage.setItem('ppdb_notif_logs', JSON.stringify(logs));
+      updateNotifikasiBadgeUI();
+      renderLogNotifikasiDashboard();
+      renderPopupNotifikasiList(logs);
+    }
+
+    // 2. Tutup popup notifikasi jika sedang terbuka
+    tutupModalNotifikasiDashboard();
+
+    // 3. Arahkan ke menu / bagian aplikasi sesuai peruntukan notifikasi
+    navigasikanKePeruntukanNotifikasi(item);
+  } catch (e) {
+    console.warn('Gagal memproses klik notifikasi:', e);
+  }
+}
+
+// Pengarah cerdas menuju halaman / section modul yang sesuai
+function navigasikanKePeruntukanNotifikasi(item) {
+  if (!item) return;
+  const tag = (item.tag || '').toLowerCase();
+  const title = (item.title || '').toLowerCase();
+  const body = (item.body || '').toLowerCase();
+  const url = (item.url || '').toLowerCase();
+
+  // A. Aktivitas Ujian / CBT Selesai
+  if (tag.includes('exam') || title.includes('ujian') || body.includes('skor') || body.includes('nilai')) {
+    switchMobileTab('section-ujian');
+    return;
+  }
+
+  // B. Aktivitas Baca Buku / Modul Pelajaran
+  if (tag.includes('belajar') || title.includes('belajar') || body.includes('membaca') || body.includes('modul')) {
+    // Jika role siswa, bisa diarahkan ke materi atau riwayat baca
+    if (currentUser && currentUser.role === 'Siswa') {
+      switchMobileTab('section-riwayat-baca');
+    } else {
+      // Jika Admin, buka menu Riwayat Baca Buku atau Dashboard
+      switchMobileTab('section-riwayat-baca');
+    }
+    return;
+  }
+
+  // C. Warta / Informasi Baru PKBM
+  if (tag.includes('kegiatan') || title.includes('informasi') || body.includes('warta')) {
+    switchMobileTab('section-kegiatan');
+    return;
+  }
+
+  // D. Siswa Baru / Verifikasi Peserta Didik
+  if (tag.includes('daftar') || title.includes('pendaftaran') || body.includes('siswa baru')) {
+    if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
+      switchMobileTab('section-list');
+    } else {
+      switchMobileTab('section-dashboard');
+    }
+    return;
+  }
+
+  // E. Navigasi berdasarkan parameter URL spesifik jika ada
+  if (url.includes('section-')) {
+    const match = url.match(/section-[a-z0-9-]+/);
+    if (match) {
+      switchMobileTab(match[0]);
+      return;
+    }
+  }
+
+  // F. Default fallback ke Dashboard
+  switchMobileTab('section-dashboard');
 }
 
 // Render daftar riwayat notifikasi di dashboard utama
@@ -9236,69 +9444,102 @@ function renderLogNotifikasiDashboard(customLogs) {
 
   container.innerHTML = logs.map(item => {
     const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : 'Baru saja';
+    const isUnread = !item.isRead;
     return `
-      <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+      <div onclick="klikItemNotifikasi('${item.id}')"
+        style="background: ${isUnread ? 'rgba(59, 130, 246, 0.08)' : 'var(--surface-2)'}; 
+               border: 1.5px solid ${isUnread ? 'rgba(59, 130, 246, 0.4)' : 'var(--border-color)'}; 
+               border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; transition: all 0.2s ease; position: relative;">
+        ${isUnread ? `<span style="position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; background: #3b82f6; border-radius: 50%;" title="Belum dibaca"></span>` : ''}
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-right: ${isUnread ? '14px' : '0'};">
           <strong style="font-size: 13.5px; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
             🔔 ${item.title || 'Pemberitahuan'}
           </strong>
           <span style="font-size: 11px; color: var(--text-muted); white-space: nowrap;">${dateStr}</span>
         </div>
         <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">${item.body || ''}</div>
-        <div style="display: flex; gap: 8px; margin-top: 4px; font-size: 11.5px;">
-          <span style="background: rgba(59, 130, 246, 0.12); color: #2563eb; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Target: ${item.targetRole || 'Semua'}</span>
-          ${item.tag ? `<span style="background: rgba(16, 185, 129, 0.12); color: #10b981; padding: 2px 8px; border-radius: 4px;">Tag: ${item.tag}</span>` : ''}
+        <div style="display: flex; gap: 8px; margin-top: 4px; font-size: 11.5px; align-items: center; justify-content: space-between;">
+          <div style="display: flex; gap: 6px;">
+            <span style="background: rgba(59, 130, 246, 0.12); color: #2563eb; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Target: ${item.targetRole || 'Semua'}</span>
+            ${item.tag ? `<span style="background: rgba(16, 185, 129, 0.12); color: #10b981; padding: 2px 8px; border-radius: 4px;">Tag: ${item.tag}</span>` : ''}
+          </div>
+          <span style="font-size: 11px; color: var(--primary-color); font-weight: 600;">Klik untuk buka ➔</span>
         </div>
       </div>
     `;
   }).join('');
 }
 
+// Helper render isi popup modal notifikasi
+function renderPopupNotifikasiList(logs) {
+  const popupList = document.getElementById('popup-notifikasi-list');
+  if (!popupList) return;
+  if (!logs || logs.length === 0) {
+    popupList.innerHTML = `
+      <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px;">
+        Belum ada riwayat notifikasi baru.
+      </div>
+    `;
+    return;
+  }
+
+  popupList.innerHTML = logs.map(item => {
+    const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : 'Baru saja';
+    const isUnread = !item.isRead;
+    return `
+      <div onclick="klikItemNotifikasi('${item.id}')"
+        style="background: ${isUnread ? 'rgba(59, 130, 246, 0.08)' : 'var(--surface-2)'}; 
+               border: 1.5px solid ${isUnread ? 'rgba(59, 130, 246, 0.4)' : 'var(--border-color)'}; 
+               border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: all 0.2s ease; position: relative;">
+        ${isUnread ? `<span style="position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; background: #3b82f6; border-radius: 50%;" title="Belum dibaca"></span>` : ''}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding-right: ${isUnread ? '14px' : '0'};">
+          <strong style="font-size: 13.5px; color: var(--text-color);">🔔 ${item.title || 'Pemberitahuan'}</strong>
+          <small style="color: var(--text-muted);">${dateStr}</small>
+        </div>
+        <p style="margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.4;">${item.body || ''}</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+          <span style="font-size: 11px; color: ${isUnread ? '#2563eb' : 'var(--text-muted)'}; font-weight: ${isUnread ? '700' : '400'};">
+            ${isUnread ? '● Belum Dilihat' : '✓ Sudah Dilihat'}
+          </span>
+          <span style="font-size: 11px; color: var(--primary-color); font-weight: 600;">Lihat detail ➔</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
 // Buka popup modal notifikasi
 function bukaModalNotifikasiDashboard() {
   const modal = document.getElementById('modal-notifikasi-popup');
-  const popupList = document.getElementById('popup-notifikasi-list');
   if (modal) modal.classList.remove('hidden');
-
-  function renderList(logs) {
-    if (!popupList) return;
-    if (!logs || logs.length === 0) {
-      popupList.innerHTML = `
-        <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px;">
-          Belum ada riwayat notifikasi baru.
-        </div>
-      `;
-    } else {
-      popupList.innerHTML = logs.map(item => {
-        const dateStr = item.timestamp ? new Date(item.timestamp).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : 'Baru saja';
-        return `
-          <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <strong style="font-size: 13.5px; color: var(--text-color);">🔔 ${item.title || 'Pemberitahuan'}</strong>
-              <small style="color: var(--text-muted);">${dateStr}</small>
-            </div>
-            <p style="margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.4;">${item.body || ''}</p>
-          </div>
-        `;
-      }).join('');
-    }
-    if (window.lucide && typeof window.lucide.createIcons === 'function') {
-      window.lucide.createIcons();
-    }
-  }
 
   // Tampilkan data lokal terlebih dahulu secara instan
   const lokalLogs = ambilNotifikasiLokal();
-  renderList(lokalLogs);
+  renderPopupNotifikasiList(lokalLogs);
 
   // Ambil data terbaru secara background jika ada API
   if (typeof callAPI === 'function') {
     callAPI({ action: 'getNotificationLogs', limit: 25 }).then(res => {
       if (res && Array.isArray(res) && res.length > 0) {
+        // Sinkronkan status isRead yang sudah ada di lokal
+        const currentLocal = ambilNotifikasiLokal();
+        const readMap = {};
+        currentLocal.forEach(x => { if (x.isRead) readMap[x.id] = true; });
+
+        const merged = res.map((item, idx) => ({
+          ...item,
+          id: item.id || ('NOTIF-SVR-' + idx + '-' + (item.timestamp || '')),
+          isRead: Boolean(readMap[item.id] || item.isRead)
+        }));
+
         try {
-          localStorage.setItem('ppdb_notif_logs', JSON.stringify(res));
+          localStorage.setItem('ppdb_notif_logs', JSON.stringify(merged));
         } catch (e) { }
-        renderList(res);
+        renderPopupNotifikasiList(merged);
         updateNotifikasiBadgeUI();
       }
     }).catch(err => {
@@ -9320,10 +9561,19 @@ async function muatLogNotifikasiDashboard() {
   try {
     const res = await callAPI({ action: 'getNotificationLogs', limit: 25 });
     if (res && Array.isArray(res) && res.length > 0) {
-      renderLogNotifikasiDashboard(res);
-      // Sinkronkan ke lokal
+      const currentLocal = ambilNotifikasiLokal();
+      const readMap = {};
+      currentLocal.forEach(x => { if (x.isRead) readMap[x.id] = true; });
+
+      const merged = res.map((item, idx) => ({
+        ...item,
+        id: item.id || ('NOTIF-SVR-' + idx + '-' + (item.timestamp || '')),
+        isRead: Boolean(readMap[item.id] || item.isRead)
+      }));
+
+      renderLogNotifikasiDashboard(merged);
       try {
-        localStorage.setItem('ppdb_notif_logs', JSON.stringify(res));
+        localStorage.setItem('ppdb_notif_logs', JSON.stringify(merged));
       } catch (e) { }
       updateNotifikasiBadgeUI();
     }
@@ -9367,6 +9617,10 @@ window.loadPushNotificationSection = loadPushNotificationSection;
 window.muatLogNotifikasiDashboard = muatLogNotifikasiDashboard;
 window.bukaModalNotifikasiDashboard = bukaModalNotifikasiDashboard;
 window.tutupModalNotifikasiDashboard = tutupModalNotifikasiDashboard;
+window.tandaiSemuaNotifikasiDibaca = tandaiSemuaNotifikasiDibaca;
+window.klikItemNotifikasi = klikItemNotifikasi;
+window.navigasikanKePeruntukanNotifikasi = navigasikanKePeruntukanNotifikasi;
+
 
 // =============================================================================
 // PWA SMART INSTALL DETECTOR & PROMPT (ANDROID & IPHONE/IPAD)

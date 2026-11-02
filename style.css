@@ -967,8 +967,7 @@ aside .brand {
 #pdf-page-canvas {
   transition: transform 0.15s ease-out;
   transform-origin: top center;
-  max-width: 100% !important;
-  height: auto !important;
+  height: auto;
   display: block;
   margin: 0 auto;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
@@ -1018,7 +1017,16 @@ aside .brand {
   }
 
   .reader-zoom-controls {
-    display: none !important; /* Pada layar HP, otomatis fit-width layar */
+    display: flex !important;
+  }
+
+  .reader-zoom-controls button {
+    padding: 3px 5px !important;
+  }
+
+  #reader-zoom-level {
+    font-size: 10.5px !important;
+    min-width: 32px !important;
   }
 
   #reader-live-timer {
@@ -1027,21 +1035,24 @@ aside .brand {
 
   .btn-selesai-ujian {
     font-size: 11px !important;
-    padding: 6px 10px !important;
+    padding: 5px 8px !important;
     white-space: nowrap !important;
   }
 
-  /* Kontainer Baca Modul di HP: padding minim agar modul tampil maksimal */
+  /* Kontainer Baca Modul di HP: padding minim agar modul tampil maksimal & pas tepi kiri-kanan */
   #pdf-render-wrapper {
-    padding: 8px 4px 60px 4px !important; /* Beri ruang ekstra bawah agar tidak tertutup sticky bar */
+    padding: 6px 2px 70px 2px !important; /* Beri ruang ekstra bawah agar tidak tertutup sticky bar */
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-x pan-y pinch-zoom;
   }
 
   #pdf-page-canvas {
-    max-width: 100% !important;
-    width: 100% !important;
-    height: auto !important;
+    max-width: none !important; /* Izinkan canvas membesar saat di-zoom melebihi lebar layar */
     border-radius: 2px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+    touch-action: pan-x pan-y pinch-zoom;
   }
 
   /* Sticky Bottom Navigation Bar di HP (Nyaman disentuh & tidak menutupi isi buku) */

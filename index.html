@@ -1088,7 +1088,10 @@
                     yang dikirimkan ke HP Admin & Tutor</p>
                 </div>
               </div>
-              <div style="display: flex; gap: 6px;">
+              <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-sm btn-outline" onclick="tandaiSemuaNotifikasiDibaca()" title="Tandai semua notifikasi sudah dibaca" style="font-size: 11.5px; padding: 4px 8px;">
+                  ✓ Sudah Lihat Semua
+                </button>
                 <button class="btn btn-sm" onclick="muatLogNotifikasiDashboard()" title="Muat Ulang Log Notifikasi">
                   <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Refresh
                 </button>
@@ -2913,6 +2916,20 @@
             <span class="btn-label-nav">Berikutnya</span>
             <i data-lucide="chevron-right" style="width: 15px; height: 15px;"></i>
           </button>
+
+          <!-- Tombol Cepat Zoom di Toolbar Bawah (Mudah dijangkau jempol di HP) -->
+          <div class="reader-bottom-zoom-group" style="display: flex; align-items: center; gap: 2px; margin-left: auto;">
+            <button class="btn btn-sm" onclick="zoomBuku(-0.15)" title="Perkecil" style="padding: 5px 8px; font-size: 11px; background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-color);">
+              <i data-lucide="zoom-out" style="width: 13px; height: 13px;"></i>
+            </button>
+            <button class="btn btn-sm" onclick="zoomFitWidth()" title="Pas Lebar Layar (Fit Width)" style="padding: 5px 8px; font-size: 11px; background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-color);">
+              <i data-lucide="maximize-2" style="width: 13px; height: 13px;"></i>
+            </button>
+            <button class="btn btn-sm" onclick="zoomBuku(0.15)" title="Perbesar" style="padding: 5px 8px; font-size: 11px; background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-color);">
+              <i data-lucide="zoom-in" style="width: 13px; height: 13px;"></i>
+            </button>
+          </div>
+
           <span id="reader-iframe-tip"
             style="font-size: 11px; color: var(--text-muted); display: none; margin-left: 6px;">
             ℹ️ Gulir / geser di dalam buku untuk membaca seluruh halaman
@@ -3737,7 +3754,12 @@
               sistem</span>
           </div>
         </div>
-        <button class="btn-close-modal" onclick="tutupModalNotifikasiDashboard()">&times;</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn btn-sm btn-outline" onclick="tandaiSemuaNotifikasiDibaca()" title="Tandai semua notifikasi sudah dibaca" style="font-size: 11.5px; padding: 4px 8px;">
+            ✓ Sudah Lihat Semua
+          </button>
+          <button class="btn-close-modal" onclick="tutupModalNotifikasiDashboard()">&times;</button>
+        </div>
       </div>
 
       <!-- Isi Notifikasi -->
@@ -3842,7 +3864,7 @@
 
   <!-- SheetJS Library for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=20261102c"></script>
+  <script src="app.js?v=20261102e"></script>
   <script src="cbt-engine.js?v=20261102c"></script>
 </body>
 

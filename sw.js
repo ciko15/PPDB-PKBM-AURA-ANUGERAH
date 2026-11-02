@@ -36,6 +36,10 @@ self.addEventListener('push', (event) => {
     icon: iconUrl,
     tag: data.tag || 'sigap-' + Date.now(),
     data: {
+      id: data.id || ('NOTIF-' + Date.now()),
+      title: data.title || 'SIGAP AURA',
+      body: data.body || '',
+      tag: data.tag || '',
       url: data.url || '/portal',
       timestamp: Date.now()
     },
@@ -52,21 +56,29 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const rawUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/portal';
+  const notifData = event.notification.data || {};
+  const rawUrl = notifData.url || '/portal';
   const fullTargetUrl = new URL(rawUrl, self.location.origin).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // 1. Jika ada tab / window SIGAP AURA yang sedang terbuka di browser / PWA HP, bawa ke depan
+      // 1. Jika ada tab / window SIGAP AURA yang sedang terbuka di browser / PWA HP, bawa ke depan & kirim perintah navigasi
       for (const client of clientList) {
         if ('focus' in client) {
           return client.focus().then((focusedClient) => {
-            if (focusedClient && 'navigate' in focusedClient && focusedClient.url !== fullTargetUrl) {
-              return focusedClient.navigate(fullTargetUrl);
+            const targetClient = focusedClient || client;
+            if (targetClient && targetClient.postMessage) {
+              targetClient.postMessage({
+                action: 'HANDLE_NOTIFICATION_CLICK',
+                url: rawUrl,
+                data: notifData
+              });
             }
-            return focusedClient;
+            if (targetClient && 'navigate' in targetClient && targetClient.url !== fullTargetUrl) {
+              return targetClient.navigate(fullTargetUrl);
+            }
+            return targetClient;
           }).catch(() => {
-            // Jika focus dicegah oleh OS, buka window baru
             if (self.clients.openWindow) return self.clients.openWindow(fullTargetUrl);
           });
         }
