@@ -2892,14 +2892,14 @@
       <!-- Reader Footer Toolbar (Navigasi Halaman Aktif, Prev/Next Responsif) -->
       <div class="reader-footer-toolbar"
         style="padding: 8px 16px; background: var(--surface-2); border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 8px; z-index: 20;">
-        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <div class="reader-nav-controls" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <button id="btn-reader-prev" class="btn btn-sm btn-primary" onclick="navigasiHalamanBuku(-1)"
             style="font-size: 12.5px; padding: 6px 12px;">
             <i data-lucide="chevron-left" style="width: 15px; height: 15px;"></i>
             <span class="btn-label-nav">Sebelumnya</span>
           </button>
 
-          <div
+          <div class="reader-page-indicator"
             style="display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; background: var(--surface-color); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-color);">
             <span>Hal.</span>
             <input type="number" id="reader-page-input" value="1" min="1" max="100"

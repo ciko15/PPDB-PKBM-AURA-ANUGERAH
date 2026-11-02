@@ -932,48 +932,195 @@ aside .brand {
   height: 100dvh !important;
   margin: 0 !important;
   border-radius: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
 }
 
 #reader-viewport-container {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  position: relative !important;
   touch-action: pan-x pan-y;
   user-select: none;
   -webkit-user-select: none;
+  background: #3e4448;
+}
+
+#pdf-render-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 #pdf-page-canvas {
   transition: transform 0.15s ease-out;
   transform-origin: top center;
+  max-width: 100% !important;
+  height: auto !important;
+  display: block;
+  margin: 0 auto;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  background: #ffffff;
 }
 
+#reader-iframe-wrapper,
+#reader-drive-iframe {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+}
+
+#reader-text-viewer {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+#reader-text-viewer img {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 6px;
+}
+
+/* Penyesuaian Khusus HP / Layar Kecil (Mobile Screen <= 768px) */
 @media (max-width: 768px) {
   .reader-header-bar {
-    padding: 8px 12px !important;
+    padding: 8px 10px !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
   }
+
   .reader-header-bar #reader-book-title {
-    max-width: 150px !important;
-    font-size: 12.5px !important;
+    max-width: 130px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
   }
+
+  .reader-header-bar #reader-book-info {
+    font-size: 10px !important;
+  }
+
   .reader-zoom-controls {
-    display: none !important; /* Pada layar HP, otomatis fit-width dan pinch-zoom */
+    display: none !important; /* Pada layar HP, otomatis fit-width layar */
   }
+
+  #reader-live-timer {
+    font-size: 11px !important;
+  }
+
   .btn-selesai-ujian {
     font-size: 11px !important;
-    padding: 5px 8px !important;
+    padding: 6px 10px !important;
+    white-space: nowrap !important;
   }
-  .reader-footer-toolbar {
-    padding: 6px 12px !important;
-  }
-  .reader-footer-toolbar .btn-label-nav {
-    display: none;
-  }
-  .reader-student-label {
-    display: none;
-  }
-  #reader-active-student {
-    max-width: 90px !important;
-  }
+
+  /* Kontainer Baca Modul di HP: padding minim agar modul tampil maksimal */
   #pdf-render-wrapper {
-    padding: 6px 4px !important;
+    padding: 8px 4px 60px 4px !important; /* Beri ruang ekstra bawah agar tidak tertutup sticky bar */
+  }
+
+  #pdf-page-canvas {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    border-radius: 2px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  /* Sticky Bottom Navigation Bar di HP (Nyaman disentuh & tidak menutupi isi buku) */
+  .reader-footer-toolbar {
+    position: sticky !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)) 12px !important;
+    background: var(--surface-2) !important;
+    border-top: 1px solid var(--border-color) !important;
+    box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.15) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    z-index: 50 !important;
+  }
+
+  .reader-nav-controls {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex: 1 !important;
+    gap: 8px !important;
+  }
+
+  /* Tombol Navigasi Sebelumnya & Berikutnya: Ukuran Tombol Sentuh yang Nyaman (Touch Target >= 40px) */
+  .reader-nav-controls #btn-reader-prev,
+  .reader-nav-controls #btn-reader-next {
+    min-height: 40px !important;
+    min-width: 44px !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+    touch-action: manipulation;
+  }
+
+  /* Indikator Halaman (Hal. X / Y) */
+  .reader-page-indicator {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+  }
+
+  .reader-page-indicator input#reader-page-input {
+    width: 38px !important;
+    height: 28px !important;
+    font-size: 12px !important;
+    border-radius: 4px !important;
+  }
+
+  /* Label 'Siswa:' disembunyikan di HP agar hemat ruang & nama siswa tetap terlihat rapi */
+  .reader-student-label {
+    display: none !important;
+  }
+
+  #reader-student-status {
+    display: none !important; /* Di HP kecil, status siswa disembunyikan agar toolbar fokus 100% pada tombol navigasi */
+  }
+
+  .reader-footer-toolbar .btn-label-nav {
+    display: inline !important; /* Tetap tampilkan teks 'Sebelumnya' / 'Berikutnya' agar jelas */
+    font-size: 11.5px !important;
+  }
+}
+
+/* Layar Sangat Kecil (Layar HP < 380px) */
+@media (max-width: 380px) {
+  .reader-footer-toolbar .btn-label-nav {
+    display: none !important; /* Sembunyikan label teks jika layar < 380px, hanya ikon panah */
+  }
+  .reader-nav-controls #btn-reader-prev,
+  .reader-nav-controls #btn-reader-next {
+    padding: 6px 14px !important;
   }
 }
 
