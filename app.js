@@ -6824,15 +6824,20 @@ async function loadPdfDocument(book, startPage = 1) {
   if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    // Helper untuk load PDF dari ArrayBuffer
+    // Helper untuk load PDF dari ArrayBuffer (hanya diterima jika isinya benar-benar PDF)
     const tryLoadArrayBuffer = async (url) => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 detik
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 detik
       try {
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.arrayBuffer();
+        const buf = await res.arrayBuffer();
+        // Cek "magic bytes" %PDF- agar respons HTML (misal rewrite Vercel) tidak dianggap berhasil
+        const head = new Uint8Array(buf.slice(0, 5));
+        const sig = String.fromCharCode(...head);
+        if (sig !== '%PDF-') throw new Error('Respons bukan file PDF');
+        return buf;
       } catch (e) {
         clearTimeout(timeoutId);
         throw e;
