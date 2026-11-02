@@ -6774,23 +6774,34 @@ async function loadPdfDocument(book, startPage = 1) {
 
   const iframeTip = document.getElementById('reader-iframe-tip');
 
-  // Tentukan URL PDF untuk mode Native PDF.js Reader (Menggunakan /api/pdf-proxy server lokal untuk bebas CORS 100%)
-  let pdfUrl = '';
+  // Tentukan URL PDF untuk mode Native PDF.js Reader
+  let driveFileId = '';
   if (book.id && (book.id.length > 20 || !book.id.startsWith('BK-'))) {
-    pdfUrl = `/api/pdf-proxy?id=${encodeURIComponent(book.id)}`;
-  } else if (book.file && book.file.startsWith('http')) {
+    driveFileId = book.id;
+  } else if (book.file && book.file.includes('drive.google.com')) {
     const driveMatch = book.file.match(/\/d\/([a-zA-Z0-9_-]+)/) || book.file.match(/id=([a-zA-Z0-9_-]+)/);
-    if (driveMatch) {
-      pdfUrl = `/api/pdf-proxy?id=${encodeURIComponent(driveMatch[1])}`;
-    } else {
-      pdfUrl = `/api/pdf-proxy?url=${encodeURIComponent(book.file)}`;
-    }
+    if (driveMatch) driveFileId = driveMatch[1];
+  }
+
+  // Gunakan host lokal yang aktif dari window.location.origin (misal: http://192.168.x.x:3001 atau domain live)
+  const baseUrl = (typeof window !== 'undefined' && window.location && window.location.origin) 
+    ? window.location.origin 
+    : '';
+
+  let proxyUrl = '';
+  let directDownloadUrl = '';
+  if (driveFileId) {
+    proxyUrl = `${baseUrl}/api/pdf-proxy?id=${encodeURIComponent(driveFileId)}`;
+    directDownloadUrl = `https://drive.usercontent.google.com/download?id=${encodeURIComponent(driveFileId)}&export=download`;
+  } else if (book.file && book.file.startsWith('http')) {
+    proxyUrl = `${baseUrl}/api/pdf-proxy?url=${encodeURIComponent(book.file)}`;
+    directDownloadUrl = book.file;
   }
 
   if (iframeTip) iframeTip.style.display = 'none';
 
-  // Jika tidak ada URL PDF sama sekali, langsung ke text / iframe
-  if (!pdfUrl) {
+  // Jika sama sekali tidak ada file atau link
+  if (!proxyUrl && !directDownloadUrl) {
     fallbackToTextViewer(book);
     return;
   }
@@ -6813,59 +6824,81 @@ async function loadPdfDocument(book, startPage = 1) {
   if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    try {
-      // Ambil file PDF secara langsung sebagai ArrayBuffer (menghindari limitasi stream / CORS range request worker)
+    // Helper untuk load PDF dari ArrayBuffer
+    const tryLoadArrayBuffer = async (url) => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 detik untuk file modul
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 detik
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.arrayBuffer();
+      } catch (e) {
+        clearTimeout(timeoutId);
+        throw e;
+      }
+    };
 
-      const fetchPromise = fetch(pdfUrl, { signal: controller.signal })
-        .then(res => {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.arrayBuffer();
+    try {
+      let arrayBuffer = null;
+      // 1. Coba lewat proxy server lokal PKBM terlebih dahulu (bebas CORS 100%)
+      try {
+        if (proxyUrl) {
+          arrayBuffer = await tryLoadArrayBuffer(proxyUrl);
+        }
+      } catch (errProxy) {
+        console.warn('Load PDF via proxy gagal, mencoba direct download:', errProxy.message);
+      }
+
+      // 2. Jika proxy belum berhasil, coba direct download URL
+      if (!arrayBuffer && directDownloadUrl) {
+        try {
+          arrayBuffer = await tryLoadArrayBuffer(directDownloadUrl);
+        } catch (errDirect) {
+          console.warn('Load PDF direct download gagal:', errDirect.message);
+        }
+      }
+
+      // 3. Jika berhasil mendapatkan data PDF, render halaman pada Canvas
+      if (arrayBuffer) {
+        const loadingTask = pdfjsLib.getDocument({
+          data: arrayBuffer,
+          cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+          cMapPacked: true
         });
 
-      fetchPromise
-        .then(async (arrayBuffer) => {
-          clearTimeout(timeoutId);
-          const loadingTask = pdfjsLib.getDocument({
-            data: arrayBuffer,
-            cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-            cMapPacked: true
-          });
+        const pdf = await loadingTask.promise;
+        currentPdfDoc = pdf;
+        const total = pdf.numPages;
+        const safePage = Math.max(1, Math.min(total, startPage));
+        currentPdfPage = safePage;
 
-          const pdf = await loadingTask.promise;
-          currentPdfDoc = pdf;
-          const total = pdf.numPages;
-          const safePage = Math.max(1, Math.min(total, startPage));
-          currentPdfPage = safePage;
+        // Pastikan canvas ditampilkan dan iframe disembunyikan
+        if (renderWrapper) renderWrapper.style.display = 'flex';
+        if (canvas) canvas.style.display = 'block';
+        if (iframeWrapper) iframeWrapper.style.display = 'none';
+        if (textViewerEl) textViewerEl.style.display = 'none';
 
-          // Pastikan canvas ditampilkan dan iframe disembunyikan
-          if (renderWrapper) renderWrapper.style.display = 'flex';
-          if (canvas) canvas.style.display = 'block';
-          if (iframeWrapper) iframeWrapper.style.display = 'none';
-          if (textViewerEl) textViewerEl.style.display = 'none';
+        if (activeBelajarSession) {
+          activeBelajarSession.totalHalaman = total;
+          activeBelajarSession.halamanSekarang = safePage;
+          saveActiveBelajarSessionToStorage();
+        }
 
-          if (activeBelajarSession) {
-            activeBelajarSession.totalHalaman = total;
-            activeBelajarSession.halamanSekarang = safePage;
-            saveActiveBelajarSessionToStorage();
-          }
+        document.getElementById('reader-total-page').textContent = total;
+        document.getElementById('reader-page-input').max = total;
+        document.getElementById('reader-page-input').value = safePage;
 
-          document.getElementById('reader-total-page').textContent = total;
-          document.getElementById('reader-page-input').max = total;
-          document.getElementById('reader-page-input').value = safePage;
-
-          await calculateInitialScale();
-          renderCurrentPdfPage();
-          updateReaderNavButtonStates();
-        })
-        .catch(err => {
-          clearTimeout(timeoutId);
-          console.warn('PDF.js arrayBuffer loading failed, beralih ke fallback preview:', err.message);
-          fallbackToTextViewer(book);
-        });
+        await calculateInitialScale();
+        renderCurrentPdfPage();
+        updateReaderNavButtonStates();
+      } else {
+        // Fallback jika fetch arrayBuffer tidak dapat diakses
+        console.warn('Tidak dapat memuat binary PDF, beralih ke preview viewer');
+        fallbackToTextViewer(book);
+      }
     } catch (err) {
-      console.error('PDF.js init error:', err);
+      console.error('PDF.js loading error:', err);
       fallbackToTextViewer(book);
     }
   } else {
@@ -6932,8 +6965,20 @@ function fallbackToTextViewer(book) {
   if (drivePreviewUrl && iframeWrapper && driveIframe) {
     if (textViewerEl) textViewerEl.style.display = 'none';
     iframeWrapper.style.display = 'block';
-    if (driveIframe.src !== drivePreviewUrl) {
-      driveIframe.src = drivePreviewUrl;
+
+    const currentPage = (activeBelajarSession && activeBelajarSession.halamanSekarang) ? activeBelajarSession.halamanSekarang : 1;
+    // Set target page di URL preview drive (misal #page=2)
+    const targetUrlWithPage = drivePreviewUrl.includes('#page=')
+      ? drivePreviewUrl.replace(/#page=\d+/, `#page=${currentPage}`)
+      : `${drivePreviewUrl}#page=${currentPage}`;
+
+    if (driveIframe.src !== targetUrlWithPage) {
+      driveIframe.src = targetUrlWithPage;
+    }
+
+    if (iframeTip) {
+      iframeTip.style.display = 'inline';
+      iframeTip.textContent = 'ℹ️ Anda dapat menggulir halaman atau tekan tombol di bawah untuk pindah halaman';
     }
     return;
   }
@@ -7027,12 +7072,18 @@ function navigasiHalamanBuku(step) {
     document.getElementById('reader-page-input').value = currentPdfPage;
     queueRenderPage(currentPdfPage);
   } else if (isIframeMode) {
-    // Mode Google Drive Iframe: Perbarui progress membaca siswa di input & log belajar
+    // Mode Google Drive Iframe: Perbarui progress membaca siswa di input, update src iframe, & log belajar
     const total = activeBelajarSession.totalHalaman || 48;
     const current = activeBelajarSession.halamanSekarang || 1;
     const nextPg = Math.max(1, Math.min(total, current + step));
     activeBelajarSession.halamanSekarang = nextPg;
     document.getElementById('reader-page-input').value = nextPg;
+
+    const driveIframe = document.getElementById('reader-drive-iframe');
+    if (driveIframe && driveIframe.src) {
+      const baseSrc = driveIframe.src.split('#')[0];
+      driveIframe.src = `${baseSrc}#page=${nextPg}`;
+    }
   } else {
     // Fallback jika mode teks
     const newPage = activeBelajarSession.halamanSekarang + step;
@@ -7100,9 +7151,18 @@ function lompatHalamanBuku(val) {
   }
   document.getElementById('reader-page-input').value = clamped;
 
+  const iframeWrapper = document.getElementById('reader-iframe-wrapper');
+  const isIframeMode = iframeWrapper && iframeWrapper.style.display !== 'none';
+
   if (currentPdfDoc) {
     currentPdfPage = clamped;
     queueRenderPage(clamped);
+  } else if (isIframeMode) {
+    const driveIframe = document.getElementById('reader-drive-iframe');
+    if (driveIframe && driveIframe.src) {
+      const baseSrc = driveIframe.src.split('#')[0];
+      driveIframe.src = `${baseSrc}#page=${clamped}`;
+    }
   } else {
     const book = bukuList.find(b => b.id === activeBelajarSession?.bukuId);
     const chapterContentEl = document.getElementById('reader-chapter-content');
