@@ -85,7 +85,18 @@ function saveFileLocal(siswaId, type, dataUrl) {
 function getFileLocal(siswaId, type) {
   if (!siswaId) return null;
   try {
-    return localStorage.getItem(`ppdb_doc_${type}_${siswaId}`);
+    const direct = localStorage.getItem(`ppdb_doc_${type}_${siswaId}`);
+    if (direct) return direct;
+
+    // Fallback: cari berdasarkan NIK jika id siswa berganti
+    if (Array.isArray(siswaDataList)) {
+      const s = siswaDataList.find(x => String(x.id) === String(siswaId) || (x.nik && String(x.nik) === String(siswaId)));
+      if (s && s.nik) {
+        const byNik = localStorage.getItem(`ppdb_doc_${type}_${s.nik}`);
+        if (byNik) return byNik;
+      }
+    }
+    return null;
   } catch (e) {
     return null;
   }
@@ -1608,10 +1619,23 @@ async function handleRegistrationOrEdit(e) {
     // Siapkan object siswa baru/edit untuk optimistic update ke memori & cache lokal
     const currentTgl = document.getElementById('reg-tgl-daftar').value || new Date().toISOString().split('T')[0];
     const finalSiswaId = siswaId || ('S' + Date.now());
-    if (b64Foto) saveFileLocal(finalSiswaId, 'foto', b64Foto);
-    if (b64Ijazah) saveFileLocal(finalSiswaId, 'ijazah', b64Ijazah);
-    if (b64Kk) saveFileLocal(finalSiswaId, 'kk', b64Kk);
-    if (b64Bayar) saveFileLocal(finalSiswaId, 'bayar', b64Bayar);
+    const nikVal = document.getElementById('reg-nik').value;
+    if (b64Foto) {
+      saveFileLocal(finalSiswaId, 'foto', b64Foto);
+      if (nikVal) saveFileLocal(nikVal, 'foto', b64Foto);
+    }
+    if (b64Ijazah) {
+      saveFileLocal(finalSiswaId, 'ijazah', b64Ijazah);
+      if (nikVal) saveFileLocal(nikVal, 'ijazah', b64Ijazah);
+    }
+    if (b64Kk) {
+      saveFileLocal(finalSiswaId, 'kk', b64Kk);
+      if (nikVal) saveFileLocal(nikVal, 'kk', b64Kk);
+    }
+    if (b64Bayar) {
+      saveFileLocal(finalSiswaId, 'bayar', b64Bayar);
+      if (nikVal) saveFileLocal(nikVal, 'bayar', b64Bayar);
+    }
 
     const newOrUpdatedSiswa = {
       id: finalSiswaId,
@@ -4852,9 +4876,18 @@ async function handleAISiswaSubmit() {
     let b64Foto = (step2Foto && step2Foto.files[0]) ? await toBase64(step2Foto.files[0]) : aiUploadedFiles.foto;
 
     // Simpan berkas ke penyimpanan offline / lokal seketika
-    if (b64Foto) saveFileLocal(finalSiswaId, 'foto', b64Foto);
-    if (b64Ijazah) saveFileLocal(finalSiswaId, 'ijazah', b64Ijazah);
-    if (b64Kk) saveFileLocal(finalSiswaId, 'kk', b64Kk);
+    if (b64Foto) {
+      saveFileLocal(finalSiswaId, 'foto', b64Foto);
+      if (nik) saveFileLocal(nik, 'foto', b64Foto);
+    }
+    if (b64Ijazah) {
+      saveFileLocal(finalSiswaId, 'ijazah', b64Ijazah);
+      if (nik) saveFileLocal(nik, 'ijazah', b64Ijazah);
+    }
+    if (b64Kk) {
+      saveFileLocal(finalSiswaId, 'kk', b64Kk);
+      if (nik) saveFileLocal(nik, 'kk', b64Kk);
+    }
 
     const newSiswa = {
       id: finalSiswaId,
@@ -6081,7 +6114,8 @@ async function fetchBookReadingHistory(bookId) {
   // 2. Fetch ke backend Node.js
   try {
     const res = await fetch(`/api/reading-history/${encodeURIComponent(userId)}/${encodeURIComponent(bookId)}`);
-    if (res.ok) {
+    const cType = res.headers.get('content-type') || '';
+    if (res.ok && cType.includes('application/json')) {
       const json = await res.json();
       if (json && json.status === 'SUCCESS' && json.data) {
         return json.data;
@@ -6109,7 +6143,8 @@ async function loadRiwayatBacaData() {
 
   try {
     const res = await fetch(`/api/reading-history/${encodeURIComponent(userId)}`);
-    if (res.ok) {
+    const cType = res.headers.get('content-type') || '';
+    if (res.ok && cType.includes('application/json')) {
       const json = await res.json();
       if (json && json.status === 'SUCCESS' && Array.isArray(json.data)) {
         readingHistoriesList = json.data;

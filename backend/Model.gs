@@ -350,7 +350,7 @@ function registerSiswa(dataObj) {
     }
   }
 
-  const id = "S" + new Date().getTime(); 
+  const id = dataObj.id || ("S" + new Date().getTime()); 
   const tglDaftar = dataObj.tglDaftar || Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd");
   
   const safeNik = String(dataObj.nik || id).replace(/[^0-9a-zA-Z]/g, '');

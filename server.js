@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -382,7 +383,7 @@ async function handleRegisterSiswa(dataObj) {
     }
   }
 
-  const id = 'S' + Date.now();
+  const id = dataObj.id || ('S' + Date.now());
   const tglDaftar = dataObj.tglDaftar || new Date().toISOString().split('T')[0];
 
   await sheet.addRow({
