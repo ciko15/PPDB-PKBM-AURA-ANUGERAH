@@ -968,6 +968,10 @@ function handleClientRouting() {
   // Render konten kegiatan publik dan profil PKBM di Landing Page
   renderLandingKegiatan();
   renderLandingTK();
+
+  // Tarik data kegiatan dan profil sekolah dari database cloud untuk halaman awal
+  loadKegiatanData();
+  loadTKData();
 }
 
 // ======================= PENGATURAN KEAMANAN & CAPTCHA (SUPER ADMIN) =======================

@@ -1263,7 +1263,9 @@ function initBankSoalData() {
         cbtBankSoalList = cloudSoal;
         try { localStorage.setItem('cbt_bank_soal_list', JSON.stringify(cbtBankSoalList)); } catch (e) {}
         renderBankSoalTable();
-        renderDaftarUjianTersedia();
+        if (typeof renderUjianKhususSiswa === 'function') {
+          renderUjianKhususSiswa();
+        }
       } else if (cbtBankSoalList && cbtBankSoalList.length > 0) {
         callAPI({ action: "saveBankSoalBatch", paketList: cbtBankSoalList }).catch(() => {});
       }
