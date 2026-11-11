@@ -824,25 +824,25 @@ function populateInitialDataIfEmpty(ss) {
     sheetKegiatan.getRange(2, 1, defaultKegiatan.length, defaultKegiatan[0].length).setValues(defaultKegiatan);
   }
 
-  // 2. Sheet Pengaturan (Profil & Titik Peta TK Aura Anugerah)
+  // 2. Sheet Pengaturan (Profil & Titik Peta PKBM Aura Anugerah)
   const sheetPengaturan = ss.getSheetByName('Pengaturan');
   if (sheetPengaturan && sheetPengaturan.getLastRow() <= 1) {
-    const defaultTK = {
-      nama: "TK Aura Anugerah",
+    const defaultPKBM = {
+      nama: "PKBM Aura Anugerah",
       jalan: "JL. Yahim KOMP.Buton Samping Hotel Citra Buana",
       kecamatan: "Sentani",
       kabupaten: "Kabupaten Jayapura, Papua (99352)",
-      deskripsi: "TK Aura Anugerah adalah Satuan Pendidikan Anak Usia Dini yang berfokus pada pembentukan karakter mandiri, nilai-nilai moralitas, kreativitas, dan kesiapan transisi PAUD ke Sekolah Dasar yang menyenangkan dan berkualitas.",
-      visi: "Terwujudnya anak usia dini yang berakhlak mulia, cerdas, ceria, mandiri, dan berbudaya lokal Papua.",
-      misi: "1. Menumbuhkan nilai budi pekerti dan pembiasaan ibadah.\n2. Mengembangkan kemampuan motorik, kognitif, dan bahasa melalui bermain bermakna.\n3. Membangun kolaborasi sinergis antara pendidik, orang tua, dan masyarakat.",
+      deskripsi: "Pusat Kegiatan Belajar Masyarakat (PKBM) Aura Anugerah menyelenggarakan pendidikan kesetaraan Paket A (SD), Paket B (SMP), Paket C (SMA), kursus keterampilan vokasi, keaksaraan, serta program pemberdayaan masyarakat terpadu di Sentani, Jayapura.",
+      visi: "Mewujudkan masyarakat yang cerdas, berdaya saing, berakhlak mulia, dan mandiri melalui layanan pendidikan non-formal yang inklusif dan berkualitas di tanah Papua.",
+      misi: "1. Menyelenggarakan pendidikan kesetaraan Paket A, B, dan C yang adaptif dan berkualitas.\n2. Memberikan pelatihan vokasi & kewirausahaan mandiri bagi warga belajar.\n3. Membangun kolaborasi sinergis antara pendidik, masyarakat, dan mitra kerja.",
       wa: "628123456789",
-      wa_nama: "Sekretariat TK Aura Anugerah",
+      wa_nama: "Sekretariat PKBM Aura Anugerah",
       telepon: "0812-4800-0000",
-      email: "tk.auraanugerah@gmail.com",
+      email: "pkbm.auraanugerah@gmail.com",
       latlong: "-2.566100,140.505700",
       target_display: "both"
     };
-    sheetPengaturan.appendRow(['ppdb_tk_info', JSON.stringify(defaultTK), new Date().toISOString()]);
+    sheetPengaturan.appendRow(['ppdb_tk_info', JSON.stringify(defaultPKBM), new Date().toISOString()]);
   }
 
   // 3. Sheet Bank Soal (Paket Ujian Awal & Butir Soal)

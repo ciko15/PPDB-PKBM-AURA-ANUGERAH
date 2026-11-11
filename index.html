@@ -292,7 +292,7 @@
               <i data-lucide="map-pin" style="width: 20px; height: 20px; color: var(--primary-color);"></i>
               <span>Alamat Kampus PKBM</span>
             </h3>
-            <p style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 0;">
+            <p id="landing-kontak-alamat" style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 0;">
               JL. Yahim KOMP. Buton Samping Hotel Citra Buana, Sentani, Kabupaten Jayapura, Papua (99352)
             </p>
           </div>
@@ -304,10 +304,10 @@
               <i data-lucide="message-circle" style="width: 20px; height: 20px; color: #22c55e;"></i>
               <span>WhatsApp Admin & Pengelola</span>
             </h3>
-            <p style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 0.75rem;">
+            <p id="landing-kontak-wa-text" style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 0.75rem;">
               +62 812-3456-7890 (Jam Kerja: 08.00 - 16.00 WIT)
             </p>
-            <a href="https://wa.me/628123456789" target="_blank" class="btn btn-landing-primary"
+            <a id="landing-kontak-wa-link" href="https://wa.me/628123456789" target="_blank" class="btn btn-landing-primary"
               style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; padding: 6px 14px;">
               <i data-lucide="send" style="width: 15px; height: 15px;"></i>
               <span>Chat WhatsApp Sekarang</span>
@@ -321,7 +321,7 @@
               <i data-lucide="mail" style="width: 20px; height: 20px; color: #0284c7;"></i>
               <span>Surel / Email Resmi</span>
             </h3>
-            <p style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 0;">
+            <p id="landing-kontak-email" style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 0;">
               pkbm.auraanugerah@gmail.com
             </p>
           </div>
@@ -926,7 +926,7 @@
                 </li>
                 <li class="nav-item" data-target="section-info-tk" id="menu-siswa-tk">
                   <i data-lucide="map-pin" class="menu-icon"></i>
-                  <span>Info TK & Lokasi</span>
+                  <span>Info Lembaga & Lokasi</span>
                 </li>
               </ul>
             </li>
@@ -2176,22 +2176,22 @@
           </div>
         </div>
 
-        <!-- ==================== SECTION: PROFIL TK AURA ANUGERAH & PETA ==================== -->
+        <!-- ==================== SECTION: PROFIL LEMBAGA PKBM & PETA ==================== -->
         <div id="section-info-tk" class="content-section card-panel hidden">
           <div
             style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 1.5rem;">
             <div>
               <h2 style="color: #0284c7; margin: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 8px;">
-                <i data-lucide="map-pin" style="width: 24px; height: 24px;"></i> Profil TK Aura Anugerah & Peta Lokasi
+                <i data-lucide="map-pin" style="width: 24px; height: 24px;"></i> Profil Lembaga PKBM & Peta Lokasi
               </h2>
               <p style="color: var(--text-muted); font-size: 0.88rem; margin: 4px 0 0 0;">
-                Satuan Pendidikan Anak Usia Dini binaan Aura Anugerah dalam satu kompleks di Sentani, Jayapura.
+                Pusat Kegiatan Belajar Masyarakat (PKBM) Aura Anugerah terpadu dengan PAUD/TK di Sentani, Jayapura.
               </p>
             </div>
             <div id="tk-admin-actions" style="display: flex; gap: 8px;">
               <button type="button" class="btn p" onclick="openModalEditTK()" id="btn-edit-tk-info"
                 style="background: #0284c7; border-color: #0284c7;">
-                <i data-lucide="settings" style="width: 16px; height: 16px;"></i> Edit Info & Lokasi TK
+                <i data-lucide="settings" style="width: 16px; height: 16px;"></i> Edit Info & Lokasi Lembaga
               </button>
             </div>
           </div>
@@ -3779,7 +3779,7 @@
     </div>
   </div>
 
-  <!-- ==================== MODAL EDIT PROFIL & LOKASI TK (ADMIN) ==================== -->
+  <!-- ==================== MODAL EDIT PROFIL & LOKASI PKBM (ADMIN) ==================== -->
   <div id="modal-edit-tk" class="login-modal hidden">
     <div class="login-modal-overlay" onclick="closeModalEditTK()"></div>
     <div class="login-card modal-content"
@@ -3787,17 +3787,17 @@
       <button class="btn-close-modal" onclick="closeModalEditTK()">&times;</button>
       <div style="padding: 1.5rem;">
         <h3 style="margin-top: 0; color: #0284c7; display: flex; align-items: center; gap: 8px;">
-          <i data-lucide="map-pin"></i> Pengaturan Informasi & Lokasi Peta TK
+          <i data-lucide="map-pin"></i> Pengaturan Informasi & Lokasi Peta PKBM
         </h3>
         <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.25rem;">
-          Atur informasi PAUD/TK Aura Anugerah serta koordinat titik peta Leaflet (OpenStreetMap) di Sentani, Jayapura.
+          Atur informasi resmi PKBM Aura Anugerah serta koordinat titik peta satelit Leaflet di Sentani, Jayapura.
         </p>
 
         <form id="form-edit-tk" onsubmit="event.preventDefault(); saveInfoTK();">
           <div class="form-group" style="margin-bottom: 1rem;">
             <label
               style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Nama
-              Satuan Pendidikan</label>
+              Lembaga / Satuan Pendidikan</label>
             <input type="text" id="tk-nama" class="form-control" required
               style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
           </div>
@@ -3830,7 +3830,7 @@
           <div class="form-group" style="margin-bottom: 1rem;">
             <label
               style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Deskripsi
-              Singkat TK</label>
+              Profil PKBM</label>
             <textarea id="tk-deskripsi" class="form-control" rows="3"
               style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 10px; font-family: inherit; font-size: 0.9rem; line-height: 1.5;"></textarea>
           </div>
@@ -3839,14 +3839,14 @@
             <div class="form-group half" style="flex: 1;">
               <label
                 style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Visi
-                TK</label>
+                Lembaga</label>
               <textarea id="tk-visi" class="form-control" rows="2"
                 style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 8px; font-family: inherit; font-size: 0.85rem;"></textarea>
             </div>
             <div class="form-group half" style="flex: 1;">
               <label
                 style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Misi
-                TK</label>
+                Lembaga</label>
               <textarea id="tk-misi" class="form-control" rows="2"
                 style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 8px; font-family: inherit; font-size: 0.85rem;"></textarea>
             </div>
@@ -3856,7 +3856,7 @@
             <div class="form-group half" style="flex: 1;">
               <label
                 style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Nomor
-                WhatsApp</label>
+                WhatsApp Admin</label>
               <input type="text" id="tk-wa" class="form-control" placeholder="628123456789"
                 style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
             </div>
@@ -3864,7 +3864,7 @@
               <label
                 style="font-size: 0.85rem; font-weight: 600; color: var(--text-color); display: block; margin-bottom: 4px;">Kontak
                 Telepon / Email</label>
-              <input type="text" id="tk-telepon" class="form-control" placeholder="aura.anugerah@gmail.com"
+              <input type="text" id="tk-telepon" class="form-control" placeholder="pkbm.auraanugerah@gmail.com"
                 style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-2); color: var(--text-color); padding: 0 12px;">
             </div>
           </div>
@@ -3886,17 +3886,17 @@
               </button>
             </div>
             <p style="font-size: 0.76rem; color: var(--text-muted); margin: 6px 0 0 0;">
-              Satu lokasi dengan PKBM Aura Anugerah: Sentani, Kab. Jayapura (Format: Latitude,Longitude).
+              Lokasi PKBM Aura Anugerah: Sentani, Kab. Jayapura (Format: Latitude,Longitude).
             </p>
           </div>
 
-          <!-- Pengaturan Visibilitas Modul TK oleh Admin -->
+          <!-- Pengaturan Visibilitas Modul oleh Admin -->
           <div
             style="background: var(--surface-2); border-radius: 10px; padding: 14px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
             <label
               style="font-size: 0.88rem; font-weight: 700; color: var(--text-color); display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
               <i data-lucide="layout" style="width: 16px; height: 16px; color: var(--primary-color);"></i> Penempatan
-              Tampilan Informasi TK
+              Tampilan Informasi Lembaga
             </label>
             <select id="tk-target-display" class="form-control"
               style="width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-color); font-weight: 600; padding: 0 12px;">
@@ -3911,7 +3911,7 @@
               style="padding: 0 18px; height: 38px;">Batal</button>
             <button type="submit" class="btn p"
               style="background: #0284c7; border-color: #0284c7; padding: 0 24px; height: 38px; font-weight: 600;">
-              <i data-lucide="save" style="width: 16px; height: 16px;"></i> Simpan Pengaturan TK
+              <i data-lucide="save" style="width: 16px; height: 16px;"></i> Simpan Pengaturan Lembaga
             </button>
           </div>
         </form>
@@ -4099,8 +4099,8 @@
 
   <!-- SheetJS Library for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=20261111landingfix"></script>
-  <script src="cbt-engine.js?v=20261111landingfix"></script>
+  <script src="app.js?v=20261111dynamiclanding"></script>
+  <script src="cbt-engine.js?v=20261111dynamiclanding"></script>
 </body>
 
 </html>

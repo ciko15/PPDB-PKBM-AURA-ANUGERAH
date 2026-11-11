@@ -8801,19 +8801,19 @@ function renderLandingKegiatan() {
 // ==================== FITUR: INFORMASI TK & MAPS LEAFLET =================
 // =========================================================================
 
-// Data Default Profil TK Aura Anugerah (Satu kompleks dengan PKBM di Sentani)
+// Data Default Profil PKBM Aura Anugerah
 const DEFAULT_TK_INFO = {
-  nama: "TK Aura Anugerah",
+  nama: "PKBM Aura Anugerah",
   jalan: "JL. Yahim KOMP.Buton Samping Hotel Citra Buana",
   kecamatan: "Sentani",
   kabupaten: "Kabupaten Jayapura, Papua (99352)",
-  deskripsi: "TK Aura Anugerah adalah Satuan Pendidikan Anak Usia Dini yang berfokus pada pembentukan karakter mandiri, nilai-nilai moralitas, kreativitas, dan kesiapan transisi PAUD ke Sekolah Dasar yang menyenangkan dan berkualitas.",
-  visi: "Terwujudnya anak usia dini yang berakhlak mulia, cerdas, ceria, mandiri, dan berbudaya lokal Papua.",
-  misi: "1. Menumbuhkan nilai budi pekerti dan pembiasaan ibadah.\n2. Mengembangkan kemampuan motorik, kognitif, dan bahasa melalui bermain bermakna.\n3. Membangun kolaborasi sinergis antara pendidik, orang tua, dan masyarakat.",
+  deskripsi: "Pusat Kegiatan Belajar Masyarakat (PKBM) Aura Anugerah menyelenggarakan program pendidikan kesetaraan Paket A (Setara SD), Paket B (Setara SMP), Paket C (Setara SMA), kursus keterampilan vokasi, keaksaraan, serta program pemberdayaan masyarakat terpadu di Sentani, Jayapura.",
+  visi: "Mewujudkan masyarakat yang cerdas, berdaya saing, berakhlak mulia, dan mandiri melalui layanan pendidikan non-formal yang inklusif dan berkualitas di tanah Papua.",
+  misi: "1. Menyelenggarakan pendidikan kesetaraan Paket A, B, dan C yang adaptif dan berkualitas.\n2. Memberikan pelatihan vokasi & kewirausahaan mandiri bagi warga belajar.\n3. Membangun kolaborasi sinergis antara pendidik, masyarakat, dan mitra kerja.",
   wa: "628123456789",
-  wa_nama: "Sekretariat TK Aura Anugerah",
+  wa_nama: "Sekretariat PKBM Aura Anugerah",
   telepon: "0812-4800-0000",
-  email: "tk.auraanugerah@gmail.com",
+  email: "pkbm.auraanugerah@gmail.com",
   latlong: "-2.566100,140.505700", // Koordinat Sentani Yahim Kompleks Citra Buana
   target_display: "both" // 'portal' | 'public' | 'both'
 };
@@ -8887,11 +8887,11 @@ function renderDashboardTK() {
 
   container.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <!-- Header Info TK -->
+      <!-- Header Info PKBM -->
       <div class="stat-card" style="padding: 1.75rem; border: 1px solid var(--border-color); border-radius: 16px; flex-direction: column; align-items: stretch;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
           <div>
-            <span style="font-size: 0.78rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px;">PAUD Mitra Satu Kompleks</span>
+            <span style="font-size: 0.78rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px;">Profil Lembaga Pendidikan Kesetaraan</span>
             <h2 style="font-size: 1.6rem; font-weight: 800; color: #0284c7; margin: 4px 0 6px 0;">${s.nama}</h2>
             <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.9rem;">
               <i data-lucide="map-pin" style="width: 15px; height: 15px; color: #0284c7;"></i>
@@ -8911,13 +8911,13 @@ function renderDashboardTK() {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-top: 8px;">
           <div style="background: var(--surface-2); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--border-color);">
             <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--primary-color); margin: 0 0 6px 0; display: flex; align-items: center; gap: 6px;">
-              <i data-lucide="target" style="width: 16px; height: 16px;"></i> Visi Sekolah
+              <i data-lucide="target" style="width: 16px; height: 16px;"></i> Visi Lembaga
             </h4>
             <p style="font-size: 0.86rem; color: var(--text-color); line-height: 1.5; margin: 0; white-space: pre-wrap;">${s.visi}</p>
           </div>
           <div style="background: var(--surface-2); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--border-color);">
             <h4 style="font-size: 0.9rem; font-weight: 700; color: #0284c7; margin: 0 0 6px 0; display: flex; align-items: center; gap: 6px;">
-              <i data-lucide="compass" style="width: 16px; height: 16px;"></i> Misi Sekolah
+              <i data-lucide="compass" style="width: 16px; height: 16px;"></i> Misi Lembaga
             </h4>
             <p style="font-size: 0.86rem; color: var(--text-color); line-height: 1.5; margin: 0; white-space: pre-wrap;">${s.misi}</p>
           </div>
@@ -8927,7 +8927,7 @@ function renderDashboardTK() {
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.25rem;">
           ${s.wa ? `
             <a href="https://wa.me/${s.wa.replace(/\D/g, '')}" target="_blank" class="btn p" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem;">
-              <i data-lucide="message-circle" style="width: 15px; height: 15px;"></i> WhatsApp TK
+              <i data-lucide="message-circle" style="width: 15px; height: 15px;"></i> WhatsApp Admin
             </a>
           ` : ''}
           ${s.telepon ? `
@@ -9008,17 +9008,38 @@ function renderLandingTK() {
 
   const s = infoTKData || getStoredTKInfo();
 
-  // Data lokasi PKBM Aura Anugerah
-  const pkbmNama = "PKBM Aura Anugerah";
-  const pkbmAlamat = "JL. Yahim KOMP. Buton Samping Hotel Citra Buana, Sentani";
-  const pkbmKab = "Kabupaten Jayapura, Papua (99352)";
-  const pkbmDeskripsi = "Pusat Kegiatan Belajar Masyarakat (PKBM) Aura Anugerah menyelenggarakan program pendidikan kesetaraan Paket A (Setara SD), Paket B (Setara SMP), Paket C (Setara SMA), kursus keterampilan vokasi, keaksaraan, serta program pemberdayaan masyarakat terpadu di Sentani.";
-  const pkbmVisi = "Mewujudkan masyarakat yang cerdas, berdaya saing, berakhlak mulia, dan mandiri melalui layanan pendidikan non-formal yang inklusif dan berkualitas di tanah Papua.";
+  // Data lokasi & profil lembaga dari database
+  const pkbmNama = s.nama || "PKBM Aura Anugerah";
+  const pkbmAlamat = s.jalan || "JL. Yahim KOMP. Buton Samping Hotel Citra Buana";
+  const pkbmKecamatan = s.kecamatan ? (s.kecamatan.toLowerCase().includes('sentani') ? s.kecamatan : `${s.kecamatan}, Sentani`) : "Sentani";
+  const pkbmKab = s.kabupaten || "Kabupaten Jayapura, Papua (99352)";
+  const pkbmDeskripsi = s.deskripsi || "Pusat Kegiatan Belajar Masyarakat (PKBM) Aura Anugerah menyelenggarakan program pendidikan kesetaraan Paket A (Setara SD), Paket B (Setara SMP), Paket C (Setara SMA), kursus keterampilan vokasi, keaksaraan, serta program pemberdayaan masyarakat terpadu di Sentani.";
+  const pkbmVisi = s.visi || "Mewujudkan masyarakat yang cerdas, berdaya saing, berakhlak mulia, dan mandiri melalui layanan pendidikan non-formal yang inklusif dan berkualitas di tanah Papua.";
   const pkbmLatlong = s.latlong || "-2.566100,140.505700";
+  const pkbmWa = (s.wa || "628123456789").replace(/\D/g, '');
+  const pkbmEmail = s.email || "pkbm.auraanugerah@gmail.com";
+
+  // Perbarui juga section kontak di landing page secara dinamis
+  const kontakAlamatEl = document.getElementById('landing-kontak-alamat');
+  if (kontakAlamatEl) {
+    kontakAlamatEl.textContent = `${pkbmAlamat}, ${pkbmKecamatan}, ${pkbmKab}`;
+  }
+  const kontakWaTextEl = document.getElementById('landing-kontak-wa-text');
+  if (kontakWaTextEl) {
+    kontakWaTextEl.textContent = `+${pkbmWa} (Jam Kerja: 08.00 - 16.00 WIT)`;
+  }
+  const kontakWaLinkEl = document.getElementById('landing-kontak-wa-link');
+  if (kontakWaLinkEl) {
+    kontakWaLinkEl.href = `https://wa.me/${pkbmWa}`;
+  }
+  const kontakEmailEl = document.getElementById('landing-kontak-email');
+  if (kontakEmailEl) {
+    kontakEmailEl.textContent = pkbmEmail;
+  }
 
   container.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1.35fr; gap: 2.5rem; align-items: stretch;">
-      <!-- Kolom Kiri: Detail Profil PKBM Aura Anugerah -->
+      <!-- Kolom Kiri: Detail Profil Lembaga dari Database -->
       <div style="display: flex; flex-direction: column; justify-content: space-between;">
         <div>
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
@@ -9034,13 +9055,13 @@ function renderLandingTK() {
               <span style="font-size: 1.1rem; line-height: 1;">📍</span>
               <div>
                 <b style="color: var(--text-color);">Alamat Kampus:</b>
-                <div style="color: var(--text-muted); margin-top: 2px;">${pkbmAlamat}, ${pkbmKab}</div>
+                <div style="color: var(--text-muted); margin-top: 2px;">${pkbmAlamat}, ${pkbmKecamatan}, ${pkbmKab}</div>
               </div>
             </div>
             <div style="display: flex; gap: 10px; align-items: flex-start;">
               <span style="font-size: 1.1rem; line-height: 1;">🎯</span>
               <div>
-                <b style="color: var(--text-color);">Visi PKBM:</b>
+                <b style="color: var(--text-color);">Visi Lembaga:</b>
                 <div style="color: var(--text-muted); margin-top: 2px;">${pkbmVisi}</div>
               </div>
             </div>
@@ -9071,14 +9092,14 @@ function renderLandingTK() {
         <div id="landing-tk-map" style="height: 440px; width: 100%; border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: var(--shadow-sm); z-index: 1;"></div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);">
           <span>🛰️ Tampilan Geometri Satelit & Bangunan Presisi</span>
-          <span style="font-weight: 600; color: var(--primary-color);">Sentani, Jayapura, Papua</span>
+          <span style="font-weight: 600; color: var(--primary-color);">${pkbmKecamatan}, ${pkbmKab.split(',')[0]}</span>
         </div>
       </div>
     </div>
   `;
 
   setTimeout(() => {
-    initLeafletMap('landing-tk-map', pkbmLatlong, pkbmNama, pkbmAlamat, true);
+    initLeafletMap('landing-tk-map', pkbmLatlong, pkbmNama, `${pkbmAlamat}, ${pkbmKecamatan}`, true);
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
       window.lucide.createIcons();
     }
