@@ -10,6 +10,7 @@
 
   <!-- PWA Manifest & App Config -->
   <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SIGAP AURA">
@@ -36,7 +37,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- PDF.js untuk Native High-Performance Reader (Bebas iframe & full navigasi) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <link rel="stylesheet" href="style.css?v=20261102c">
+  <link rel="stylesheet" href="style.css?v=20261111theme">
 </head>
 
 <body>
@@ -711,7 +712,7 @@
               </div>
 
               <!-- 6. Bagian Captcha Ringkas Sebaris -->
-              <div class="login-form-group">
+              <div id="login-captcha-group" class="login-form-group">
                 <div class="captcha-label-row">
                   <label for="login-captcha-input" class="login-label" style="margin-bottom: 0;">
                     <i data-lucide="shield-check" style="width: 14px; height: 14px; color: var(--primary-color);"></i>
@@ -947,6 +948,10 @@
                 <li class="nav-item hidden" data-target="section-api-keys" id="menu-api-keys">
                   <i data-lucide="key" class="menu-icon"></i>
                   <span>Kelola API Gemini</span>
+                </li>
+                <li class="nav-item hidden" data-target="section-pengaturan-keamanan" id="menu-pengaturan-keamanan">
+                  <i data-lucide="shield" class="menu-icon"></i>
+                  <span>Keamanan & Captcha</span>
                 </li>
                 <li class="nav-item" data-target="section-notifikasi" id="menu-notifikasi">
                   <i data-lucide="bell-ring" class="menu-icon"></i>
@@ -1385,6 +1390,10 @@
                 style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
                 <i data-lucide="play-circle" style="width: 16px; height: 16px;"></i>Mulai Ujian CBT (Siswa)
               </button>
+              <button class="btn btn-outline" onclick="bukaModalPilihCetakKartuUjian()"
+                title="Cetak Kartu Peserta Ujian Resmi untuk Event UTS/UAS">
+                <i data-lucide="printer" style="width: 15px; height: 15px;"></i>Cetak Kartu Ujian
+              </button>
               <button class="btn btn-outline" onclick="showInputNilaiModal()">
                 <i data-lucide="edit-3" style="width: 15px; height: 15px;"></i>Input Nilai Manual
               </button>
@@ -1470,7 +1479,11 @@
                 statusnya telah diaktifkan oleh pengajar sesuai jenjang Anda. Klik <b>Ikuti Ujian</b> dan masukkan
                 token.</p>
             </div>
-            <div id="container-ujian-khusus-siswa"
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span id="siswa-cbt-identity-badge" style="font-weight: 600; font-size: 13px; color: var(--text-color);"></span>
+              <span style="font-size: 12px; color: var(--text-muted);"><b id="count-siswa-cbt">0</b> Paket Ujian Tersedia</span>
+            </div>
+            <div id="grid-siswa-ujian-cards"
               style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
               <!-- Rendered by renderUjianKhususSiswa() -->
             </div>
@@ -1895,6 +1908,84 @@
           </div>
         </div>
 
+        <!-- ==================== SECTION: PENGATURAN KEAMANAN & CAPTCHA (SUPER ADMIN) ==================== -->
+        <div id="section-pengaturan-keamanan" class="content-section hidden card-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+            <div>
+              <h3 style="margin: 0; color: #059669; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="shield-check" style="width: 24px; height: 24px;"></i> Pengaturan Keamanan & Captcha (Super Admin)
+              </h3>
+              <p style="color: var(--text-muted); margin: 0.25rem 0 0 0; font-size: 0.9rem;">
+                Kelola perlindungan login dan verifikasi captcha visual untuk seluruh akun pengguna aplikasi.
+              </p>
+            </div>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 99px;">
+              🛡️ Super Admin Control
+            </span>
+          </div>
+
+          <!-- Card Switch Utama Pengaturan Captcha -->
+          <div class="card" style="margin-bottom: 1.5rem; background: var(--surface-color); border: 1.5px solid var(--border-color); border-radius: 14px; padding: 22px; box-shadow: var(--shadow-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 260px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                  <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">
+                    Verifikasi Captcha pada Halaman Login
+                  </h4>
+                  <span id="badge-status-captcha-setting" class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700;">
+                    🟢 AKTIF
+                  </span>
+                </div>
+                <p style="margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+                  Bila dinonaktifkan, seluruh pengguna (Admin, Guru, Siswa, Super Admin) dapat langsung masuk menggunakan Username dan Password <b>tanpa perlu mengisi kode captcha</b>.
+                </p>
+              </div>
+
+              <!-- Toggle Switch Modern -->
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <label style="position: relative; display: inline-block; width: 56px; height: 30px; margin: 0; cursor: pointer;">
+                  <input type="checkbox" id="switch-enable-captcha" onchange="toggleCaptchaSetting(this.checked)" style="opacity: 0; width: 0; height: 0;">
+                  <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 34px;"></span>
+                </label>
+                <span id="label-toggle-captcha" style="font-weight: 700; font-size: 14px; color: var(--text-color); min-width: 80px;">Aktif</span>
+              </div>
+            </div>
+
+            <!-- Detail Penjelasan Tambahan -->
+            <div style="margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--border-color); display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+              <div style="background: var(--surface-2); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-color);">
+                <div style="font-weight: 700; color: #059669; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                  <i data-lucide="shield" style="width: 15px; height: 15px;"></i> Mode Captcha Aktif (Direkomendasikan)
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); line-height: 1.45;">
+                  Melindungi sistem dari serangan brute force, bot otomatis, dan upaya login berulang secara tidak wajar.
+                </div>
+              </div>
+
+              <div style="background: var(--surface-2); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-color);">
+                <div style="font-weight: 700; color: #b45309; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                  <i data-lucide="zap" style="width: 15px; height: 15px;"></i> Mode Bebas Captcha (Login Instan)
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); line-height: 1.45;">
+                  Cocok saat event ujian serentak, sosialisasi siswa baru, atau jika siswa mengalami kendala membaca kode captcha di HP.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preview Simulasi Form Login -->
+          <div class="card" style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 14px; padding: 20px;">
+            <h4 style="margin: 0 0 12px 0; font-size: 14.5px; font-weight: 700; color: var(--text-color); display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="eye" style="width: 16px; height: 16px; color: var(--primary-color);"></i>
+              Status Tampilan Form Login Saat Ini
+            </h4>
+            <div id="preview-status-captcha-box" style="padding: 12px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; background: rgba(16, 185, 129, 0.1); color: #047857; border: 1px solid rgba(16, 185, 129, 0.25);">
+              <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i>
+              <span>Captcha aktif: Kolom kode keamanan ditampilkan dan wajib diisi sebelum klik Masuk.</span>
+            </div>
+          </div>
+        </div>
+
         <!-- ==================== SECTION: PORTAL SISWA (KHUSUS PESERTA DIDIK) ==================== -->
         <div id="section-portal-siswa" class="content-section card-panel hidden">
           <div class="list-header"
@@ -2049,7 +2140,10 @@
                 Kelola dan publikasikan pengumuman acara, agenda akademik, atau berita sekolah.
               </p>
             </div>
-            <div id="kegiatan-admin-actions" style="display: flex; gap: 8px;">
+            <div id="kegiatan-admin-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline" onclick="syncAllSchoolDataToCloud()" id="btn-sync-cloud-kegiatan" title="Pindahkan & Sinkronkan Semua Data Lokal ke Google Spreadsheet">
+                <i data-lucide="cloud-upload" style="width: 16px; height: 16px;"></i> Sinkronkan ke Database Cloud
+              </button>
               <button type="button" class="btn p" onclick="openModalKegiatan()" id="btn-tambah-kegiatan">
                 <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Tambah Kegiatan
               </button>
@@ -2318,14 +2412,14 @@
         <div id="section-more-menu" class="content-section hidden">
           <!-- Header Banner Menu Lainnya -->
           <div
-            style="background: linear-gradient(135deg, rgba(22, 163, 74, 0.15), rgba(242, 169, 0, 0.1)); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
-            <div style="display: flex; align-items: center; gap: 14px;">
+            style="background: linear-gradient(135deg, rgba(22, 163, 74, 0.15), rgba(242, 169, 0, 0.1)); border: 1px solid var(--border-color); border-radius: 16px; padding: 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 14px; cursor: pointer; flex: 1;" onclick="showUserProfileModal()" title="Klik untuk edit profil pengguna">
               <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo"
                 style="width: 48px; height: 48px; border-radius: 12px; background: var(--primary-color); padding: 5px; object-fit: contain; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
               <div>
-                <h2 style="margin: 0; font-size: 17px; font-weight: 700; color: var(--text-color);"
-                  id="menu-section-user-name">Pengguna</h2>
-                <p style="margin: 3px 0 0; font-size: 12.5px; color: var(--text-muted);" id="menu-section-user-role">
+                <h2 style="margin: 0; font-size: 16.5px; font-weight: 700; color: var(--text-color); display: flex; align-items: center; gap: 6px;"
+                  id="menu-section-user-name">Pengguna <i data-lucide="edit-2" style="width: 14px; height: 14px; color: var(--primary-color); opacity: 0.8;"></i></h2>
+                <p style="margin: 3px 0 0; font-size: 12px; color: var(--text-muted);" id="menu-section-user-role">
                   Sistem Akademik SIGAP AURA</p>
               </div>
             </div>
@@ -2479,6 +2573,23 @@
                   <div>
                     <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Kelola API Gemini AI</div>
                     <div style="font-size: 12px; color: var(--text-muted);">Konfigurasi kunci AI pendaftaran cepat</div>
+                  </div>
+                </div>
+                <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
+              </div>
+
+              <!-- Menu Khusus Super Admin: Pengaturan Keamanan & Captcha -->
+              <div id="more-menu-admin-keamanan" class="card-panel menu-list-row hidden"
+                onclick="switchMobileTab('section-pengaturan-keamanan')"
+                style="padding: 14px 16px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); background: var(--surface-color);">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <div
+                    style="width: 38px; height: 38px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); color: #059669; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="shield" style="width: 20px; height: 20px;"></i>
+                  </div>
+                  <div>
+                    <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Keamanan & Captcha</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Pengaturan verifikasi captcha form login</div>
                   </div>
                 </div>
                 <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
@@ -2846,7 +2957,7 @@
               style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite;"></span>
             <span id="reader-live-timer">00:00:00</span>
           </div>
-          <button class="btn btn-sm btn-selesai-ujian" onclick="selesaiBelajarDanUjian()"
+          <button id="btn-reader-selesai" class="btn btn-sm btn-selesai-ujian" onclick="selesaiBelajarDanUjian()"
             style="background: var(--accent); color: #12263A; font-weight: 700; border: none; font-size: 12px; padding: 6px 12px;">
             Selesai & Ujian 📝
           </button>
@@ -2984,9 +3095,16 @@
             </select>
           </div>
         </div>
-        <div class="form-group" style="margin-top: 12px;">
-          <label>Jumlah Halaman Modul</label>
-          <input type="number" id="buku-total-hal" value="30" min="1" max="1000" required>
+        <div class="form-group-row" style="margin-top: 12px;">
+          <div class="form-group half">
+            <label>Jumlah Halaman Modul <span style="color:red">*</span></label>
+            <input type="number" id="buku-total-hal" value="30" min="1" max="1000" required>
+          </div>
+          <div class="form-group half">
+            <label>Batas Syarat Ujian (%) <span style="color:red">*</span></label>
+            <input type="number" id="buku-min-progress" value="50" min="1" max="100" required placeholder="Default 50%">
+            <small style="color: var(--text-muted); font-size: 11px;">Min. % halaman dibaca siswa untuk bisa ujian</small>
+          </div>
         </div>
         <div class="form-group" style="margin-top: 12px;">
           <label>Deskripsi Ringkas / Silabus</label>
@@ -3126,6 +3244,16 @@
           </div>
         </div>
 
+        <div class="form-group" style="margin-top: 14px; background: var(--surface-2); padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-weight: 700; color: var(--text-color);">
+            <input type="checkbox" id="paket-butuh-kartu" style="width: 17px; height: 17px; cursor: pointer;">
+            <span>🪪 Wajibkan Kartu Ujian Resmi (Event Semester / UTS / UAS / USP)</span>
+          </label>
+          <small style="color: var(--text-muted); display: block; margin-top: 4px; line-height: 1.4;">
+            Centang opsi ini jika ujian ini adalah event resmi (UTS, UAS, dll.) di mana peserta didik dapat mencetak/mengunduh <b>Kartu Peserta Ujian</b> resmi ber-barcode/identitas. Untuk evaluasi modul harian tidak perlu dicentang.
+          </small>
+        </div>
+
         <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
           <button type="button" class="btn btn-outline" onclick="closeModalFormPaketSoal()">Batal</button>
           <button type="submit" class="btn btn-primary"><i data-lucide="save"
@@ -3241,6 +3369,113 @@
           <button type="submit" class="btn btn-primary"
             style="background: linear-gradient(135deg, #059669, #10b981); border: none;">
             <i data-lucide="play" style="width: 15px; height: 15px;"></i>Mulai Ujian Sekarang
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL PILIH CETAK KARTU UJIAN RESMI ==================== -->
+  <div id="modal-cetak-kartu-ujian" class="login-modal hidden" style="z-index: 99998;">
+    <div class="login-modal-overlay" onclick="closeModalPilihCetakKartuUjian()"></div>
+    <div class="login-card modal-content" style="max-width: 520px; text-align: left;">
+      <button class="btn-close-modal" onclick="closeModalPilihCetakKartuUjian()">&times;</button>
+      <h3 style="margin-top: 0; margin-bottom: 6px;">🪪 Cetak Kartu Peserta Ujian Resmi</h3>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+        Cetak Kartu Tanda Peserta Ujian berstandar resmi (UTS, UAS, USP) dalam format PDF siap cetak.
+      </p>
+
+      <form id="form-cetak-kartu-ujian" onsubmit="event.preventDefault(); prosesCetakKartuUjianDariModal();">
+        <div class="form-group">
+          <label>Pilih Event / Paket Ujian <span style="color:red">*</span></label>
+          <select id="cetak-kartu-pilih-paket" class="form-control" required onchange="onPaketKartuUjianChange(this.value)">
+            <option value="">-- Pilih Paket Ujian Resmi --</option>
+          </select>
+          <small style="color: var(--text-muted); font-size: 11.5px; margin-top: 4px; display: block;">
+            Menampilkan paket ujian yang ditandai <b>Wajib Kartu Ujian</b> atau jenis UTS / UAS / USP.
+          </small>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label style="font-weight: 700; margin-bottom: 6px; display: block;">Asal Peserta Didik</label>
+          <div style="display: flex; gap: 12px; background: var(--surface-2); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; margin: 0; font-weight: 600;">
+              <input type="radio" name="asal-peserta-kartu" value="internal" checked onchange="toggleAsalPesertaKartu(this.value)">
+              <span>🏫 Siswa PKBM Aura Anugerah (Database)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; margin: 0; font-weight: 600;">
+              <input type="radio" name="asal-peserta-kartu" value="eksternal" onchange="toggleAsalPesertaKartu(this.value)">
+              <span>🌐 Siswa Tamu / Sekolah Lain (Ad-hoc)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Opsi 1: Siswa Internal Terdaftar -->
+        <div id="wrapper-peserta-internal" class="form-group" style="margin-top: 12px;">
+          <label>Target Peserta Didik <span style="color:red">*</span></label>
+          <select id="cetak-kartu-pilih-siswa" class="form-control">
+            <option value="SEMUA">👥 Cetak Semua Siswa Terdaftar (Sesuai Jenjang/Kelas)</option>
+          </select>
+        </div>
+
+        <!-- Opsi 2: Siswa Tamu / Sekolah Lain (Ad-hoc tanpa beban database) -->
+        <div id="wrapper-peserta-eksternal" style="display: none; margin-top: 12px; background: var(--surface-2); border: 1.5px dashed var(--border-color); border-radius: 10px; padding: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <i data-lucide="building-2" style="width: 16px; height: 16px; color: var(--primary-color);"></i>
+            <strong style="font-size: 13px; color: var(--text-color);">Data Peserta Sekolah / PKBM Tamu</strong>
+          </div>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin: 0 0 10px 0; line-height: 1.4;">
+            💡 <b>Bebas Beban Database:</b> Data ini hanya digunakan untuk men-generate Kartu Ujian (PDF) dan akun sesi ujian temporer tanpa mengotori database siswa reguler Anda.
+          </p>
+
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label style="font-size: 12px;">Nama Sekolah / PKBM Asal <span style="color:red">*</span></label>
+            <input type="text" id="kartu-tamu-sekolah-asal" placeholder="Contoh: PKBM Harapan Bangsa / SMA Negeri 1" class="form-control">
+          </div>
+
+          <div class="form-group-row" style="gap: 8px; margin-bottom: 10px;">
+            <div class="form-group half">
+              <label style="font-size: 12px;">Nama Lengkap Siswa <span style="color:red">*</span></label>
+              <input type="text" id="kartu-tamu-nama" placeholder="Nama Peserta Ujian" class="form-control">
+            </div>
+            <div class="form-group half">
+              <label style="font-size: 12px;">NISN / NIK <span style="color:red">*</span></label>
+              <input type="text" id="kartu-tamu-nisn" placeholder="Nomor NISN / NIK" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-group-row" style="gap: 8px;">
+            <div class="form-group half">
+              <label style="font-size: 12px;">Ruang / Lokasi CBT</label>
+              <input type="text" id="kartu-tamu-ruang" value="Lab Komputer PKBM Aura Anugerah" class="form-control">
+            </div>
+            <div class="form-group half">
+              <label style="font-size: 12px;">No. Peserta / Kursi</label>
+              <input type="text" id="kartu-tamu-nopes" placeholder="Contoh: EXT-001" class="form-control">
+            </div>
+          </div>
+        </div>
+
+        <!-- Info Preview Ringkas -->
+        <div id="box-info-cetak-kartu" style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-top: 14px; font-size: 12.5px; display: none;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color: var(--text-muted);">Mata Uji / Event:</span>
+            <strong id="preview-kartu-judul" style="color: var(--text-color);">-</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color: var(--text-muted);">Target Rombel:</span>
+            <span id="preview-kartu-rombel" class="tag def">-</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Alokasi Waktu:</span>
+            <strong id="preview-kartu-durasi" style="color: #059669;">-</strong>
+          </div>
+        </div>
+
+        <div style="margin-top: 22px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModalPilihCetakKartuUjian()">Batal</button>
+          <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #059669, #10b981); border: none; font-weight: 700;">
+            <i data-lucide="printer" style="width: 15px; height: 15px;"></i>Unduh PDF Kartu Ujian
           </button>
         </div>
       </form>
@@ -3758,7 +3993,7 @@
           <button class="btn btn-sm btn-outline" onclick="tandaiSemuaNotifikasiDibaca()" title="Tandai semua notifikasi sudah dibaca" style="font-size: 11.5px; padding: 4px 8px;">
             ✓ Sudah Lihat Semua
           </button>
-          <button class="btn-close-modal" onclick="tutupModalNotifikasiDashboard()">&times;</button>
+          <button class="btn-close-modal modal-notif-close-btn" onclick="tutupModalNotifikasiDashboard()">&times;</button>
         </div>
       </div>
 
@@ -3864,8 +4099,8 @@
 
   <!-- SheetJS Library for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="app.js?v=20261102g"></script>
-  <script src="cbt-engine.js?v=20261102c"></script>
+  <script src="app.js?v=20261111fullcatalog"></script>
+  <script src="cbt-engine.js?v=20261111fullcatalog"></script>
 </body>
 
 </html>

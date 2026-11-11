@@ -282,6 +282,68 @@ function saveCbtActiveSessionToStorage() {
   }
 }
 
+// Helper: Cek apakah sebuah buku bacaan/modul memiliki paket soal yang dikaitkan di Bank Soal
+function ambilPaketSoalTerkaitBuku(bukuId) {
+  if (!bukuId) return null;
+  if (typeof cbtBankSoalList === 'undefined' || !cbtBankSoalList) return null;
+  const pkt = cbtBankSoalList.find(p => {
+    const matchId = String(p.bukuId) === String(bukuId) || String(p.id) === String(bukuId);
+    const hasSoal = p.soalList && p.soalList.length > 0;
+    return matchId && hasSoal;
+  });
+  return pkt || null;
+}
+
+// Helper: Cek kelayakan / batasan siswa untuk mengikuti / mengajukan ujian modul
+// Batasan default 50% halaman modul terbaca (dapat diatur per modul via b.minProgress)
+function cekKelayakanUjianModulSiswa(bukuId, studentId = null) {
+  const result = {
+    layak: true,
+    persen: 0,
+    minPersen: 50,
+    halTerbaca: 0,
+    totalHal: 30,
+    pesan: ''
+  };
+
+  const b = (typeof bukuList !== 'undefined') ? bukuList.find(x => String(x.id) === String(bukuId)) : null;
+  if (!b) return result;
+
+  const minProgress = (b.minProgress !== undefined && b.minProgress !== null && !isNaN(b.minProgress))
+    ? parseInt(b.minProgress, 10)
+    : 50;
+  result.minPersen = minProgress;
+  result.totalHal = b.totalHal || 30;
+
+  // Cek progress baca siswa dari readingHistoriesList atau localStorage
+  let userId = studentId;
+  if (!userId && typeof getCurrentUserId === 'function') {
+    userId = getCurrentUserId();
+  }
+
+  let lastPage = 0;
+  if (typeof readingHistoriesList !== 'undefined' && readingHistoriesList && readingHistoriesList.length > 0) {
+    const rec = readingHistoriesList.find(h => (!userId || String(h.user_id) === String(userId)) && String(h.book_id) === String(bukuId));
+    if (rec && rec.last_page) lastPage = parseInt(rec.last_page, 10) || 0;
+  }
+
+  // Jika tidak ada di array readingHistoriesList, periksa sesi lokal yang sedang aktif
+  if (!lastPage && typeof activeBelajarSession !== 'undefined' && activeBelajarSession && String(activeBelajarSession.bukuId) === String(bukuId)) {
+    lastPage = activeBelajarSession.halamanSekarang || 0;
+  }
+
+  result.halTerbaca = lastPage;
+  const persen = Math.min(100, Math.round((lastPage / result.totalHal) * 100));
+  result.persen = persen;
+
+  if (persen < minProgress) {
+    result.layak = false;
+    result.pesan = `Anda baru membaca ${persen}% (Hal. ${lastPage} dari ${result.totalHal} hal). Modul ini mensyaratkan minimal ${minProgress}% materi dibaca sebelum dapat mengerjakan ujian.`;
+  }
+
+  return result;
+}
+
 // Template Generator Soal Ujian Otomatis berdasarkan Modul / Mata Pelajaran
 function generateSoalPaketModul(buku) {
   const mapel = (buku && buku.mapel) ? buku.mapel : 'Umum';
@@ -387,11 +449,21 @@ function bukaModalPilihUjianCBT(presetBukuId, presetNamaSiswa) {
       selectBuku.appendChild(optGroupCustom);
     }
 
-    // 2. Evaluasi Mandiri Berbasis Katalog Buku Modul
+    // 2. Evaluasi Mandiri Berbasis Katalog Buku Modul (HANYA modul yang ada paket soalnya)
     if (typeof bukuList !== 'undefined' && bukuList.length > 0) {
       const optGroupBuku = document.createElement('optgroup');
-      optGroupBuku.label = '📚 Ujian Mandiri Per Modul Bacaan';
+      optGroupBuku.label = '📚 Ujian Mandiri Per Modul Bacaan (Soal Tersedia)';
+      
+      let countModulSoal = 0;
       bukuList.forEach(b => {
+        // Cek apakah modul memiliki soal yang dikaitkan
+        const linkedPaket = ambilPaketSoalTerkaitBuku(b.id);
+        if (!linkedPaket) {
+          // Buku bacaan belum ada soal yang dikaitkan -> Jangan tampilkan pilihan mengerjakan soal
+          return;
+        }
+
+        countModulSoal++;
         const sel = (presetBukuId && String(b.id) === String(presetBukuId)) ? 'selected' : '';
         const opt = document.createElement('option');
         opt.value = 'BUKU:' + b.id;
@@ -399,7 +471,10 @@ function bukaModalPilihUjianCBT(presetBukuId, presetNamaSiswa) {
         opt.textContent = `${b.nama} [${b.jenjang} · ${b.kelas || 'Kesetaraan'}]`;
         optGroupBuku.appendChild(opt);
       });
-      selectBuku.appendChild(optGroupBuku);
+
+      if (countModulSoal > 0) {
+        selectBuku.appendChild(optGroupBuku);
+      }
     }
   }
 
@@ -499,6 +574,28 @@ function prosesMulaiCBT() {
       return;
     }
 
+    // Cek apakah paket soal ini dikaitkan dengan buku modul tertentu dan terapkan batasan ujian
+    if (pkt.bukuId) {
+      const cekSyarat = cekKelayakanUjianModulSiswa(pkt.bukuId, s.id);
+      if (!cekSyarat.layak) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Belum Memenuhi Batas Belajar Modul',
+          html: `<div style="text-align: left; font-size: 13.5px;">
+            <p>${cekSyarat.pesan}</p>
+            <div style="background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin-top: 10px; border: 1px solid var(--border-color);">
+              <div>📖 Halaman Terbaca: <b>Hal. ${cekSyarat.halTerbaca} dari ${cekSyarat.totalHal} (${cekSyarat.persen}%)</b></div>
+              <div>🎯 Batas Minimal Ujian: <b>${cekSyarat.minPersen}% materi modul</b></div>
+            </div>
+            <p style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">Silakan lanjutkan membaca materi modul terlebih dahulu sebelum menempuh ujian evaluasi.</p>
+          </div>`,
+          confirmButtonText: 'Kembali Belajar Modul',
+          confirmButtonColor: 'var(--primary-color)'
+        });
+        return;
+      }
+    }
+
     closeModalPilihCBT();
     launchCbtDariPaketSoal(pkt, s);
   } else {
@@ -508,6 +605,38 @@ function prosesMulaiCBT() {
       Swal.fire('Error', 'Buku modul ujian tidak ditemukan!', 'error');
       return;
     }
+
+    // 1. Cek apakah ada soal yang dikaitkan ke buku ini
+    const linkedPaket = ambilPaketSoalTerkaitBuku(b.id);
+    if (!linkedPaket) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Soal Belum Tersedia',
+        text: `Buku modul "${b.nama}" belum memiliki paket soal yang dikaitkan oleh Guru/Pengajar.`
+      });
+      return;
+    }
+
+    // 2. Cek batasan minimal membaca modul (default 50%)
+    const cekSyarat = cekKelayakanUjianModulSiswa(b.id, s.id);
+    if (!cekSyarat.layak) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Belum Memenuhi Batas Belajar Modul',
+        html: `<div style="text-align: left; font-size: 13.5px;">
+          <p>${cekSyarat.pesan}</p>
+          <div style="background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin-top: 10px; border: 1px solid var(--border-color);">
+            <div>📖 Halaman Terbaca: <b>Hal. ${cekSyarat.halTerbaca} dari ${cekSyarat.totalHal} (${cekSyarat.persen}%)</b></div>
+            <div>🎯 Batas Minimal Ujian: <b>${cekSyarat.minPersen}% materi modul</b></div>
+          </div>
+          <p style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">Silakan tuntaskan membaca modul terlebih dahulu untuk membuka akses ujian.</p>
+        </div>`,
+        confirmButtonText: 'Buka Modul Belajar',
+        confirmButtonColor: 'var(--primary-color)'
+      });
+      return;
+    }
+
     closeModalPilihCBT();
     launchCbtBeesmart(b, s);
   }
@@ -1126,12 +1255,34 @@ function initBankSoalData() {
     ];
     saveBankSoalToStorage();
   }
+
+  // Tarik data Bank Soal terbaru dari cloud database
+  if (typeof callAPI === 'function') {
+    callAPI({ action: "getBankSoal" }).then(cloudSoal => {
+      if (Array.isArray(cloudSoal) && cloudSoal.length > 0) {
+        cbtBankSoalList = cloudSoal;
+        try { localStorage.setItem('cbt_bank_soal_list', JSON.stringify(cbtBankSoalList)); } catch (e) {}
+        renderBankSoalTable();
+        renderDaftarUjianTersedia();
+      } else if (cbtBankSoalList && cbtBankSoalList.length > 0) {
+        callAPI({ action: "saveBankSoalBatch", paketList: cbtBankSoalList }).catch(() => {});
+      }
+    }).catch(err => {
+      console.warn("Gagal tarik bank soal dari cloud:", err.message);
+    });
+  }
 }
 
 function saveBankSoalToStorage() {
   try {
     localStorage.setItem('cbt_bank_soal_list', JSON.stringify(cbtBankSoalList));
   } catch (e) {}
+
+  if (typeof callAPI === 'function') {
+    callAPI({ action: "saveBankSoalBatch", paketList: cbtBankSoalList }).catch(err => {
+      console.warn("Gagal simpan bank soal ke cloud database:", err.message);
+    });
+  }
 }
 
 function switchUjianSubTab(tabName) {
@@ -1280,17 +1431,49 @@ function renderUjianKhususSiswa() {
 
   gridContainer.innerHTML = availableExams.map(pkt => {
     const countButir = pkt.soalList ? pkt.soalList.length : 0;
+    
+    // Cek batasan modul jika paket soal ini dikaitkan dengan modul buku tertentu
+    let modulStatusHtml = '';
+    let isTerkunciModul = false;
+    let alasanTerkunci = '';
+
+    if (pkt.bukuId) {
+      const cek = cekKelayakanUjianModulSiswa(pkt.bukuId, studentId);
+      if (!cek.layak) {
+        isTerkunciModul = true;
+        alasanTerkunci = `Materi baru dibaca ${cek.persen}% (Syarat min. ${cek.minPersen}%)`;
+        modulStatusHtml = `
+          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 6px; padding: 6px 10px; margin-bottom: 12px; font-size: 11.5px; color: #dc2626;">
+            ⚠️ <b>Belum Memenuhi Batas Baca Modul:</b><br>${alasanTerkunci}.
+          </div>
+        `;
+      } else {
+        modulStatusHtml = `
+          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 6px 10px; margin-bottom: 12px; font-size: 11.5px; color: #059669;">
+            ✓ <b>Syarat Modul Terpenuhi:</b> Telah membaca ${cek.persen}% materi.
+          </div>
+        `;
+      }
+    }
+
+    const isButuhKartu = !!pkt.butuhKartu || ['UTS', 'UAS', 'Ujian Sekolah'].includes(pkt.jenisUjian);
+
     return `
-      <div class="card" style="background: var(--surface-color); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-sm); transition: transform 0.2s, border-color 0.2s;">
+      <div class="card" style="background: var(--surface-color); border: 1.5px solid ${isTerkunciModul ? 'rgba(239, 68, 68, 0.3)' : 'var(--border-color)'}; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-sm); transition: transform 0.2s, border-color 0.2s;">
         <div>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px;">
-            <span style="font-family: monospace; font-weight: 800; background: #ecfdf5; color: #047857; padding: 2px 8px; border-radius: 4px; font-size: 12px; border: 1px solid #a7f3d0;">
-              ${pkt.kode}
-            </span>
-            <span class="tag pusat" style="font-size: 11px;">🟢 Siap Dikerjakan</span>
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+              <span style="font-family: monospace; font-weight: 800; background: #ecfdf5; color: #047857; padding: 2px 8px; border-radius: 4px; font-size: 12px; border: 1px solid #a7f3d0;">
+                ${pkt.kode}
+              </span>
+              ${isButuhKartu ? '<span class="badge" style="background: #fdf2f8; color: #db2777; font-weight: 700; border: 1px solid #fbcfe8; font-size: 11px;">🪪 Wajib Kartu</span>' : ''}
+            </div>
+            ${isTerkunciModul ? '<span class="tag" style="background: rgba(239,68,68,0.12); color:#dc2626; font-size: 11px;">🔒 Perlu Tuntaskan Modul</span>' : '<span class="tag pusat" style="font-size: 11px;">🟢 Siap Dikerjakan</span>'}
           </div>
           <h3 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 700; color: var(--text-color); line-height: 1.4;">${pkt.judul}</h3>
           <p style="margin: 0 0 12px 0; font-size: 12px; color: var(--text-muted);">${pkt.instruksi || 'Pilihlah salah satu jawaban yang paling tepat.'}</p>
+
+          ${modulStatusHtml}
 
           <div style="background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; border: 1px solid var(--border-color);">
             <div style="display: flex; justify-content: space-between;">
@@ -1308,9 +1491,16 @@ function renderUjianKhususSiswa() {
           </div>
         </div>
 
-        <button type="button" class="btn" onclick="mulaiUjianLangsungSiswa('${pkt.id}')" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; font-weight: 700; height: 40px; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); font-size: 13.5px; cursor: pointer;">
-          <i data-lucide="play" style="width: 16px; height: 16px;"></i> Masuk & Kerjakan Ujian
-        </button>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          ${isButuhKartu ? `
+            <button type="button" class="btn btn-outline" onclick="cetakKartuUjianSiswaLogin('${pkt.id}')" style="width: 100%; justify-content: center; font-size: 12.5px; font-weight: 600; border-color: #f472b6; color: #db2777; height: 36px;">
+              <i data-lucide="printer" style="width: 14px; height: 14px;"></i> Unduh Kartu Ujian Saya (PDF)
+            </button>
+          ` : ''}
+          <button type="button" class="btn" onclick="mulaiUjianLangsungSiswa('${pkt.id}')" style="width: 100%; justify-content: center; background: ${isTerkunciModul ? '#64748b' : 'linear-gradient(135deg, #059669, #10b981)'}; color: #ffffff; font-weight: 700; height: 40px; border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); font-size: 13.5px; cursor: pointer;">
+            <i data-lucide="${isTerkunciModul ? 'lock' : 'play'}" style="width: 16px; height: 16px;"></i> ${isTerkunciModul ? 'Cek Syarat Ujian Modul' : 'Masuk & Kerjakan Ujian'}
+          </button>
+        </div>
       </div>
     `;
   }).join('');
@@ -1361,7 +1551,11 @@ function renderBankSoalTable() {
     const countButir = pkt.soalList ? pkt.soalList.length : 0;
     const badgeJenis = jenisBadges[pkt.jenisUjian] || jenisBadges['Evaluasi Modul'];
     const targetKelas = pkt.kelas || 'Semua Kelas';
+    const isButuhKartu = !!pkt.butuhKartu || ['UTS', 'UAS', 'Ujian Sekolah'].includes(pkt.jenisUjian);
     const isAktif = (pkt.statusUjian || 'AKTIF') === 'AKTIF';
+    const kartuBadge = isButuhKartu 
+      ? '<span class="badge" style="background: #fdf2f8; color: #db2777; font-weight: 700; border: 1px solid #fbcfe8; font-size: 11px;">🪪 Wajib Kartu</span>' 
+      : '';
 
     return [
       '<tr>',
@@ -1379,7 +1573,7 @@ function renderBankSoalTable() {
           '</div>',
         '</td>',
         '<td>',
-          '<div style="margin-bottom: 3px;">' + badgeJenis + '</div>',
+          '<div style="display: flex; gap: 6px; align-items: center; margin-bottom: 3px; flex-wrap: wrap;">' + badgeJenis + kartuBadge + '</div>',
           '<strong style="color: var(--text-color); font-size: 13.5px;">' + pkt.judul + '</strong>',
           '<div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Tgl: ' + (pkt.tanggal || '-') + ' · KKM: ' + (pkt.kkm || 70) + '</div>',
         '</td>',
@@ -1401,6 +1595,7 @@ function renderBankSoalTable() {
         '<td><small style="color: var(--text-muted);">' + (pkt.pembuat || 'Tutor') + '</small></td>',
         '<td style="text-align: right;">',
           '<div style="display: inline-flex; gap: 6px;">',
+            (isButuhKartu ? '<button class="btn btn-sm btn-outline" style="font-size: 11.5px; padding: 4px 8px; border-color: #f472b6; color: #db2777;" onclick="cetakKartuUjianPaketLangsung(\'' + pkt.id + '\')" title="Cetak Kartu Ujian Siswa"><i data-lucide="printer" style="width: 13px; height: 13px;"></i> Kartu</button>' : ''),
             '<button class="btn btn-sm" style="background: #059669; color: #fff; border: none; font-size: 12px; padding: 5px 10px;" onclick="bukaKelolaButirSoal(\'' + pkt.id + '\')" title="Kelola Pertanyaan & Kunci Jawaban">',
               '📝 Butir Soal (' + countButir + ')',
             '</button>',
@@ -1425,30 +1620,36 @@ function onJenisUjianChange(jenis) {
   const grpBuku = document.getElementById('group-paket-buku');
   const judulInput = document.getElementById('paket-judul');
   const durasiInput = document.getElementById('paket-durasi-menit');
+  const checkKartu = document.getElementById('paket-butuh-kartu');
 
   if (jenis === 'UTS') {
     if (durasiInput) durasiInput.value = '60';
     if (judulInput && (!judulInput.value || judulInput.value.startsWith('Evaluasi'))) {
       judulInput.value = 'Penilaian Tengah Semester (PTS) Ganjil';
     }
+    if (checkKartu) checkKartu.checked = true;
   } else if (jenis === 'UAS') {
     if (durasiInput) durasiInput.value = '90';
     if (judulInput && (!judulInput.value || judulInput.value.startsWith('Evaluasi'))) {
       judulInput.value = 'Penilaian Akhir Semester (PAS) Genap';
     }
+    if (checkKartu) checkKartu.checked = true;
   } else if (jenis === 'Ujian Sekolah') {
     if (durasiInput) durasiInput.value = '90';
     if (judulInput && (!judulInput.value || judulInput.value.startsWith('Evaluasi'))) {
       judulInput.value = 'Ujian Satuan Pendidikan (USP) Kelulusan';
     }
+    if (checkKartu) checkKartu.checked = true;
   } else if (jenis === 'Placement Test') {
     if (durasiInput) durasiInput.value = '45';
     if (judulInput && (!judulInput.value || judulInput.value.startsWith('Evaluasi'))) {
       judulInput.value = 'Asesmen Diagnostik / Penempatan Siswa Baru';
     }
+    if (checkKartu) checkKartu.checked = false;
   } else {
     // Evaluasi Modul
     if (durasiInput) durasiInput.value = '15';
+    if (checkKartu) checkKartu.checked = false;
   }
 }
 
@@ -1462,6 +1663,8 @@ function showModalTambahSoal() {
   document.getElementById('paket-jenis-ujian').value = 'Evaluasi Modul';
   document.getElementById('paket-jenjang').value = 'Paket C';
   document.getElementById('paket-kelas').value = 'Kelas X';
+  const checkKartu = document.getElementById('paket-butuh-kartu');
+  if (checkKartu) checkKartu.checked = false;
 
   filterBukuSelectForPaket('Paket C');
 
@@ -1554,6 +1757,8 @@ function editPaketSoal(id) {
   document.getElementById('paket-instruksi').value = pkt.instruksi || '';
   document.getElementById('paket-token-input').value = pkt.token || 'BEESMART';
   document.getElementById('paket-status-ujian').value = pkt.statusUjian || 'AKTIF';
+  const checkKartu = document.getElementById('paket-butuh-kartu');
+  if (checkKartu) checkKartu.checked = !!pkt.butuhKartu;
 
   const modal = document.getElementById('modal-form-paket-soal');
   if (modal) modal.classList.remove('hidden');
@@ -1572,6 +1777,7 @@ function simpanPaketSoalBaru() {
   const durasiMenit = parseInt(document.getElementById('paket-durasi-menit').value, 10) || 15;
   const kkm = parseInt(document.getElementById('paket-kkm').value, 10) || 70;
   const instruksi = document.getElementById('paket-instruksi').value.trim();
+  const butuhKartu = document.getElementById('paket-butuh-kartu') ? document.getElementById('paket-butuh-kartu').checked : false;
 
   const pembuat = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.nama : 'Tutor PKBM';
 
@@ -1594,6 +1800,7 @@ function simpanPaketSoalBaru() {
       pkt.durasiMenit = durasiMenit;
       pkt.kkm = kkm;
       pkt.instruksi = instruksi;
+      pkt.butuhKartu = butuhKartu;
     }
   } else {
     const newPaket = {
@@ -1609,6 +1816,7 @@ function simpanPaketSoalBaru() {
       durasiMenit: durasiMenit,
       kkm: kkm,
       instruksi: instruksi,
+      butuhKartu: butuhKartu,
       pembuat: pembuat,
       tanggal: new Date().toLocaleDateString('id-ID'),
       soalList: []
@@ -2224,3 +2432,478 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreActiveCbtSessionIfAny();
   }, 600);
 });
+
+// ==================== GENERATOR & PENGELOLA KARTU UJIAN RESMI (PTS / PAS / USP) ====================
+
+/**
+ * Buka modal untuk memilih event ujian dan siswa yang dicetak kartunya.
+ */
+function bukaModalPilihCetakKartuUjian(defaultPaketId) {
+  const modal = document.getElementById('modal-cetak-kartu-ujian');
+  const selPaket = document.getElementById('cetak-kartu-pilih-paket');
+  const selSiswa = document.getElementById('cetak-kartu-pilih-siswa');
+  const boxInfo = document.getElementById('box-info-cetak-kartu');
+  if (!modal || !selPaket) return;
+
+  // Filter paket yang butuh kartu atau event resmi
+  const paketResmi = cbtBankSoalList.filter(p => !!p.butuhKartu || ['UTS', 'UAS', 'Ujian Sekolah'].includes(p.jenisUjian));
+
+  if (paketResmi.length === 0) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Belum Ada Event Ujian Resmi',
+      text: 'Tidak ada paket ujian yang mewajibkan kartu ujian. Anda dapat mengaktifkannya pada opsi "Wajibkan Kartu Ujian" saat membuat/mengedit paket soal CBT.'
+    });
+    return;
+  }
+
+  selPaket.innerHTML = '<option value="">-- Pilih Paket Ujian Resmi --</option>' + 
+    paketResmi.map(p => {
+      const label = `[${p.jenisUjian || 'UJIAN'}] ${p.kode} - ${p.judul} (${p.jenjang} · ${p.kelas || 'Semua Kelas'})`;
+      return `<option value="${p.id}">${label}</option>`;
+    }).join('');
+
+  if (defaultPaketId) {
+    selPaket.value = defaultPaketId;
+    onPaketKartuUjianChange(defaultPaketId);
+  } else {
+    selPaket.value = paketResmi[0].id;
+    onPaketKartuUjianChange(paketResmi[0].id);
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeModalPilihCetakKartuUjian() {
+  const modal = document.getElementById('modal-cetak-kartu-ujian');
+  if (modal) modal.classList.add('hidden');
+}
+
+/**
+ * Saat paket ujian dipilih di dialog cetak, perbarui filter siswa yang cocok dengan jenjang/kelas
+ */
+function onPaketKartuUjianChange(paketId) {
+  const selSiswa = document.getElementById('cetak-kartu-pilih-siswa');
+  const boxInfo = document.getElementById('box-info-cetak-kartu');
+  const previewJudul = document.getElementById('preview-kartu-judul');
+  const previewRombel = document.getElementById('preview-kartu-rombel');
+  const previewDurasi = document.getElementById('preview-kartu-durasi');
+
+  const pkt = cbtBankSoalList.find(p => p.id === paketId);
+  if (!pkt) {
+    if (boxInfo) boxInfo.style.display = 'none';
+    if (selSiswa) {
+      selSiswa.innerHTML = '<option value="SEMUA">👥 Cetak Semua Siswa Terdaftar</option>';
+    }
+    return;
+  }
+
+  if (boxInfo) boxInfo.style.display = 'block';
+  if (previewJudul) previewJudul.textContent = `[${pkt.kode}] ${pkt.judul}`;
+  if (previewRombel) previewRombel.textContent = `${pkt.jenjang} · ${pkt.kelas || 'Semua Kelas'}`;
+  if (previewDurasi) previewDurasi.textContent = `${pkt.durasiMenit || 15} Menit (KKM: ${pkt.kkm || 70})`;
+
+  if (!selSiswa) return;
+
+  // Filter daftar siswa yang cocok dengan jenjang dan kelas
+  const allSiswa = (typeof siswaDataList !== 'undefined' && Array.isArray(siswaDataList)) ? siswaDataList : [];
+  const matchingSiswa = allSiswa.filter(s => {
+    const matchJenjang = !pkt.jenjang || s.program === pkt.jenjang;
+    const matchKelas = !pkt.kelas || pkt.kelas === 'Semua Kelas' || s.kelas === pkt.kelas;
+    return matchJenjang && matchKelas;
+  });
+
+  let opts = `<option value="SEMUA">👥 Cetak Semua Siswa Terdaftar (${matchingSiswa.length} Siswa)</option>`;
+  matchingSiswa.forEach(s => {
+    opts += `<option value="${s.id}">${s.nama} [NISN: ${s.nisn || '-'}] - ${s.program || ''} ${s.kelas || ''}</option>`;
+  });
+
+  selSiswa.innerHTML = opts;
+}
+
+/**
+ * Trigger cetak dari tombol paket di tabel admin
+ */
+function cetakKartuUjianPaketLangsung(paketId) {
+  bukaModalPilihCetakKartuUjian(paketId);
+}
+
+/**
+ * Trigger cetak langsung dari kartu siswa yang login
+ */
+function cetakKartuUjianSiswaLogin(paketId) {
+  if (typeof currentUser === 'undefined' || !currentUser) {
+    Swal.fire('Info', 'Silakan login terlebih dahulu untuk mencetak kartu ujian.', 'info');
+    return;
+  }
+  const siswa = currentUser.dataSiswa || {
+    id: currentUser.id || 'SISWA-01',
+    nama: currentUser.nama || 'Peserta Ujian',
+    nik: currentUser.nik || '-',
+    nisn: currentUser.nisn || '-',
+    program: currentUser.program || 'Paket C',
+    kelas: currentUser.kelas || 'Kelas X'
+  };
+
+  cetakKartuUjianResmi(paketId, siswa);
+}
+
+/**
+ * Toggle antara Siswa Internal PKBM vs Siswa Tamu / Sekolah Luar
+ */
+function toggleAsalPesertaKartu(tipe) {
+  const wrapInternal = document.getElementById('wrapper-peserta-internal');
+  const wrapEksternal = document.getElementById('wrapper-peserta-eksternal');
+  if (tipe === 'eksternal') {
+    if (wrapInternal) wrapInternal.style.display = 'none';
+    if (wrapEksternal) wrapEksternal.style.display = 'block';
+  } else {
+    if (wrapInternal) wrapInternal.style.display = 'block';
+    if (wrapEksternal) wrapEksternal.style.display = 'none';
+  }
+}
+
+/**
+ * Proses unduh PDF dari form modal
+ */
+function prosesCetakKartuUjianDariModal() {
+  const paketId = document.getElementById('cetak-kartu-pilih-paket')?.value;
+  const asalPeserta = document.querySelector('input[name="asal-peserta-kartu"]:checked')?.value || 'internal';
+
+  if (!paketId) {
+    Swal.fire('Peringatan', 'Pilih paket ujian terlebih dahulu!', 'warning');
+    return;
+  }
+
+  const pkt = cbtBankSoalList.find(p => p.id === paketId);
+  if (!pkt) return;
+
+  if (asalPeserta === 'eksternal') {
+    // Siswa Tamu / Sekolah Lain (Ad-hoc)
+    const sekolahAsal = (document.getElementById('kartu-tamu-sekolah-asal')?.value || '').trim();
+    const namaSiswa = (document.getElementById('kartu-tamu-nama')?.value || '').trim();
+    const nisn = (document.getElementById('kartu-tamu-nisn')?.value || '').trim();
+    const ruang = (document.getElementById('kartu-tamu-ruang')?.value || 'Lab Komputer PKBM Aura Anugerah').trim();
+    const nopesManual = (document.getElementById('kartu-tamu-nopes')?.value || '').trim();
+
+    if (!sekolahAsal || !namaSiswa) {
+      Swal.fire('Form Belum Lengkap', 'Mohon isi Nama Sekolah Asal dan Nama Siswa Tamu.', 'warning');
+      return;
+    }
+
+    const siswaTamu = {
+      id: 'EXT-' + Date.now().toString().slice(-4),
+      nama: namaSiswa,
+      nisn: nisn || '-',
+      nik: '-',
+      program: pkt.jenjang,
+      kelas: pkt.kelas !== 'Semua Kelas' ? pkt.kelas : 'Kelas X',
+      sekolahAsal: sekolahAsal,
+      ruangCbt: ruang,
+      nomorPesertaCustom: nopesManual
+    };
+
+    cetakKartuUjianResmi(pkt, siswaTamu);
+    closeModalPilihCetakKartuUjian();
+    return;
+  }
+
+  // Siswa Internal dari Database PKBM
+  const targetSiswaId = document.getElementById('cetak-kartu-pilih-siswa')?.value;
+  const allSiswa = (typeof siswaDataList !== 'undefined' && Array.isArray(siswaDataList)) ? siswaDataList : [];
+
+  if (targetSiswaId && targetSiswaId !== 'SEMUA') {
+    const siswa = allSiswa.find(s => String(s.id) === String(targetSiswaId));
+    if (!siswa) {
+      Swal.fire('Error', 'Data siswa tidak ditemukan!', 'error');
+      return;
+    }
+    cetakKartuUjianResmi(paketId, siswa);
+  } else {
+    // Cetak batch semua siswa yang cocok
+    const matchingSiswa = allSiswa.filter(s => {
+      const matchJenjang = !pkt.jenjang || s.program === pkt.jenjang;
+      const matchKelas = !pkt.kelas || pkt.kelas === 'Semua Kelas' || s.kelas === pkt.kelas;
+      return matchJenjang && matchKelas;
+    });
+
+    if (matchingSiswa.length === 0) {
+      // Jika belum ada data siswa, buatkan contoh kartu peserta
+      const dummy = {
+        id: 'CONTOH-01',
+        nama: 'Peserta Ujian Resmi PKBM',
+        nisn: '0012345678',
+        nik: '9103012345670001',
+        program: pkt.jenjang,
+        kelas: pkt.kelas !== 'Semua Kelas' ? pkt.kelas : 'Kelas X'
+      };
+      cetakKartuUjianResmi(paketId, dummy);
+      return;
+    }
+
+    cetakBatchKartuUjianResmi(pkt, matchingSiswa);
+  }
+
+  closeModalPilihCetakKartuUjian();
+}
+
+/**
+ * Generator PDF Utama Kartu Tanda Peserta Ujian Resmi
+ * Menggunakan format A5 Landscape berstandar nasional
+ */
+function cetakKartuUjianResmi(paketId, siswaData) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    Swal.fire('Error', 'Library PDF (jsPDF) belum termuat sempurna.', 'error');
+    return;
+  }
+
+  const pkt = (typeof paketId === 'object' && paketId) ? paketId : cbtBankSoalList.find(p => p.id === paketId);
+  const s = siswaData || {};
+
+  const { jsPDF } = window.jspdf;
+  // A5 Landscape: 210mm x 148mm
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a5' });
+
+  gambarHalamanKartuUjian(doc, pkt, s);
+
+  const namaFile = `Kartu_Ujian_${(s.nama || 'Peserta').replace(/\s+/g, '_')}_${(pkt ? pkt.kode : 'CBT')}.pdf`;
+  doc.save(namaFile);
+
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      icon: 'success',
+      title: 'Kartu Ujian Berhasil Dibuat',
+      text: `File ${namaFile} telah diunduh. Silakan cetak pada kertas A5 atau F4/A4.`,
+      timer: 3500,
+      showConfirmButton: false
+    });
+  }
+}
+
+/**
+ * Cetak kolektif satu rombel ke dalam 1 dokumen PDF multi-halaman
+ */
+function cetakBatchKartuUjianResmi(paket, siswaArray) {
+  if (!window.jspdf || !window.jspdf.jsPDF) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a5' });
+
+  siswaArray.forEach((s, idx) => {
+    if (idx > 0) doc.addPage('a5', 'landscape');
+    gambarHalamanKartuUjian(doc, paket, s);
+  });
+
+  const namaFile = `Batch_Kartu_Ujian_${paket.kode}_${siswaArray.length}_Siswa.pdf`;
+  doc.save(namaFile);
+
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      icon: 'success',
+      title: 'Kartu Ujian Kolektif Berhasil Diunduh',
+      text: `Berhasil mencetak ${siswaArray.length} kartu peserta ujian ke dalam file: ${namaFile}`,
+      timer: 4000,
+      showConfirmButton: false
+    });
+  }
+}
+
+/**
+ * Render elemen visual kartu ujian (Kop resmi, Garis ganda, Biodata, Jadwal Ujian, Foto 3x4, Tanda Tangan & Aturan)
+ */
+function gambarHalamanKartuUjian(doc, pkt, s) {
+  const pageWidth = 210;
+  const pageHeight = 148;
+
+  // Border Luar Ganda & Background Bersih
+  doc.setDrawColor(5, 150, 105); // Emerald Green PKBM
+  doc.setLineWidth(0.8);
+  doc.rect(6, 6, pageWidth - 12, pageHeight - 12);
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.3);
+  doc.rect(7.5, 7.5, pageWidth - 15, pageHeight - 15);
+
+  // KOP SURAT RESMI PKBM
+  doc.setFillColor(240, 253, 244); // Lembut emerald
+  doc.rect(8, 8, pageWidth - 16, 24, 'F');
+
+  // Pita Aksen Hijau
+  doc.setFillColor(5, 150, 105);
+  doc.rect(8, 8, 4, 24, 'F');
+
+  doc.setTextColor(5, 150, 105);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text(INSTITUSI_CONFIG.yayasan || 'YAYASAN AURA ANUGERAH', 18, 15);
+  
+  doc.setFontSize(14);
+  doc.setTextColor(15, 23, 42);
+  doc.text(INSTITUSI_CONFIG.nama || 'PKBM AURA ANUGERAH', 18, 21);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`NPSN: ${INSTITUSI_CONFIG.npsn || '69910495'} | Izin Operasional: 421.1/043/DPMPTSP/2021 | Sentani - Jayapura, Papua`, 18, 26);
+  doc.text(`Laman Resmi: https://pkbmauraanugerah.sch.id | Email: info@pkbmauraanugerah.sch.id`, 18, 30);
+
+  // Garis Pemisah Kop
+  doc.setDrawColor(5, 150, 105);
+  doc.setLineWidth(0.6);
+  doc.line(8, 33, pageWidth - 8, 33);
+
+  // JUDUL KARTU UJIAN
+  const jenisEvent = pkt ? (pkt.jenisUjian || 'UJIAN RESMI').toUpperCase() : 'PENILAIAN RESMI';
+  let judulKartu = 'KARTU TANDA PESERTA UJIAN RESMI';
+  if (jenisEvent === 'UTS') judulKartu = 'KARTU PESERTA PENILAIAN TENGAH SEMESTER (PTS / UTS)';
+  else if (jenisEvent === 'UAS') judulKartu = 'KARTU PESERTA PENILAIAN AKHIR SEMESTER (PAS / UAS)';
+  else if (jenisEvent === 'UJIAN SEKOLAH') judulKartu = 'KARTU PESERTA UJIAN SATUAN PENDIDIKAN (USP / KELULUSAN)';
+
+  doc.setFillColor(248, 250, 252);
+  doc.rect(14, 36, pageWidth - 28, 9, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.rect(14, 36, pageWidth - 28, 9);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(5, 150, 105);
+  doc.text(judulKartu, pageWidth / 2, 42, { align: 'center' });
+
+  // BIODATA SISWA (Kiri)
+  const leftX = 14;
+  const startY = 53;
+  const lineGap = 6.6;
+
+  doc.setFontSize(8.8);
+  doc.setTextColor(30, 41, 59);
+
+  const nomorPeserta = s.nomorPesertaCustom || `P-${(s.nisn || s.nik || '2026').toString().slice(-6)}-${(pkt ? pkt.kode : 'CBT').slice(-3)}`;
+  const labelAsalSekolah = s.sekolahAsal ? ` [Tamu: ${s.sekolahAsal}]` : '';
+
+  const rows = [
+    ['Nomor Peserta Ujian', nomorPeserta],
+    ['Nama Lengkap Peserta', ((s.nama || 'Peserta Didik') + labelAsalSekolah).toUpperCase()],
+    ['NISN / Asal Sekolah', `${s.nisn || '-'} · ${s.sekolahAsal || 'PKBM Aura Anugerah'}`],
+    ['Program & Jenjang', `${s.program || (pkt ? pkt.jenjang : 'Paket C')} (${s.kelas || (pkt ? pkt.kelas : 'Semua')})`],
+    ['Mata Uji / Modul', pkt ? pkt.judul : 'Evaluasi Belajar'],
+    ['Alokasi Waktu Ujian', `${pkt ? pkt.durasiMenit : 60} Menit (KKM: ${pkt ? pkt.kkm : 70})`],
+    ['Sesi / Ruang CBT', s.ruangCbt || 'Sesi 1 (Laboratorium Komputer / CBT Mobile)']
+  ];
+
+  rows.forEach((r, idx) => {
+    const currY = startY + (idx * lineGap);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(r[0], leftX, currY);
+    doc.text(':', leftX + 44, currY);
+
+    doc.setFont('helvetica', idx === 0 || idx === 1 || idx === 4 ? 'bold' : 'normal');
+    doc.setTextColor(idx === 0 ? 5 : 15, idx === 0 ? 150 : 23, idx === 0 ? 105 : 42);
+    // Potong teks jika terlalu panjang
+    const valText = doc.splitTextToSize(String(r[1]), 84);
+    doc.text(valText[0] || '', leftX + 47, currY);
+  });
+
+  // KOTAK FOTO PESERTA (Kanan Tengah)
+  const fotoX = 148;
+  const fotoY = 50;
+  const fotoW = 24;
+  const fotoH = 30;
+
+  doc.setDrawColor(148, 163, 184);
+  doc.setLineWidth(0.4);
+  doc.rect(fotoX, fotoY, fotoW, fotoH);
+  doc.setFillColor(241, 245, 249);
+  doc.rect(fotoX, fotoY, fotoW, fotoH, 'F');
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('FOTO', fotoX + (fotoW / 2), fotoY + 13, { align: 'center' });
+  doc.text('PESERTA', fotoX + (fotoW / 2), fotoY + 17, { align: 'center' });
+  doc.text('3 x 4', fotoX + (fotoW / 2), fotoY + 21, { align: 'center' });
+
+  // KOTAK TOKEN / QR SIMULASI
+  const qrX = 176;
+  doc.setDrawColor(5, 150, 105);
+  doc.setLineWidth(0.4);
+  doc.setFillColor(236, 253, 245);
+  doc.rect(qrX, fotoY, 20, fotoH, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(5, 150, 105);
+  doc.text('KODE UJIAN', qrX + 10, fotoY + 6, { align: 'center' });
+  doc.setFontSize(8.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text((pkt ? pkt.kode : 'CBT'), qrX + 10, fotoY + 12, { align: 'center' });
+
+  doc.setFontSize(6.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('TOKEN AKSES:', qrX + 10, fotoY + 20, { align: 'center' });
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(180, 83, 9);
+  doc.text((pkt ? pkt.token : 'BEESMART'), qrX + 10, fotoY + 26, { align: 'center' });
+
+  // TANDA TANGAN & PENGESAHAN
+  const ttdY = 86;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(51, 65, 85);
+
+  // TTD Peserta
+  doc.text('Tanda Tangan Peserta,', 148, ttdY);
+  doc.line(146, ttdY + 14, 172, ttdY + 14);
+  doc.setFontSize(7);
+  doc.text((s.nama || 'Peserta').slice(0, 15), 148, ttdY + 17);
+
+  // TTD Ketua Penyelenggara / Pengawas
+  doc.setFontSize(7.5);
+  doc.text('Sentani, ' + (pkt ? (pkt.tanggal || new Date().toLocaleDateString('id-ID')) : new Date().toLocaleDateString('id-ID')), 174, ttdY - 4);
+  doc.text('Ketua Panitia Ujian,', 174, ttdY);
+  doc.line(174, ttdY + 14, 198, ttdY + 14);
+  doc.setFontSize(7);
+  doc.text('TIM PENGUJI CBT', 174, ttdY + 17);
+
+  // TATA TERTIB PESERTA (Bagian Bawah)
+  const boxRulesY = 105;
+  doc.setDrawColor(226, 232, 240);
+  doc.setFillColor(248, 250, 252);
+  doc.rect(14, boxRulesY, pageWidth - 28, 32, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(5, 150, 105);
+  doc.text('TATA TERTIB & PETUNJUK PESERTA UJIAN:', 18, boxRulesY + 5);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.8);
+  doc.setTextColor(71, 85, 105);
+  const rules = [
+    '1. Kartu Peserta Ujian ini wajib dibawa saat pelaksanaan ujian tatap muka atau disimpan saat ujian daring mandiri.',
+    '2. Masuk ke ruang ujian CBT tepat waktu 15 menit sebelum waktu pengerjaan dimulai dan masukkan Token Ujian resmi di atas.',
+    '3. Dilarang membuka catatan, berdiskusi, atau berbuat curang selama sistem CBT Beesmart merekam pengerjaan ujian.',
+    '4. Bila terjadi kendala teknis/jaringan, segera lapor ke Pengawas/Tutor PKBM; waktu dan jawaban otomatis tersimpan aman di server.'
+  ];
+
+  rules.forEach((rule, rIdx) => {
+    doc.text(rule, 18, boxRulesY + 10 + (rIdx * 5));
+  });
+
+  // Footer Validasi
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text(`Dokumen resmi diterbitkan secara otomatis oleh Sistem CBT PKBM Aura Anugerah pada ${new Date().toLocaleString('id-ID')}`, 14, pageHeight - 7);
+}
+
+// Ekspos fungsi ke global window agar dapat dipanggil dari elemen HTML
+window.bukaModalPilihCetakKartuUjian = bukaModalPilihCetakKartuUjian;
+window.closeModalPilihCetakKartuUjian = closeModalPilihCetakKartuUjian;
+window.onPaketKartuUjianChange = onPaketKartuUjianChange;
+window.cetakKartuUjianPaketLangsung = cetakKartuUjianPaketLangsung;
+window.cetakKartuUjianSiswaLogin = cetakKartuUjianSiswaLogin;
+window.prosesCetakKartuUjianDariModal = prosesCetakKartuUjianDariModal;
+window.cetakKartuUjianResmi = cetakKartuUjianResmi;
+window.toggleAsalPesertaKartu = toggleAsalPesertaKartu;
+window.simpanPaketSoal = simpanPaketSoalBaru;
+

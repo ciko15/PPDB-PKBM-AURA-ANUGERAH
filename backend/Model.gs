@@ -54,12 +54,30 @@ function doLogin(username, password) {
         const last6Nik = sNik.length >= 6 ? sNik.slice(-6) : '';
 
         const matchUser = (cleanUser === sNik || (sNisn && cleanUser === sNisn));
-        const matchPass = (
-          cleanPass === sTgl ||
-          (ddmmyyyy && cleanPass === ddmmyyyy) ||
-          (yyyymmdd && cleanPass === yyyymmdd) ||
-          (last6Nik && cleanPass === last6Nik)
-        );
+        let matchPass = false;
+
+        // Cek apakah siswa sudah pernah membuat/mengubah password khusus di sheet Users
+        let customPass = '';
+        if (sheet && matchUser) {
+          const uData = sheet.getDataRange().getValues();
+          for (let u = 1; u < uData.length; u++) {
+            if (String(uData[u][0]).trim() === cleanUser) {
+              customPass = String(uData[u][1] || '').trim();
+              break;
+            }
+          }
+        }
+
+        if (customPass) {
+          matchPass = (cleanPass === customPass);
+        } else {
+          matchPass = (
+            cleanPass === sTgl ||
+            (ddmmyyyy && cleanPass === ddmmyyyy) ||
+            (yyyymmdd && cleanPass === yyyymmdd) ||
+            (last6Nik && cleanPass === last6Nik)
+          );
+        }
 
         if (matchUser && matchPass) {
           return {
@@ -266,7 +284,7 @@ function updateUser(username, newNama, newPassword) {
   if (!sheet) throw new Error("Database belum disetup.");
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === username) {
+    if (String(data[i][0]).trim() === String(username).trim()) {
       if (newPassword) {
         sheet.getRange(i + 1, 2).setValue(newPassword);
       }
@@ -276,6 +294,13 @@ function updateUser(username, newNama, newPassword) {
       return { message: "Data profil berhasil diperbarui." };
     }
   }
+
+  // Jika username belum ada di Users (misal akun siswa pertama kali ganti password dari tanggal lahir)
+  if (username && newPassword) {
+    sheet.appendRow([username, newPassword, newNama || username, 'Siswa']);
+    return { message: "Password akun siswa berhasil dibuat dan diperbarui." };
+  }
+
   throw new Error("User tidak ditemukan.");
 }
 
@@ -745,10 +770,169 @@ function setupDatabase() {
     sheetPush = ss.insertSheet('Push_Subscriptions');
     sheetPush.appendRow(['Endpoint', 'Subscription_JSON', 'Username', 'Nama', 'Role', 'Updated_At']);
   }
+
+  let sheetKegiatan = ss.getSheetByName('Kegiatan');
+  if (!sheetKegiatan) {
+    sheetKegiatan = ss.insertSheet('Kegiatan');
+    sheetKegiatan.appendRow(['ID', 'Judul', 'Tanggal', 'Kategori', 'Deskripsi', 'Gambar', 'Video', 'Author', 'AuthorRole', 'TargetDisplay', 'CreatedAt', 'UpdatedAt']);
+  }
+
+  let sheetPengaturan = ss.getSheetByName('Pengaturan');
+  if (!sheetPengaturan) {
+    sheetPengaturan = ss.insertSheet('Pengaturan');
+    sheetPengaturan.appendRow(['Key', 'Value_JSON', 'Updated_At']);
+  }
+
+  let sheetBuku = ss.getSheetByName('Buku');
+  if (!sheetBuku) {
+    sheetBuku = ss.insertSheet('Buku');
+    sheetBuku.appendRow(['ID', 'Nama', 'Jenjang', 'Kategori', 'TotalHal', 'MinProgress', 'File', 'Keterangan', 'Dibaca', 'Updated_At']);
+  }
+
+  let sheetHasilUjian = ss.getSheetByName('Hasil_Ujian');
+  if (!sheetHasilUjian) {
+    sheetHasilUjian = ss.insertSheet('Hasil_Ujian');
+    sheetHasilUjian.appendRow(['ID', 'Tanggal', 'SiswaID', 'NamaSiswa', 'Program', 'BukuJudul', 'Nilai', 'Predikat', 'Catatan', 'Penguji', 'Created_At']);
+  }
+
+  let sheetBankSoal = ss.getSheetByName('Bank_Soal');
+  if (!sheetBankSoal) {
+    sheetBankSoal = ss.insertSheet('Bank_Soal');
+    sheetBankSoal.appendRow(['ID', 'Kode', 'Token', 'Jenjang', 'Kelas', 'BukuID', 'Judul', 'DurasiMenit', 'KKM', 'JenisUjian', 'StatusUjian', 'ButuhKartu', 'Pembuat', 'Tanggal', 'SoalList_JSON', 'Updated_At']);
+  }
   
   const sheet1 = ss.getSheetByName('Sheet1');
   if (sheet1 && ss.getSheets().length > 1) {
     ss.deleteSheet(sheet1);
+  }
+
+  // Isi data awal langsung ke Spreadsheet jika sheet baru dibuat / kosong
+  populateInitialDataIfEmpty(ss);
+}
+
+function populateInitialDataIfEmpty(ss) {
+  if (!ss) ss = SpreadsheetApp.openById(SHEET_ID);
+
+  // 1. Sheet Kegiatan (Isi 3 Warta Kegiatan awal)
+  const sheetKegiatan = ss.getSheetByName('Kegiatan');
+  if (sheetKegiatan && sheetKegiatan.getLastRow() <= 1) {
+    const defaultKegiatan = [
+      ['keg-1', 'Orientasi Belajar & Pembagian Modul Pendidikan Kesetaraan 2026', '2026-10-20', 'Akademik', 'Kegiatan orientasi tatap muka perdana bagi warga belajar Paket A, B, dan C Aura Anugerah Sentani. Peserta diberikan penjelasan mengenai kurikulum merdeka kesetaraan serta tata cara asesmen modul daring dan tatap muka.', 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80', '', 'Admin Aura', 'Super Admin', 'both', new Date().toISOString(), new Date().toISOString()],
+      ['keg-2', 'Simulasi Ujian Berbasis Komputer (CBT) Modul IPA & IPS', '2026-10-22', 'Ujian / Evaluasi', 'Peserta didik Paket B dan Paket C melaksanakan tryout CBT online terpadu. Antusiasme tinggi terpancar dari para peserta dalam menjawab bank soal dan memahami materi pembelajaran digital.', 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80', '', 'Ibu Guru Maria', 'Guru', 'both', new Date().toISOString(), new Date().toISOString()],
+      ['keg-3', 'Pentas Seni & Gelar Karya Mandiri Warga Belajar PKBM Sentani', '2026-10-15', 'Pentas / Kreativitas', 'Pameran karya kerajinan tangan, olahan pangan lokal, serta pertunjukan seni budaya oleh siswa-siswi PKBM Aura Anugerah bersama anak-anak PAUD/TK Aura Anugerah dalam suasana yang hangat dan penuh kebersamaan.', 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80', '', 'Admin Aura', 'Admin', 'public', new Date().toISOString(), new Date().toISOString()]
+    ];
+    sheetKegiatan.getRange(2, 1, defaultKegiatan.length, defaultKegiatan[0].length).setValues(defaultKegiatan);
+  }
+
+  // 2. Sheet Pengaturan (Profil & Titik Peta TK Aura Anugerah)
+  const sheetPengaturan = ss.getSheetByName('Pengaturan');
+  if (sheetPengaturan && sheetPengaturan.getLastRow() <= 1) {
+    const defaultTK = {
+      nama: "TK Aura Anugerah",
+      jalan: "JL. Yahim KOMP.Buton Samping Hotel Citra Buana",
+      kecamatan: "Sentani",
+      kabupaten: "Kabupaten Jayapura, Papua (99352)",
+      deskripsi: "TK Aura Anugerah adalah Satuan Pendidikan Anak Usia Dini yang berfokus pada pembentukan karakter mandiri, nilai-nilai moralitas, kreativitas, dan kesiapan transisi PAUD ke Sekolah Dasar yang menyenangkan dan berkualitas.",
+      visi: "Terwujudnya anak usia dini yang berakhlak mulia, cerdas, ceria, mandiri, dan berbudaya lokal Papua.",
+      misi: "1. Menumbuhkan nilai budi pekerti dan pembiasaan ibadah.\n2. Mengembangkan kemampuan motorik, kognitif, dan bahasa melalui bermain bermakna.\n3. Membangun kolaborasi sinergis antara pendidik, orang tua, dan masyarakat.",
+      wa: "628123456789",
+      wa_nama: "Sekretariat TK Aura Anugerah",
+      telepon: "0812-4800-0000",
+      email: "tk.auraanugerah@gmail.com",
+      latlong: "-2.566100,140.505700",
+      target_display: "both"
+    };
+    sheetPengaturan.appendRow(['ppdb_tk_info', JSON.stringify(defaultTK), new Date().toISOString()]);
+  }
+
+  // 3. Sheet Bank Soal (Paket Ujian Awal & Butir Soal)
+  const sheetBank = ss.getSheetByName('Bank_Soal');
+  if (sheetBank && sheetBank.getLastRow() <= 1) {
+    const defaultBank = [
+      [
+        'PKT-001', 'CBT-PKC-01', 'AURA2026', 'Paket C', 'Semua Kelas', 'BK-001',
+        'Evaluasi Akhir Modul 1: Bahasa Indonesia Menggapai Cita-Cita',
+        15, 70, 'Evaluasi Modul', 'AKTIF', 0, 'Tutor Penguji PKBM', '2026-10-25',
+        JSON.stringify([
+          {
+            id: 1,
+            pertanyaan: 'Apakah tujuan utama dari pembelajaran modul kesetaraan Bahasa Indonesia Paket C ini?',
+            opsi: [
+              { k: 'A', t: 'Meningkatkan pemahaman konsep dasar dan kompetensi literasi terapan di masyarakat.' },
+              { k: 'B', t: 'Menghafal seluruh isi kamus besar bahasa Indonesia secara detail.' },
+              { k: 'C', t: 'Mempelajari bahasa asing selain bahasa Indonesia.' },
+              { k: 'D', t: 'Mengabaikan kaidah EYD dalam komunikasi resmi.' }
+            ],
+            kunci: 'A'
+          },
+          {
+            id: 2,
+            pertanyaan: 'Dalam teks eksposisi, bagian yang memuat sudut pandang penulis terhadap persoalan disebut:',
+            opsi: [
+              { k: 'A', t: 'Tesis (pernyataan pendapat).' },
+              { k: 'B', t: 'Argumentasi penjelas.' },
+              { k: 'C', t: 'Penegasan ulang / kesimpulan.' },
+              { k: 'D', t: 'Orientasi tokoh.' }
+            ],
+            kunci: 'A'
+          },
+          {
+            id: 3,
+            pertanyaan: 'Ciri utama kalimat efektif dalam penulisan laporan ilmiah adalah:',
+            opsi: [
+              { k: 'A', t: 'Lugas, jelas, dan tidak menimbulkan makna ganda.' },
+              { k: 'B', t: 'Menggunakan kiasan sastra yang sangat berbelit-belit.' },
+              { k: 'C', t: 'Kalimat sangat panjang tanpa tanda koma.' },
+              { k: 'D', t: 'Memadukan banyak bahasa daerah yang tidak umum.' }
+            ],
+            kunci: 'A'
+          }
+        ]),
+        new Date().toISOString()
+      ],
+      [
+        'PKT-002', 'CBT-PKB-02', 'BELAJAR26', 'Paket B', 'Semua Kelas', 'BK-004',
+        'Asesmen Modul IPA: Ekosistem & Pelestarian Lingkungan Hidup',
+        20, 75, 'Evaluasi Modul', 'AKTIF', 0, 'Tutor Sains PKBM', '2026-10-25',
+        JSON.stringify([
+          {
+            id: 1,
+            pertanyaan: 'Interaksi timbal balik antara makhluk hidup dengan komponen abiotik di habitatnya disebut:',
+            opsi: [
+              { k: 'A', t: 'Ekosistem.' },
+              { k: 'B', t: 'Simbiosis parasitisme.' },
+              { k: 'C', t: 'Rantai makanan tertutup.' },
+              { k: 'D', t: 'Komunitas biotik.' }
+            ],
+            kunci: 'A'
+          },
+          {
+            id: 2,
+            pertanyaan: 'Upaya pelestarian keanekaragaman hayati secara in-situ dapat dilakukan melalui:',
+            opsi: [
+              { k: 'A', t: 'Pendirian taman nasional dan cagar alam di habitat aslinya.' },
+              { k: 'B', t: 'Penangkaran hewan langka di kebun binatang kota.' },
+              { k: 'C', t: 'Penebangan hutan secara terbuka tanpa reboisasi.' },
+              { k: 'D', t: 'Pembangunan pusat perbelanjaan di wilayah hutan lindung.' }
+            ],
+            kunci: 'A'
+          },
+          {
+            id: 3,
+            pertanyaan: 'Perubahan wujud zat dari cair menjadi gas akibat peningkatan suhu dinamakan proses:',
+            opsi: [
+              { k: 'A', t: 'Penguapan (evaporasi).' },
+              { k: 'B', t: 'Penyubliman.' },
+              { k: 'C', t: 'Pembekuan.' },
+              { k: 'D', t: 'Pengembunan (kondensasi).' }
+            ],
+            kunci: 'A'
+          }
+        ]),
+        new Date().toISOString()
+      ]
+    ];
+    sheetBank.getRange(2, 1, defaultBank.length, defaultBank[0].length).setValues(defaultBank);
   }
 }
 
@@ -871,4 +1055,370 @@ function getNotificationLogs(limit) {
   }
   return list;
 }
+
+// =================== KEGIATAN & WARTA MANAGEMENT ===================
+function getKegiatanSheet() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName('Kegiatan');
+  if (!sheet) {
+    sheet = ss.insertSheet('Kegiatan');
+    sheet.appendRow(['ID', 'Judul', 'Tanggal', 'Kategori', 'Deskripsi', 'Gambar', 'Video', 'Author', 'AuthorRole', 'TargetDisplay', 'CreatedAt', 'UpdatedAt']);
+  }
+  return sheet;
+}
+
+function getKegiatanListFromDB() {
+  const sheet = getKegiatanSheet();
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  const list = [];
+  // Kembalikan dari urutan terbaru (dari baris bawah ke atas)
+  for (let i = data.length - 1; i >= 1; i--) {
+    const row = data[i];
+    if (!row[0]) continue;
+    let tglStr = '';
+    if (row[2] instanceof Date) {
+      tglStr = Utilities.formatDate(row[2], "GMT+7", "yyyy-MM-dd");
+    } else {
+      tglStr = String(row[2] || '').split('T')[0];
+    }
+
+    list.push({
+      id: String(row[0]),
+      judul: String(row[1] || ''),
+      tanggal: tglStr,
+      kategori: String(row[3] || 'Akademik'),
+      deskripsi: String(row[4] || ''),
+      gambar: String(row[5] || ''),
+      video: String(row[6] || ''),
+      author: String(row[7] || 'Petugas'),
+      authorRole: String(row[8] || 'Petugas'),
+      target_display: String(row[9] || 'both'),
+      createdAt: row[10] ? String(row[10]) : '',
+      updatedAt: row[11] ? String(row[11]) : ''
+    });
+  }
+  return list;
+}
+
+function saveKegiatanToDB(keg) {
+  if (!keg || !keg.judul) throw new Error("Judul kegiatan wajib diisi.");
+  const sheet = getKegiatanSheet();
+  const data = sheet.getDataRange().getValues();
+  const kegId = keg.id || ('keg-' + new Date().getTime());
+  const now = new Date().toISOString();
+
+  // Mode Edit / Update jika sudah ada ID
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(kegId).trim()) {
+      sheet.getRange(i + 1, 2).setValue(keg.judul || '');
+      sheet.getRange(i + 1, 3).setValue(keg.tanggal || '');
+      sheet.getRange(i + 1, 4).setValue(keg.kategori || 'Akademik');
+      sheet.getRange(i + 1, 5).setValue(keg.deskripsi || '');
+      sheet.getRange(i + 1, 6).setValue(keg.gambar || '');
+      sheet.getRange(i + 1, 7).setValue(keg.video || '');
+      if (keg.target_display) sheet.getRange(i + 1, 10).setValue(keg.target_display);
+      sheet.getRange(i + 1, 12).setValue(now);
+      return { id: kegId, message: "Kegiatan berhasil diperbarui." };
+    }
+  }
+
+  // Mode Tambah Baru
+  sheet.appendRow([
+    kegId,
+    keg.judul || '',
+    keg.tanggal || Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd"),
+    keg.kategori || 'Akademik',
+    keg.deskripsi || '',
+    keg.gambar || '',
+    keg.video || '',
+    keg.author || 'Petugas',
+    keg.authorRole || 'Petugas',
+    keg.target_display || 'both',
+    now,
+    now
+  ]);
+  return { id: kegId, message: "Kegiatan baru berhasil disimpan ke Database." };
+}
+
+function deleteKegiatanFromDB(id) {
+  if (!id) throw new Error("ID kegiatan diperlukan.");
+  const sheet = getKegiatanSheet();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(id).trim()) {
+      sheet.deleteRow(i + 1);
+      return { message: "Kegiatan berhasil dihapus dari Database." };
+    }
+  }
+  return { message: "Data kegiatan tidak ditemukan." };
+}
+
+// =================== PENGATURAN / TK INFO (MAPS & PROFIL) ===================
+function getPengaturanSheet() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName('Pengaturan');
+  if (!sheet) {
+    sheet = ss.insertSheet('Pengaturan');
+    sheet.appendRow(['Key', 'Value_JSON', 'Updated_At']);
+  }
+  return sheet;
+}
+
+function getAppSettingFromDB(key) {
+  const sheet = getPengaturanSheet();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(key).trim()) {
+      try {
+        return JSON.parse(data[i][1]);
+      } catch (e) {
+        return data[i][1];
+      }
+    }
+  }
+  return null;
+}
+
+function saveAppSettingToDB(key, val) {
+  if (!key) throw new Error("Key pengaturan diperlukan.");
+  const sheet = getPengaturanSheet();
+  const data = sheet.getDataRange().getValues();
+  const valJson = typeof val === 'object' ? JSON.stringify(val) : String(val);
+  const now = new Date().toISOString();
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(key).trim()) {
+      sheet.getRange(i + 1, 2).setValue(valJson);
+      sheet.getRange(i + 1, 3).setValue(now);
+      return { message: "Pengaturan berhasil diperbarui." };
+    }
+  }
+  sheet.appendRow([key, valJson, now]);
+  return { message: "Pengaturan berhasil disimpan." };
+}
+
+function getBukuSheet() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName('Buku');
+  if (!sheet) {
+    sheet = ss.insertSheet('Buku');
+    sheet.appendRow(['ID', 'Nama', 'Jenjang', 'Kategori', 'TotalHal', 'MinProgress', 'File', 'Keterangan', 'Dibaca', 'Detail_JSON', 'Updated_At']);
+  }
+  return sheet;
+}
+
+function getBukuListFromDB() {
+  const sheet = getBukuSheet();
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    let extra = {};
+    try {
+      if (row[9]) extra = JSON.parse(row[9]);
+    } catch (e) { }
+
+    list.push({
+      id: String(row[0]),
+      kode: extra.kode || ('BK-' + String(i).padStart(3, '0')),
+      nama: String(row[1] || ''),
+      mapel: extra.mapel || String(row[3] || ''),
+      jenjang: String(row[2] || ''),
+      kelas: extra.kelas || '',
+      modul: extra.modul || '1',
+      kategori: String(row[3] || ''),
+      totalHal: Number(row[4]) || 30,
+      minProgress: row[5] !== undefined && row[5] !== '' ? Number(row[5]) : 50,
+      dibaca: Number(row[8]) || 0,
+      rating: extra.rating || 4.5,
+      cover: extra.cover || `https://drive.google.com/thumbnail?id=${row[0]}&sz=w600`,
+      file: String(row[6] || ''),
+      download: extra.download || `https://drive.google.com/uc?export=download&id=${row[0]}`,
+      keterangan: String(row[7] || '')
+    });
+  }
+  return list;
+}
+
+function saveBukuBatchToDB(bukuArr) {
+  if (!Array.isArray(bukuArr)) throw new Error("Format buku harus berupa array.");
+  const sheet = getBukuSheet();
+  sheet.clear();
+  sheet.appendRow(['ID', 'Nama', 'Jenjang', 'Kategori', 'TotalHal', 'MinProgress', 'File', 'Keterangan', 'Dibaca', 'Detail_JSON', 'Updated_At']);
+  const now = new Date().toISOString();
+  
+  const rows = bukuArr.map((b, idx) => {
+    const extra = {
+      kode: b.kode || ('BK-' + String(idx + 1).padStart(3, '0')),
+      mapel: b.mapel || b.kategori || '',
+      kelas: b.kelas || '',
+      modul: b.modul || '1',
+      rating: b.rating || 4.5,
+      cover: b.cover || '',
+      download: b.download || ''
+    };
+
+    return [
+      b.id || '',
+      b.nama || '',
+      b.jenjang || '',
+      b.kategori || b.mapel || '',
+      b.totalHal || 30,
+      b.minProgress !== undefined ? b.minProgress : 50,
+      b.file || '',
+      b.keterangan || '',
+      b.dibaca || 0,
+      JSON.stringify(extra),
+      now
+    ];
+  });
+
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+  }
+  return { message: `${rows.length} buku pelajaran berhasil disinkronkan ke Database.` };
+}
+
+// =================== HASIL UJIAN RAPOR SISWA ===================
+function getHasilUjianSheet() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName('Hasil_Ujian');
+  if (!sheet) {
+    sheet = ss.insertSheet('Hasil_Ujian');
+    sheet.appendRow(['ID', 'Tanggal', 'SiswaID', 'NamaSiswa', 'Program', 'BukuJudul', 'Nilai', 'Predikat', 'Catatan', 'Penguji', 'Created_At']);
+  }
+  return sheet;
+}
+
+function getHasilUjianFromDB() {
+  const sheet = getHasilUjianSheet();
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  const list = [];
+  for (let i = data.length - 1; i >= 1; i--) {
+    const row = data[i];
+    if (!row[0]) continue;
+    list.push({
+      id: String(row[0]),
+      tanggal: String(row[1] || ''),
+      siswaId: String(row[2] || ''),
+      namaSiswa: String(row[3] || ''),
+      program: String(row[4] || ''),
+      bukuJudul: String(row[5] || ''),
+      nilai: Number(row[6]) || 0,
+      predikat: String(row[7] || ''),
+      catatan: String(row[8] || ''),
+      penguji: String(row[9] || '')
+    });
+  }
+  return list;
+}
+
+function saveHasilUjianToDB(ujian) {
+  if (!ujian) throw new Error("Data hasil ujian diperlukan.");
+  const sheet = getHasilUjianSheet();
+  const now = new Date().toISOString();
+  const id = ujian.id || ('EX-' + Date.now());
+
+  sheet.appendRow([
+    id,
+    ujian.tanggal || Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd"),
+    ujian.siswaId || '',
+    ujian.namaSiswa || '',
+    ujian.program || '',
+    ujian.bukuJudul || '',
+    ujian.nilai || 0,
+    ujian.predikat || '',
+    ujian.catatan || '',
+    ujian.penguji || '',
+    now
+  ]);
+  return { id: id, message: "Hasil ujian berhasil disimpan ke database." };
+}
+
+// =================== BANK SOAL & CBT ===================
+function getBankSoalSheet() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName('Bank_Soal');
+  if (!sheet) {
+    sheet = ss.insertSheet('Bank_Soal');
+    sheet.appendRow(['ID', 'Kode', 'Token', 'Jenjang', 'Kelas', 'BukuID', 'Judul', 'DurasiMenit', 'KKM', 'JenisUjian', 'StatusUjian', 'ButuhKartu', 'Pembuat', 'Tanggal', 'SoalList_JSON', 'Updated_At']);
+  }
+  return sheet;
+}
+
+function getBankSoalFromDB() {
+  const sheet = getBankSoalSheet();
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    let soals = [];
+    try {
+      soals = JSON.parse(row[14] || '[]');
+    } catch (e) { }
+
+    list.push({
+      id: String(row[0]),
+      kode: String(row[1] || ''),
+      token: String(row[2] || ''),
+      jenjang: String(row[3] || ''),
+      kelas: String(row[4] || ''),
+      bukuId: String(row[5] || ''),
+      judul: String(row[6] || ''),
+      durasiMenit: Number(row[7]) || 15,
+      kkm: Number(row[8]) || 70,
+      jenisUjian: String(row[9] || 'Evaluasi Modul'),
+      statusUjian: String(row[10] || 'AKTIF'),
+      butuhKartu: !!row[11],
+      pembuat: String(row[12] || ''),
+      tanggal: String(row[13] || ''),
+      soalList: soals
+    });
+  }
+  return list;
+}
+
+function saveBankSoalBatchToDB(paketArr) {
+  if (!Array.isArray(paketArr)) throw new Error("Format paket soal harus array.");
+  const sheet = getBankSoalSheet();
+  sheet.clear();
+  sheet.appendRow(['ID', 'Kode', 'Token', 'Jenjang', 'Kelas', 'BukuID', 'Judul', 'DurasiMenit', 'KKM', 'JenisUjian', 'StatusUjian', 'ButuhKartu', 'Pembuat', 'Tanggal', 'SoalList_JSON', 'Updated_At']);
+  const now = new Date().toISOString();
+
+  const rows = paketArr.map(p => [
+    p.id || '',
+    p.kode || '',
+    p.token || '',
+    p.jenjang || '',
+    p.kelas || '',
+    p.bukuId || '',
+    p.judul || '',
+    p.durasiMenit || 15,
+    p.kkm || 70,
+    p.jenisUjian || 'Evaluasi Modul',
+    p.statusUjian || 'AKTIF',
+    p.butuhKartu ? 1 : 0,
+    p.pembuat || '',
+    p.tanggal || '',
+    JSON.stringify(p.soalList || []),
+    now
+  ]);
+
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+  }
+  return { message: `${rows.length} paket bank soal berhasil disimpan ke Database.` };
+}
+
+
 

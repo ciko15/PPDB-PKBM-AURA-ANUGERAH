@@ -2,8 +2,15 @@
  * Entry point untuk Web App API
  */
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "API PPDB AI Active." }))
-      .setMimeType(ContentService.MimeType.JSON);
+  try {
+    setupDatabase();
+  } catch (err) {
+    Logger.log("doGet setup error: " + err.toString());
+  }
+  return ContentService.createTextOutput(JSON.stringify({ 
+    status: "success", 
+    message: "API PPDB AI Active & Database Initialized." 
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
@@ -16,7 +23,10 @@ function doPost(e) {
     
     let result = {};
     
-    if (action === "login") {
+    if (action === "initDatabase") {
+      setupDatabase();
+      result = { message: "Database dan seluruh data awal berhasil disiapkan di Spreadsheet." };
+    } else if (action === "login") {
       result = doLogin(params.username, params.password);
     } else if (action === "getUsers") {
       result = getUsers();
@@ -63,6 +73,28 @@ function doPost(e) {
       result = logNotificationActivity(params.title, params.body, params.url, params.targetRole, params.tag);
     } else if (action === "getNotificationLogs") {
       result = getNotificationLogs(params.limit);
+    } else if (action === "getKegiatan") {
+      result = getKegiatanListFromDB();
+    } else if (action === "saveKegiatan") {
+      result = saveKegiatanToDB(params.kegiatan);
+    } else if (action === "deleteKegiatan") {
+      result = deleteKegiatanFromDB(params.id);
+    } else if (action === "getAppSetting") {
+      result = getAppSettingFromDB(params.key);
+    } else if (action === "saveAppSetting") {
+      result = saveAppSettingToDB(params.key, params.val);
+    } else if (action === "getBuku") {
+      result = getBukuListFromDB();
+    } else if (action === "saveBukuBatch") {
+      result = saveBukuBatchToDB(params.bukuList);
+    } else if (action === "getHasilUjian") {
+      result = getHasilUjianFromDB();
+    } else if (action === "saveHasilUjian") {
+      result = saveHasilUjianToDB(params.ujian);
+    } else if (action === "getBankSoal") {
+      result = getBankSoalFromDB();
+    } else if (action === "saveBankSoalBatch") {
+      result = saveBankSoalBatchToDB(params.paketList);
     } else {
       result = { error: "Action not found" };
     }

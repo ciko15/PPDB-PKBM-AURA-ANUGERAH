@@ -83,6 +83,34 @@ async function getSheet(sheetTitle) {
           'Jenis Kelamin', 'Tahun Lulus', 'Nama Wali'
         ]
       });
+    } else if (sheetTitle === 'Kegiatan') {
+      sheet = await doc.addSheet({
+        title: 'Kegiatan',
+        headerValues: [
+          'ID', 'Judul', 'Tanggal', 'Kategori', 'Deskripsi', 'Gambar', 'Video',
+          'Author', 'AuthorRole', 'TargetDisplay', 'CreatedAt', 'UpdatedAt'
+        ]
+      });
+    } else if (sheetTitle === 'Pengaturan') {
+      sheet = await doc.addSheet({
+        title: 'Pengaturan',
+        headerValues: ['Key', 'Value_JSON', 'Updated_At']
+      });
+    } else if (sheetTitle === 'Buku') {
+      sheet = await doc.addSheet({
+        title: 'Buku',
+        headerValues: ['ID', 'Nama', 'Jenjang', 'Kategori', 'TotalHal', 'MinProgress', 'File', 'Keterangan', 'Dibaca', 'Updated_At']
+      });
+    } else if (sheetTitle === 'Hasil_Ujian') {
+      sheet = await doc.addSheet({
+        title: 'Hasil_Ujian',
+        headerValues: ['ID', 'Tanggal', 'SiswaID', 'NamaSiswa', 'Program', 'BukuJudul', 'Nilai', 'Predikat', 'Catatan', 'Penguji', 'Created_At']
+      });
+    } else if (sheetTitle === 'Bank_Soal') {
+      sheet = await doc.addSheet({
+        title: 'Bank_Soal',
+        headerValues: ['ID', 'Kode', 'Token', 'Jenjang', 'Kelas', 'BukuID', 'Judul', 'DurasiMenit', 'KKM', 'JenisUjian', 'StatusUjian', 'ButuhKartu', 'Pembuat', 'Tanggal', 'SoalList_JSON', 'Updated_At']
+      });
     } else {
       throw new Error(`Sheet ${sheetTitle} tidak ditemukan di Spreadsheet.`);
     }
@@ -691,6 +719,268 @@ async function handleAICheck(dataSiswa, jenisDokumen) {
   return { status: 'ERROR', koreksi: 'Gemini AI tidak mengembalikan respons yang valid.' };
 }
 
+// =================== KEGIATAN & WARTA HANDLERS ===================
+async function handleGetKegiatan() {
+  const sheet = await getSheet('Kegiatan');
+  const rows = await sheet.getRows();
+  const list = [];
+  
+  // Baca dari baris paling baru ke lama
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const raw = rows[i].toObject();
+    if (!raw['ID']) continue;
+    list.push({
+      id: raw['ID'],
+      judul: raw['Judul'] || '',
+      tanggal: String(raw['Tanggal'] || '').split('T')[0],
+      kategori: raw['Kategori'] || 'Akademik',
+      deskripsi: raw['Deskripsi'] || '',
+      gambar: raw['Gambar'] || '',
+      video: raw['Video'] || '',
+      author: raw['Author'] || 'Petugas',
+      authorRole: raw['AuthorRole'] || 'Petugas',
+      target_display: raw['TargetDisplay'] || 'both',
+      createdAt: raw['CreatedAt'] || '',
+      updatedAt: raw['UpdatedAt'] || ''
+    });
+  }
+  return list;
+}
+
+async function handleSaveKegiatan(keg) {
+  if (!keg || !keg.judul) throw new Error('Judul kegiatan wajib diisi.');
+  const sheet = await getSheet('Kegiatan');
+  const rows = await sheet.getRows();
+  const kegId = keg.id || ('keg-' + Date.now());
+  const now = new Date().toISOString();
+
+  let target = rows.find(r => String(r.get('ID') || '').trim() === String(kegId).trim());
+  if (target) {
+    if (keg.judul !== undefined) target.set('Judul', keg.judul);
+    if (keg.tanggal !== undefined) target.set('Tanggal', keg.tanggal);
+    if (keg.kategori !== undefined) target.set('Kategori', keg.kategori);
+    if (keg.deskripsi !== undefined) target.set('Deskripsi', keg.deskripsi);
+    if (keg.gambar !== undefined) target.set('Gambar', keg.gambar);
+    if (keg.video !== undefined) target.set('Video', keg.video);
+    if (keg.target_display !== undefined) target.set('TargetDisplay', keg.target_display);
+    target.set('UpdatedAt', now);
+    await target.save();
+    return { id: kegId, message: 'Kegiatan berhasil diperbarui.' };
+  }
+
+  await sheet.addRow({
+    'ID': kegId,
+    'Judul': keg.judul || '',
+    'Tanggal': keg.tanggal || now.split('T')[0],
+    'Kategori': keg.kategori || 'Akademik',
+    'Deskripsi': keg.deskripsi || '',
+    'Gambar': keg.gambar || '',
+    'Video': keg.video || '',
+    'Author': keg.author || 'Petugas',
+    'AuthorRole': keg.authorRole || 'Petugas',
+    'TargetDisplay': keg.target_display || 'both',
+    'CreatedAt': now,
+    'UpdatedAt': now
+  });
+  return { id: kegId, message: 'Kegiatan baru berhasil disimpan ke Database.' };
+}
+
+async function handleDeleteKegiatan(id) {
+  if (!id) throw new Error('ID kegiatan diperlukan.');
+  const sheet = await getSheet('Kegiatan');
+  const rows = await sheet.getRows();
+  const target = rows.find(r => String(r.get('ID') || '').trim() === String(id).trim());
+  if (target) {
+    await target.delete();
+    return { message: 'Kegiatan berhasil dihapus dari Database.' };
+  }
+  return { message: 'Data kegiatan tidak ditemukan.' };
+}
+
+// =================== PENGATURAN / TK INFO HANDLERS ===================
+async function handleGetAppSetting(key) {
+  const sheet = await getSheet('Pengaturan');
+  const rows = await sheet.getRows();
+  const row = rows.find(r => String(r.get('Key') || '').trim() === String(key).trim());
+  if (row) {
+    try {
+      return JSON.parse(row.get('Value_JSON'));
+    } catch (e) {
+      return row.get('Value_JSON');
+    }
+  }
+  return null;
+}
+
+async function handleSaveAppSetting(key, val) {
+  if (!key) throw new Error('Key pengaturan diperlukan.');
+  const sheet = await getSheet('Pengaturan');
+  const rows = await sheet.getRows();
+  const now = new Date().toISOString();
+  const valJson = typeof val === 'object' ? JSON.stringify(val) : String(val);
+
+  const row = rows.find(r => String(r.get('Key') || '').trim() === String(key).trim());
+  if (row) {
+    row.set('Value_JSON', valJson);
+    row.set('Updated_At', now);
+    await row.save();
+    return { message: 'Pengaturan berhasil diperbarui.' };
+  }
+
+  await sheet.addRow({
+    'Key': key,
+    'Value_JSON': valJson,
+    'Updated_At': now
+  });
+  return { message: 'Pengaturan berhasil disimpan.' };
+}
+
+// =================== BUKU PELAJARAN HANDLERS ===================
+async function handleGetBuku() {
+  const sheet = await getSheet('Buku');
+  const rows = await sheet.getRows();
+  return rows.map(r => {
+    const raw = r.toObject();
+    return {
+      id: raw['ID'],
+      nama: raw['Nama'] || '',
+      jenjang: raw['Jenjang'] || '',
+      kategori: raw['Kategori'] || '',
+      totalHal: parseInt(raw['TotalHal'] || 30, 10),
+      minProgress: raw['MinProgress'] !== undefined && raw['MinProgress'] !== '' ? parseInt(raw['MinProgress'], 10) : 50,
+      file: raw['File'] || '',
+      keterangan: raw['Keterangan'] || '',
+      dibaca: parseInt(raw['Dibaca'] || 0, 10)
+    };
+  }).filter(b => b.id);
+}
+
+async function handleSaveBukuBatch(bukuList) {
+  if (!Array.isArray(bukuList)) throw new Error('Daftar buku harus berupa array.');
+  const sheet = await getSheet('Buku');
+  await sheet.clearRows();
+  const now = new Date().toISOString();
+
+  for (const b of bukuList) {
+    await sheet.addRow({
+      'ID': b.id || '',
+      'Nama': b.nama || '',
+      'Jenjang': b.jenjang || '',
+      'Kategori': b.kategori || '',
+      'TotalHal': b.totalHal || 30,
+      'MinProgress': b.minProgress !== undefined ? b.minProgress : 50,
+      'File': b.file || '',
+      'Keterangan': b.keterangan || '',
+      'Dibaca': b.dibaca || 0,
+      'Updated_At': now
+    });
+  }
+  return { message: `${bukuList.length} buku berhasil disinkronkan.` };
+}
+
+// =================== HASIL UJIAN HANDLERS ===================
+async function handleGetHasilUjian() {
+  const sheet = await getSheet('Hasil_Ujian');
+  const rows = await sheet.getRows();
+  const list = [];
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const raw = rows[i].toObject();
+    if (!raw['ID']) continue;
+    list.push({
+      id: raw['ID'],
+      tanggal: raw['Tanggal'] || '',
+      siswaId: raw['SiswaID'] || '',
+      namaSiswa: raw['NamaSiswa'] || '',
+      program: raw['Program'] || '',
+      bukuJudul: raw['BukuJudul'] || '',
+      nilai: parseInt(raw['Nilai'] || 0, 10),
+      predikat: raw['Predikat'] || '',
+      catatan: raw['Catatan'] || '',
+      penguji: raw['Penguji'] || ''
+    });
+  }
+  return list;
+}
+
+async function handleSaveHasilUjian(ujian) {
+  if (!ujian) throw new Error('Data ujian diperlukan.');
+  const sheet = await getSheet('Hasil_Ujian');
+  const id = ujian.id || ('EX-' + Date.now());
+  const now = new Date().toISOString();
+
+  await sheet.addRow({
+    'ID': id,
+    'Tanggal': ujian.tanggal || now.split('T')[0],
+    'SiswaID': ujian.siswaId || '',
+    'NamaSiswa': ujian.namaSiswa || '',
+    'Program': ujian.program || '',
+    'BukuJudul': ujian.bukuJudul || '',
+    'Nilai': ujian.nilai || 0,
+    'Predikat': ujian.predikat || '',
+    'Catatan': ujian.catatan || '',
+    'Penguji': ujian.penguji || '',
+    'Created_At': now
+  });
+  return { id: id, message: 'Hasil ujian berhasil disimpan ke database.' };
+}
+
+// =================== BANK SOAL CBT HANDLERS ===================
+async function handleGetBankSoal() {
+  const sheet = await getSheet('Bank_Soal');
+  const rows = await sheet.getRows();
+  return rows.map(r => {
+    const raw = r.toObject();
+    let soals = [];
+    try { soals = JSON.parse(raw['SoalList_JSON'] || '[]'); } catch (e) { }
+    return {
+      id: raw['ID'],
+      kode: raw['Kode'] || '',
+      token: raw['Token'] || '',
+      jenjang: raw['Jenjang'] || '',
+      kelas: raw['Kelas'] || '',
+      bukuId: raw['BukuID'] || '',
+      judul: raw['Judul'] || '',
+      durasiMenit: parseInt(raw['DurasiMenit'] || 15, 10),
+      kkm: parseInt(raw['KKM'] || 70, 10),
+      jenisUjian: raw['JenisUjian'] || 'Evaluasi Modul',
+      statusUjian: raw['StatusUjian'] || 'AKTIF',
+      butuhKartu: raw['ButuhKartu'] === '1' || raw['ButuhKartu'] === true,
+      pembuat: raw['Pembuat'] || '',
+      tanggal: raw['Tanggal'] || '',
+      soalList: soals
+    };
+  }).filter(p => p.id);
+}
+
+async function handleSaveBankSoalBatch(paketList) {
+  if (!Array.isArray(paketList)) throw new Error('Daftar bank soal harus berupa array.');
+  const sheet = await getSheet('Bank_Soal');
+  await sheet.clearRows();
+  const now = new Date().toISOString();
+
+  for (const p of paketList) {
+    await sheet.addRow({
+      'ID': p.id || '',
+      'Kode': p.kode || '',
+      'Token': p.token || '',
+      'Jenjang': p.jenjang || '',
+      'Kelas': p.kelas || '',
+      'BukuID': p.bukuId || '',
+      'Judul': p.judul || '',
+      'DurasiMenit': p.durasiMenit || 15,
+      'KKM': p.kkm || 70,
+      'JenisUjian': p.jenisUjian || 'Evaluasi Modul',
+      'StatusUjian': p.statusUjian || 'AKTIF',
+      'ButuhKartu': p.butuhKartu ? '1' : '0',
+      'Pembuat': p.pembuat || '',
+      'Tanggal': p.tanggal || '',
+      'SoalList_JSON': JSON.stringify(p.soalList || []),
+      'Updated_At': now
+    });
+  }
+  return { message: `${paketList.length} paket bank soal berhasil disimpan.` };
+}
+
 // =================== MAIN API ROUTE ===================
 
 app.post('/api', async (req, res) => {
@@ -737,6 +1027,39 @@ app.post('/api', async (req, res) => {
         break;
       case 'deleteSiswa':
         result = await handleDeleteSiswa(req.body.idSiswa);
+        break;
+      case 'getKegiatan':
+        result = await handleGetKegiatan();
+        break;
+      case 'saveKegiatan':
+        result = await handleSaveKegiatan(req.body.kegiatan);
+        break;
+      case 'deleteKegiatan':
+        result = await handleDeleteKegiatan(req.body.id);
+        break;
+      case 'getAppSetting':
+        result = await handleGetAppSetting(req.body.key);
+        break;
+      case 'saveAppSetting':
+        result = await handleSaveAppSetting(req.body.key, req.body.val);
+        break;
+      case 'getBuku':
+        result = await handleGetBuku();
+        break;
+      case 'saveBukuBatch':
+        result = await handleSaveBukuBatch(req.body.bukuList);
+        break;
+      case 'getHasilUjian':
+        result = await handleGetHasilUjian();
+        break;
+      case 'saveHasilUjian':
+        result = await handleSaveHasilUjian(req.body.ujian);
+        break;
+      case 'getBankSoal':
+        result = await handleGetBankSoal();
+        break;
+      case 'saveBankSoalBatch':
+        result = await handleSaveBankSoalBatch(req.body.paketList);
         break;
       default:
         return res.status(400).json({ success: false, error: 'Action not found' });

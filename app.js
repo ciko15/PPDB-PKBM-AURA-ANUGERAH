@@ -418,6 +418,7 @@ function loadMoreMenuSection() {
 
   const btnUsers = document.getElementById('more-menu-admin-users');
   const btnApi = document.getElementById('more-menu-admin-api');
+  const btnKeamanan = document.getElementById('more-menu-admin-keamanan');
   if (btnUsers) {
     if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
       btnUsers.classList.remove('hidden');
@@ -430,6 +431,13 @@ function loadMoreMenuSection() {
       btnApi.classList.remove('hidden');
     } else {
       btnApi.classList.add('hidden');
+    }
+  }
+  if (btnKeamanan) {
+    if (currentUser && currentUser.role === 'Super Admin') {
+      btnKeamanan.classList.remove('hidden');
+    } else {
+      btnKeamanan.classList.add('hidden');
     }
   }
 }
@@ -869,8 +877,15 @@ async function callAPI(payload) {
       throw new Error("Respon server bukan format JSON yang valid");
     }
     if (!result.success) {
-      console.error("API response error detail:", result);
-      throw new Error(result.error || (typeof result.data === 'object' && result.data && result.data.error) || "Gagal memanggil API");
+      console.error("API response error detail:", {
+        action: payload && payload.action,
+        error: result.error,
+        message: result.message,
+        data: result.data,
+        fullResponse: result
+      });
+      const errorMsg = result.error || (typeof result.data === 'object' && result.data && (result.data.error || result.data.message)) || result.message || "Gagal memanggil API";
+      throw new Error(errorMsg);
     }
     return result.data;
   }
@@ -906,6 +921,7 @@ async function callAPI(payload) {
 function handleClientRouting() {
   const path = window.location.pathname.toLowerCase();
   const session = localStorage.getItem('ppdb_session');
+  loadCaptchaSetting();
 
   if (session) {
     currentUser = JSON.parse(session);
@@ -928,7 +944,7 @@ function handleClientRouting() {
     if (modalLogin) {
       modalLogin.classList.remove('hidden');
       setTimeout(() => {
-        generateCaptchaLogin();
+        applyCaptchaVisibility();
         try {
           const remUser = localStorage.getItem('ppdb_remember_username');
           if (remUser && inputLoginUser) {
@@ -954,10 +970,116 @@ function handleClientRouting() {
   renderLandingTK();
 }
 
+// ======================= PENGATURAN KEAMANAN & CAPTCHA (SUPER ADMIN) =======================
+let isCaptchaEnabled = true;
+
+function loadCaptchaSetting() {
+  try {
+    const saved = localStorage.getItem('pkbm_enable_captcha');
+    if (saved !== null) {
+      isCaptchaEnabled = (saved === 'true');
+    } else {
+      isCaptchaEnabled = true;
+    }
+  } catch (err) {
+    isCaptchaEnabled = true;
+  }
+  applyCaptchaVisibility();
+}
+
+function applyCaptchaVisibility() {
+  const grp = document.getElementById('login-captcha-group');
+  const input = document.getElementById('login-captcha-input');
+  const sw = document.getElementById('switch-enable-captcha');
+  const labelToggle = document.getElementById('label-toggle-captcha');
+  const badgeStatus = document.getElementById('badge-status-captcha-setting');
+  const boxPreview = document.getElementById('preview-status-captcha-box');
+
+  if (grp) {
+    if (isCaptchaEnabled) {
+      grp.classList.remove('hidden');
+      if (input) input.required = true;
+      generateCaptchaLogin();
+    } else {
+      grp.classList.add('hidden');
+      if (input) {
+        input.required = false;
+        input.value = '';
+      }
+    }
+  }
+
+  // Perbarui UI di tab Pengaturan Keamanan Super Admin
+  if (sw) sw.checked = isCaptchaEnabled;
+  if (labelToggle) {
+    labelToggle.textContent = isCaptchaEnabled ? 'Aktif' : 'Nonaktif';
+    labelToggle.style.color = isCaptchaEnabled ? '#059669' : '#dc2626';
+  }
+  if (badgeStatus) {
+    badgeStatus.textContent = isCaptchaEnabled ? '🟢 AKTIF' : '🔴 NONAKTIF';
+    badgeStatus.style.background = isCaptchaEnabled ? '#dcfce7' : '#fee2e2';
+    badgeStatus.style.color = isCaptchaEnabled ? '#15803d' : '#b91c1c';
+  }
+  if (boxPreview) {
+    if (isCaptchaEnabled) {
+      boxPreview.style.background = 'rgba(16, 185, 129, 0.1)';
+      boxPreview.style.color = '#047857';
+      boxPreview.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+      boxPreview.innerHTML = `
+        <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i>
+        <span>Captcha aktif: Kolom kode keamanan ditampilkan di form login dan wajib diisi sebelum klik Masuk.</span>
+      `;
+    } else {
+      boxPreview.style.background = 'rgba(239, 68, 68, 0.08)';
+      boxPreview.style.color = '#dc2626';
+      boxPreview.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+      boxPreview.innerHTML = `
+        <i data-lucide="alert-triangle" style="width: 18px; height: 18px;"></i>
+        <span>Captcha dinonaktifkan: Kolom captcha disembunyikan. Pengguna cukup memasukkan Username & Password langsung.</span>
+      `;
+    }
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  }
+}
+
+function toggleCaptchaSetting(enabled) {
+  if (typeof currentUser !== 'undefined' && currentUser && currentUser.role !== 'Super Admin') {
+    Swal.fire('Akses Ditolak', 'Hanya akun Super Admin yang berhak mengubah pengaturan keamanan Captcha.', 'error');
+    applyCaptchaVisibility();
+    return;
+  }
+
+  isCaptchaEnabled = !!enabled;
+  try {
+    localStorage.setItem('pkbm_enable_captcha', isCaptchaEnabled ? 'true' : 'false');
+  } catch (err) {
+    console.warn('Gagal menyimpan status captcha ke localStorage:', err);
+  }
+
+  applyCaptchaVisibility();
+
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: isCaptchaEnabled ? 'success' : 'info',
+      title: isCaptchaEnabled ? 'Verifikasi Captcha Diaktifkan' : 'Verifikasi Captcha Dinonaktifkan',
+      text: isCaptchaEnabled ? 'Form login sekarang mewajibkan kode keamanan captcha.' : 'Form login sekarang bebas captcha.',
+      showConfirmButton: false,
+      timer: 3000
+    });
+  }
+}
+window.toggleCaptchaSetting = toggleCaptchaSetting;
+window.applyCaptchaVisibility = applyCaptchaVisibility;
+
 // ======================= CAPTCHA LOGIN (PKBM AURA ANUGERAH) =======================
 let currentCaptchaCode = '';
 
 function generateCaptchaLogin() {
+  if (!isCaptchaEnabled) return;
   const canvas = document.getElementById('login-captcha-canvas');
   if (!canvas) return;
 
@@ -1126,15 +1248,17 @@ async function handleLogin(e) {
     return;
   }
 
-  // 2. Validasi Captcha Sisi Klien
-  if (!userCaptcha || userCaptcha !== currentCaptchaCode) {
-    showLoginError("Kode keamanan tidak sesuai. Silakan coba lagi.");
-    if (captchaInput) {
-      captchaInput.value = '';
-      captchaInput.focus();
+  // 2. Validasi Captcha Sisi Klien (Hanya jika fitur Captcha diaktifkan Super Admin)
+  if (isCaptchaEnabled) {
+    if (!userCaptcha || userCaptcha !== currentCaptchaCode) {
+      showLoginError("Kode keamanan tidak sesuai. Silakan coba lagi.");
+      if (captchaInput) {
+        captchaInput.value = '';
+        captchaInput.focus();
+      }
+      generateCaptchaLogin();
+      return;
     }
-    generateCaptchaLogin();
-    return;
   }
 
   // Saat submit berhasil validasi: tombol nonaktif dan teks berubah "Memproses…" (cegah klik ganda)
@@ -1207,7 +1331,9 @@ function handleLogout() {
       // Otomatis buka form login
       if (modalLogin) {
         modalLogin.classList.remove('hidden');
-        setTimeout(generateCaptchaLogin, 60);
+        setTimeout(() => {
+          applyCaptchaVisibility();
+        }, 60);
       }
     }
   });
@@ -1290,22 +1416,26 @@ function showDashboard() {
     if (mobileTabList) mobileTabList.style.display = '';
     if (mobileSheetValidasi) mobileSheetValidasi.style.display = '';
 
+    const menuKeamanan = document.getElementById('menu-pengaturan-keamanan');
     if (currentUser.role === 'Super Admin') {
       if (dropPengaturan) dropPengaturan.classList.remove('hidden');
       menuUsers.classList.remove('hidden');
       if (menuApiKeys) menuApiKeys.classList.remove('hidden');
+      if (menuKeamanan) menuKeamanan.classList.remove('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = '';
       if (mobileSheetApi) mobileSheetApi.style.display = '';
     } else if (currentUser.role === 'Admin') {
       if (dropPengaturan) dropPengaturan.classList.remove('hidden');
       menuUsers.classList.remove('hidden');
       if (menuApiKeys) menuApiKeys.classList.add('hidden');
+      if (menuKeamanan) menuKeamanan.classList.add('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = '';
       if (mobileSheetApi) mobileSheetApi.style.display = 'none';
     } else {
       if (dropPengaturan) dropPengaturan.classList.add('hidden');
       menuUsers.classList.add('hidden');
       if (menuApiKeys) menuApiKeys.classList.add('hidden');
+      if (menuKeamanan) menuKeamanan.classList.add('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = 'none';
       if (mobileSheetApi) mobileSheetApi.style.display = 'none';
     }
@@ -3310,66 +3440,155 @@ async function deleteSiswaData(id) {
 // ======================= KELOLA PENGGUNA & PROFIL =======================
 function showUserProfileModal() {
   if (!currentUser) return;
+  const isSiswa = currentUser.role === 'Siswa';
+  const siswa = currentUser.dataSiswa || {};
+  const roleColor = currentUser.role === 'Super Admin' ? '#db2777' : currentUser.role === 'Admin' ? '#0284c7' : currentUser.role === 'Guru' ? '#b45309' : '#059669';
+  const roleBg = currentUser.role === 'Super Admin' ? 'rgba(219, 39, 119, 0.12)' : currentUser.role === 'Admin' ? 'rgba(2, 132, 199, 0.12)' : currentUser.role === 'Guru' ? 'rgba(180, 83, 9, 0.12)' : 'rgba(5, 150, 105, 0.12)';
+
+  const avatarUrl = (siswa && siswa.foto) ? siswa.foto : `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=059669&color=fff&size=120`;
+
   const htmlContent = `
-    <div style="text-align: left; font-size: 0.9rem; line-height: 1.5;">
-      <div style="text-align: center; margin-bottom: 1.5rem;">
-        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=0284c7&color=fff&size=100" style="border-radius: 50%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <h3 style="margin-top: 10px; margin-bottom: 2px;">${currentUser.nama}</h3>
-        <p style="color: #64748b; margin: 0;">${currentUser.role}</p>
+    <div style="text-align: left; font-size: 13.5px; line-height: 1.5; color: var(--text-color);">
+      <!-- Header Banner Profil Modern -->
+      <div style="background: linear-gradient(135deg, rgba(5, 150, 105, 0.12), rgba(16, 185, 129, 0.05)); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px; margin-bottom: 18px; display: flex; align-items: center; gap: 16px;">
+        <div style="position: relative; width: 68px; height: 68px; flex-shrink: 0;">
+          <img src="${avatarUrl}" style="width: 68px; height: 68px; border-radius: 50%; object-fit: cover; border: 2.5px solid var(--primary-color); box-shadow: 0 4px 10px rgba(0,0,0,0.12);">
+          <span style="position: absolute; bottom: 0; right: 0; width: 18px; height: 18px; background: #10b981; border: 2.5px solid var(--surface-color, #fff); border-radius: 50%;" title="Status Aktif"></span>
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${currentUser.nama}</h3>
+            <span class="badge" style="background: ${roleBg}; color: ${roleColor}; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 99px;">
+              ${currentUser.role}
+            </span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>ID / Username:</span>
+            <code style="background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-weight: 700; color: var(--primary-color); font-size: 12px;">${currentUser.username}</code>
+          </div>
+          ${isSiswa ? `<div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">Jenjang: <b>${siswa.program || 'Paket C'}</b> (${siswa.kelas || 'Kelas X'})</div>` : ''}
+        </div>
       </div>
+
+      <!-- Form Rincian & Password -->
       <form id="form-update-profile" onsubmit="event.preventDefault();">
-        <div class="form-group">
-          <label>Username (Tidak dapat diubah)</label>
-          <input type="text" value="${currentUser.username}" readonly style="background: #f1f5f9; cursor: not-allowed; border: 1px solid #cbd5e1;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label style="font-weight: 600; font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Username / NIK</label>
+            <input type="text" value="${currentUser.username}" readonly style="width: 100%; height: 38px; background: var(--surface-2); color: var(--text-muted); cursor: not-allowed; border: 1px solid var(--border-color); border-radius: 8px; padding: 0 10px; font-size: 13px; font-weight: 600; box-sizing: border-box;">
+          </div>
+          <div class="form-group">
+            <label style="font-weight: 600; font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Hak Akses Sistem</label>
+            <input type="text" value="${currentUser.role}" readonly style="width: 100%; height: 38px; background: var(--surface-2); color: var(--text-muted); cursor: not-allowed; border: 1px solid var(--border-color); border-radius: 8px; padding: 0 10px; font-size: 13px; font-weight: 600; box-sizing: border-box;">
+          </div>
         </div>
-        <div class="form-group" style="margin-top: 1rem;">
-          <label>Role Akses (Tidak dapat diubah)</label>
-          <input type="text" value="${currentUser.role}" readonly style="background: #f1f5f9; cursor: not-allowed; border: 1px solid #cbd5e1;">
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="font-weight: 600; font-size: 12.5px; color: var(--text-color); display: block; margin-bottom: 5px;">Nama Lengkap Pengguna <span style="color:red">*</span></label>
+          <input type="text" id="prof-nama" value="${currentUser.nama}" required class="form-control" style="width: 100%; height: 40px; background: var(--surface-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 0 12px; font-size: 13.5px; box-sizing: border-box;">
         </div>
-        <div class="form-group" style="margin-top: 1rem;">
-          <label>Nama Lengkap</label>
-          <input type="text" id="prof-nama" value="${currentUser.nama}" required style="border: 1px solid #cbd5e1;">
-        </div>
-        <div class="form-group" style="margin-top: 1rem;">
-          <label>Password Baru (Opsional)</label>
-          <input type="password" id="prof-pass" placeholder="Ketik password baru jika ingin mengubah" style="border: 1px solid #cbd5e1;">
+
+        <!-- Box Keamanan Kata Sandi -->
+        <div style="background: var(--surface-2); border: 1.5px solid var(--border-color); border-radius: 12px; padding: 14px 16px; margin-top: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <label style="font-weight: 700; font-size: 13px; color: var(--text-color); display: flex; align-items: center; gap: 6px; margin: 0;">
+              <i data-lucide="key-round" style="width: 15px; height: 15px; color: var(--primary-color);"></i>
+              Ubah Password Akun
+            </label>
+            <span style="font-size: 11px; color: var(--text-muted);">Opsional</span>
+          </div>
+          <p style="margin: 0 0 10px 0; font-size: 11.5px; color: var(--text-muted); line-height: 1.45;">
+            ${isSiswa ? 'Bagi Peserta Didik: Anda bebas mengganti password dari tanggal lahir ke kata sandi rahasia pribadi yang mudah diingat.' : 'Ketik password baru jika ingin memperbarui kredensial masuk akun Anda.'}
+          </p>
+
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="password" id="prof-pass" placeholder="Ketik kata sandi baru (minimal 6 karakter)" class="form-control"
+              style="width: 100%; height: 40px; background: var(--surface-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 0 42px 0 12px; font-size: 13.5px; box-sizing: border-box;">
+            <button type="button" onclick="toggleModalPasswordVisibility('prof-pass', this)" style="position: absolute; right: 8px; background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center;" title="Lihat password">
+              <i data-lucide="eye" style="width: 17px; height: 17px;"></i>
+            </button>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+            <small style="color: var(--text-muted); font-size: 11px;">Minimal 6 karakter kombinasi huruf / angka.</small>
+            <small id="prof-pass-strength" style="font-size: 11px; font-weight: 700; color: #64748b;"></small>
+          </div>
         </div>
       </form>
     </div>
   `;
 
   Swal.fire({
-    title: 'Profil Pengguna',
+    title: 'Profil Akun Pengguna',
     html: htmlContent,
     showCancelButton: true,
-    confirmButtonText: 'Simpan Perubahan',
+    confirmButtonText: '<i data-lucide="save" style="width: 15px; height: 15px; display: inline-block; vertical-align: middle; margin-right: 4px;"></i> Simpan Perubahan',
     cancelButtonText: 'Batal',
-    confirmButtonColor: '#10b981',
+    confirmButtonColor: '#059669',
+    cancelButtonColor: '#64748b',
+    width: '480px',
+    didOpen: () => {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+      const passInp = document.getElementById('prof-pass');
+      const passStrength = document.getElementById('prof-pass-strength');
+      if (passInp && passStrength) {
+        passInp.addEventListener('input', () => {
+          const val = passInp.value;
+          if (!val) {
+            passStrength.textContent = '';
+          } else if (val.length < 6) {
+            passStrength.textContent = 'Kurang panjang (min. 6)';
+            passStrength.style.color = '#ef4444';
+          } else if (val.length >= 8 && /[0-9]/.test(val) && /[a-zA-Z]/.test(val)) {
+            passStrength.textContent = 'Sangat Kuat ✓';
+            passStrength.style.color = '#10b981';
+          } else {
+            passStrength.textContent = 'Cukup Baik';
+            passStrength.style.color = '#f59e0b';
+          }
+        });
+      }
+    },
     preConfirm: async () => {
-      const newNama = document.getElementById('prof-nama').value;
-      const newPass = document.getElementById('prof-pass').value;
+      const newNama = document.getElementById('prof-nama')?.value.trim();
+      const newPass = document.getElementById('prof-pass')?.value.trim();
 
       if (!newNama) {
         Swal.showValidationMessage('Nama lengkap tidak boleh kosong');
         return false;
       }
+      if (newPass && newPass.length < 6) {
+        Swal.showValidationMessage('Password baru minimal 6 karakter.');
+        return false;
+      }
 
       showLoader("Menyimpan Profil...");
       try {
-        await callAPI({ action: "updateUser", username: currentUser.username, nama: newNama, password: newPass });
+        await callAPI({ action: "updateUser", username: currentUser.username, nama: newNama, password: newPass || undefined });
+        
         // Update local session
         currentUser.nama = newNama;
         localStorage.setItem('ppdb_session', JSON.stringify(currentUser));
-        // Update UI
+
+        // Update UI Nama & Avatar
         if (activeUserName) activeUserName.textContent = currentUser.nama;
         if (activeUserAvatar) activeUserAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=0284c7&color=fff`;
         const whoNameEl = document.getElementById('who-user-name');
         if (whoNameEl) whoNameEl.textContent = currentUser.nama;
+        const mobileNameEl = document.getElementById('menu-section-user-name');
+        if (mobileNameEl) mobileNameEl.innerHTML = `${currentUser.nama} <i data-lucide="edit-2" style="width: 14px; height: 14px; color: var(--primary-color); opacity: 0.8;"></i>`;
+        
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+          window.lucide.createIcons();
+        }
+
         hideLoader();
         return true;
       } catch (err) {
         hideLoader();
-        Swal.showValidationMessage(`Error: ${err.message}`);
+        Swal.showValidationMessage(`Gagal memperbarui profil: ${err.message}`);
         return false;
       }
     }
@@ -3379,13 +3598,31 @@ function showUserProfileModal() {
         toast: true,
         position: 'top-end',
         icon: 'success',
-        title: 'Profil berhasil diperbarui',
+        title: 'Profil Berhasil Diperbarui!',
+        text: 'Data profil dan kata sandi baru Anda telah aktif.',
         showConfirmButton: false,
-        timer: 3000
+        timer: 3500
       });
     }
   });
 }
+
+function toggleModalPasswordVisibility(inputId, btnEl) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btnEl.innerHTML = '<i data-lucide="eye-off" style="width: 17px; height: 17px; color: var(--primary-color);"></i>';
+  } else {
+    inp.type = 'password';
+    btnEl.innerHTML = '<i data-lucide="eye" style="width: 17px; height: 17px; color: var(--text-muted);"></i>';
+  }
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+window.toggleModalPasswordVisibility = toggleModalPasswordVisibility;
+window.showUserProfileModal = showUserProfileModal;
 
 let allUsersDataList = [];
 let currentUserRoleFilter = 'all';
@@ -5272,7 +5509,7 @@ function catatTransaksiBaru() {
 // ====================================================================================
 
 // In-Memory Data / Storage Cache
-let bukuList = [
+const DEFAULT_BUKU_CATALOG = [
   {
     "id": "1NzFRFPPwsyeO7OGYYtOJlkN3Zk59TGhH",
     "kode": "BK-001",
@@ -6025,6 +6262,7 @@ let bukuList = [
   }
 ];
 
+let bukuList = [...DEFAULT_BUKU_CATALOG];
 let sesiBelajarLog = [];
 let ujianHasilList = [];
 let readingHistoriesList = [];
@@ -6403,32 +6641,24 @@ function lanjutkanBacaBuku(bukuId, targetPage = 1) {
 let activeBelajarSession = null;
 let liveTimerInterval = null;
 
-function loadBukuData() {
+async function loadBukuData() {
   try {
     const saved = localStorage.getItem('ppdb_buku_list');
     if (saved) {
       let parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 10) {
-        // Perbaiki jika ada item dengan judul corrupted dari versi lama
-        let hasCorrupted = false;
-        parsed = parsed.map(item => {
-          if (item.kode === 'BK-016' || (item.nama && item.nama.includes('cb)>>'))) {
-            hasCorrupted = true;
-            return { ...item, nama: 'Matematika Peminatan Paket C' };
-          }
-          return item;
-        });
+      // Hanya gunakan cache jika berisi minimal 40 buku lengkap, jika kurang kembalikan ke 50 buku master
+      if (Array.isArray(parsed) && parsed.length >= 40) {
         bukuList = parsed;
-        if (hasCorrupted) {
-          localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList));
-        }
       } else {
-        localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList));
+        bukuList = [...DEFAULT_BUKU_CATALOG];
+        try { localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList)); } catch (e) { }
       }
     } else {
-      localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList));
+      bukuList = [...DEFAULT_BUKU_CATALOG];
     }
-  } catch (e) { }
+  } catch (e) {
+    bukuList = [...DEFAULT_BUKU_CATALOG];
+  }
 
   try {
     const savedLogs = localStorage.getItem('ppdb_belajar_log');
@@ -6446,7 +6676,34 @@ function loadBukuData() {
   updateBelajarStats();
   renderUjianTable();
   populateUjianSelectOptions();
-  loadRiwayatBacaData(); // Ambil riwayat baca buku
+
+  // Tarik data buku terbaru dari Database Cloud
+  try {
+    const cloudBuku = await callAPI({ action: "getBuku" });
+    if (Array.isArray(cloudBuku) && cloudBuku.length >= 40) {
+      bukuList = cloudBuku;
+      try { localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList)); } catch (e) { }
+      renderBukuPopuler();
+      renderBukuGrid();
+      updateBelajarStats();
+      populateUjianSelectOptions();
+    } else {
+      // Jika di cloud database masih kurang dari 40 buku (misal terpotong 5 buku), kirim 50 buku lengkap ke cloud database
+      bukuList = [...DEFAULT_BUKU_CATALOG];
+      try { localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList)); } catch (e) { }
+      renderBukuPopuler();
+      renderBukuGrid();
+      updateBelajarStats();
+      populateUjianSelectOptions();
+      callAPI({ action: "saveBukuBatch", bukuList }).catch(() => {});
+    }
+  } catch (err) {
+    console.warn("Gagal sinkron buku dari database cloud:", err.message);
+  }
+
+  try {
+    loadRiwayatBacaData(); // Ambil riwayat baca buku
+  } catch (e) { }
 }
 
 function onJenjangFilterChange() {
@@ -6775,6 +7032,19 @@ function launchReaderSession(book, studentName, initialPage = null, isResumed = 
   document.getElementById('reader-active-student').textContent = studentName;
   updateZoomDisplay(1.0);
   updateReaderNavButtonStates();
+
+  // Periksa apakah modul ini memiliki paket soal yang dikaitkan
+  const linkedSoal = (typeof ambilPaketSoalTerkaitBuku === 'function') ? ambilPaketSoalTerkaitBuku(book.id) : null;
+  const btnReaderSelesai = document.getElementById('btn-reader-selesai');
+  if (btnReaderSelesai) {
+    if (linkedSoal) {
+      btnReaderSelesai.innerHTML = 'Selesai & Ujian 📝';
+      btnReaderSelesai.title = 'Selesaikan membaca dan lanjutkan ke evaluasi ujian';
+    } else {
+      btnReaderSelesai.innerHTML = 'Selesai Belajar ✓';
+      btnReaderSelesai.title = 'Tutup dan simpan riwayat belajar';
+    }
+  }
 
   // Buka modal reader
   const modalReader = document.getElementById('modal-reader');
@@ -7467,6 +7737,36 @@ function tampilkanResumeSelesaiBelajar(session, durasiMnt, halTerbaca, totalHal,
     rekomendasiText = 'Telah membaca lebih dari separuh modul. Pemahaman konsep sudah cukup baik untuk latihan soal mandiri.';
   }
 
+  // Periksa apakah modul ini memiliki paket soal yang dikaitkan
+  const linkedSoal = (typeof ambilPaketSoalTerkaitBuku === 'function') ? ambilPaketSoalTerkaitBuku(session.bukuId) : null;
+  const currentUserId = (typeof getCurrentUserId === 'function') ? getCurrentUserId() : null;
+  const cekSyarat = (typeof cekKelayakanUjianModulSiswa === 'function') ? cekKelayakanUjianModulSiswa(session.bukuId, currentUserId) : { layak: true, minPersen: 50 };
+
+  const adaSoal = !!linkedSoal;
+  const bolehUjian = adaSoal && cekSyarat.layak;
+
+  let infoUjianHtml = '';
+  if (!adaSoal) {
+    infoUjianHtml = `
+      <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted); background: var(--surface-color); padding: 8px 10px; border-radius: 6px; border: 1px dashed var(--border-color);">
+        ℹ️ <i>Modul ini belum memiliki paket soal evaluasi yang dikaitkan oleh Pengajar.</i>
+      </div>
+    `;
+  } else if (!cekSyarat.layak) {
+    infoUjianHtml = `
+      <div style="margin-top: 10px; font-size: 12px; color: #dc2626; background: rgba(239, 68, 68, 0.08); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">
+        ⚠️ <b>Belum Memenuhi Batas Belajar Ujian:</b><br>
+        Telah membaca <b>${persenSelesai}%</b> materi. Modul ini mensyaratkan minimal <b>${cekSyarat.minPersen}%</b> halaman dibaca untuk dapat mengajukan/mengikuti ujian.
+      </div>
+    `;
+  } else {
+    infoUjianHtml = `
+      <div style="margin-top: 10px; font-size: 12px; color: #15803d; background: rgba(34, 197, 94, 0.08); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.2);">
+        ✓ <b>Syarat Ujian Terpenuhi:</b> Telah membaca ${persenSelesai}% materi (syarat min. ${cekSyarat.minPersen}%). Paket soal CBT siap dikerjakan.
+      </div>
+    `;
+  }
+
   Swal.fire({
     title: 'Resume Hasil Belajar Siswa 🎓',
     html: `
@@ -7513,21 +7813,27 @@ function tampilkanResumeSelesaiBelajar(session, durasiMnt, halTerbaca, totalHal,
             </div>
             <div>${rekomendasiText}</div>
           </div>
+
+          ${infoUjianHtml}
         </div>
 
         <p style="margin-bottom: 0; font-size: 12px; color: var(--text-muted); line-height: 1.45;">
-          Notifikasi ringkasan ini telah otomatis dikirimkan ke HP Admin & Tutor. Apakah Anda ingin langsung memulai sesi Ujian CBT untuk materi ini?
+          ${bolehUjian ? 'Aktivitas belajar telah terekam. Apakah Anda ingin langsung memulai sesi Ujian CBT untuk materi ini?' : 'Aktivitas belajar telah selesai dan otomatis terekam ke sistem database PKBM Aura Anugerah.'}
         </p>
       </div>
     `,
     icon: 'success',
-    showCancelButton: true,
-    confirmButtonText: 'Laksanakan Ujian Sekarang 📝',
+    showCancelButton: bolehUjian,
+    confirmButtonText: bolehUjian ? 'Laksanakan Ujian Sekarang 📝' : 'Tutup & Selesai Belajar ✓',
     cancelButtonText: 'Tutup & Istirahat',
     confirmButtonColor: 'var(--primary-color)'
   }).then(res => {
-    if (res.isConfirmed) {
-      showInputNilaiModal(session.bukuId, session.namaSiswa);
+    if (res.isConfirmed && bolehUjian) {
+      if (typeof bukaModalPilihUjianCBT === 'function') {
+        bukaModalPilihUjianCBT(session.bukuId, session.namaSiswa);
+      } else {
+        showInputNilaiModal(session.bukuId, session.namaSiswa);
+      }
     }
   });
 }
@@ -7591,6 +7897,9 @@ function renderBelajarLogTable() {
 
 function saveBukuListToStorage() {
   try { localStorage.setItem('ppdb_buku_list', JSON.stringify(bukuList)); } catch (e) { }
+  callAPI({ action: "saveBukuBatch", bukuList }).catch(err => {
+    console.warn("Gagal simpan batch buku ke cloud:", err.message);
+  });
 }
 
 function saveLogBelajarToStorage() {
@@ -7619,6 +7928,8 @@ function showEditBukuModal(id) {
   document.getElementById('buku-jenjang').value = b.jenjang;
   document.getElementById('buku-kategori').value = b.kategori;
   document.getElementById('buku-total-hal').value = b.totalHal || 30;
+  const elMinProgress = document.getElementById('buku-min-progress');
+  if (elMinProgress) elMinProgress.value = (b.minProgress !== undefined && b.minProgress !== null) ? b.minProgress : 50;
   document.getElementById('buku-keterangan').value = b.keterangan || '';
   document.getElementById('buku-file-url').value = b.file || '';
   document.getElementById('modal-form-buku').classList.remove('hidden');
@@ -7634,6 +7945,7 @@ function simpanBukuData() {
   const jenjang = document.getElementById('buku-jenjang').value;
   const kategori = document.getElementById('buku-kategori').value;
   const totalHal = parseInt(document.getElementById('buku-total-hal').value, 10) || 30;
+  const minProgress = parseInt(document.getElementById('buku-min-progress')?.value, 10) || 50;
   const keterangan = document.getElementById('buku-keterangan').value.trim();
   const file = document.getElementById('buku-file-url').value.trim();
 
@@ -7646,7 +7958,7 @@ function simpanBukuData() {
     // Edit mode
     const idx = bukuList.findIndex(x => x.id === id);
     if (idx !== -1) {
-      bukuList[idx] = { ...bukuList[idx], nama, jenjang, kategori, totalHal, keterangan, file };
+      bukuList[idx] = { ...bukuList[idx], nama, jenjang, kategori, totalHal, minProgress, keterangan, file };
     }
   } else {
     // Tambah baru
@@ -7656,6 +7968,7 @@ function simpanBukuData() {
       jenjang,
       kategori,
       totalHal,
+      minProgress,
       keterangan,
       file,
       dibaca: 0
@@ -7794,7 +8107,7 @@ function simpanNilaiUjian() {
   };
 
   ujianHasilList.unshift(newUjian);
-  saveUjianListToStorage();
+  saveUjianListToStorage(newUjian);
   closeInputNilaiModal();
   renderUjianTable();
 
@@ -7815,16 +8128,32 @@ function simpanNilaiUjian() {
   });
 }
 
-function saveUjianListToStorage() {
+function saveUjianListToStorage(newUjian = null) {
   try { localStorage.setItem('ppdb_ujian_list', JSON.stringify(ujianHasilList)); } catch (e) { }
+  if (newUjian) {
+    callAPI({ action: "saveHasilUjian", ujian: newUjian }).catch(err => {
+      console.warn("Gagal simpan hasil ujian ke database cloud:", err.message);
+    });
+  }
 }
 
-function loadUjianData() {
+async function loadUjianData() {
   try {
     const saved = localStorage.getItem('ppdb_ujian_list');
     if (saved) ujianHasilList = JSON.parse(saved);
   } catch (e) { }
   renderUjianTable();
+
+  try {
+    const cloudHasil = await callAPI({ action: "getHasilUjian" });
+    if (Array.isArray(cloudHasil) && cloudHasil.length > 0) {
+      ujianHasilList = cloudHasil;
+      try { localStorage.setItem('ppdb_ujian_list', JSON.stringify(ujianHasilList)); } catch (e) { }
+      renderUjianTable();
+    }
+  } catch (err) {
+    console.warn("Gagal ambil hasil ujian dari cloud database:", err.message);
+  }
 }
 
 function filterUjianTable() {
@@ -8016,9 +8345,33 @@ function saveStoredKegiatan(data) {
   }
 }
 
-function loadKegiatanData() {
+async function loadKegiatanData() {
+  // 1. Tampilkan dulu dari cache lokal agar instan
   kegiatanList = getStoredKegiatan();
   renderDashboardKegiatan();
+  renderLandingKegiatan();
+
+  // 2. Tarik data terbaru dari Database Server / Google Sheets
+  try {
+    const cloudData = await callAPI({ action: "getKegiatan" });
+    if (Array.isArray(cloudData)) {
+      if (cloudData.length > 0) {
+        kegiatanList = cloudData;
+        saveStoredKegiatan(kegiatanList);
+        renderDashboardKegiatan();
+        renderLandingKegiatan();
+      } else if (kegiatanList && kegiatanList.length > 0) {
+        // Jika di database belum ada data sama sekali tapi ada data default/lokal, migrasi data lokal ke database
+        for (const item of kegiatanList) {
+          try {
+            await callAPI({ action: "saveKegiatan", kegiatan: item });
+          } catch (e) {}
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Koneksi cloud kegiatan tertunda, menggunakan data lokal:", err.message);
+  }
 }
 
 function filterKegiatan(mode) {
@@ -8253,6 +8606,8 @@ function saveKegiatan() {
     return;
   }
 
+  let savedKegiatanItem = null;
+
   if (id) {
     // Mode Update
     const idx = kegiatanList.findIndex(x => x.id === id);
@@ -8268,6 +8623,7 @@ function saveKegiatan() {
         target_display: isAdmin ? target_display : kegiatanList[idx].target_display,
         updatedAt: new Date().toISOString()
       };
+      savedKegiatanItem = kegiatanList[idx];
     }
   } else {
     // Mode Create Baru
@@ -8285,12 +8641,20 @@ function saveKegiatan() {
       createdAt: new Date().toISOString()
     };
     kegiatanList.unshift(newKeg);
+    savedKegiatanItem = newKeg;
   }
 
   saveStoredKegiatan(kegiatanList);
   closeModalKegiatan();
   renderDashboardKegiatan();
   renderLandingKegiatan();
+
+  // Kirim data ke Cloud Database (Google Sheets)
+  if (savedKegiatanItem) {
+    callAPI({ action: "saveKegiatan", kegiatan: savedKegiatanItem }).catch(err => {
+      console.warn("Gagal simpan kegiatan ke database:", err.message);
+    });
+  }
 
   // Kirim Web Push Notification jika posting warta/kegiatan baru
   if (!id && typeof sendAppPushNotification === 'function') {
@@ -8306,7 +8670,7 @@ function saveKegiatan() {
   Swal.fire({
     icon: 'success',
     title: 'Berhasil Disimpan!',
-    text: `Warta kegiatan "${judul}" telah disimpan dengan visibilitas: ${target_display}.`,
+    text: `Warta kegiatan "${judul}" telah disimpan ke Database dengan visibilitas: ${target_display}.`,
     timer: 1800,
     showConfirmButton: false
   });
@@ -8322,19 +8686,24 @@ function deleteKegiatan(id) {
 
   Swal.fire({
     title: 'Hapus Kegiatan?',
-    text: `Apakah Anda yakin ingin menghapus "${k.judul}"?`,
+    text: `Apakah Anda yakin ingin menghapus "${k.judul}"? Data akan terhapus dari Database.`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#ef4444',
     confirmButtonText: 'Ya, Hapus!',
     cancelButtonText: 'Batal'
-  }).then((res) => {
+  }).then(async (res) => {
     if (res.isConfirmed) {
       kegiatanList = kegiatanList.filter(x => x.id !== id);
       saveStoredKegiatan(kegiatanList);
       renderDashboardKegiatan();
       renderLandingKegiatan();
-      Swal.fire('Terhapus', 'Warta kegiatan telah dihapus.', 'success');
+      try {
+        await callAPI({ action: "deleteKegiatan", id: id });
+      } catch (err) {
+        console.warn("Gagal hapus kegiatan di database:", err.message);
+      }
+      Swal.fire('Terhapus', 'Warta kegiatan telah dihapus dari Database.', 'success');
     }
   });
 }
@@ -8358,12 +8727,17 @@ function quickToggleVisibility(id) {
     confirmButtonText: 'Terapkan Akses',
     confirmButtonColor: 'var(--primary-color)',
     cancelButtonText: 'Batal'
-  }).then((res) => {
+  }).then(async (res) => {
     if (res.isConfirmed && res.value) {
       k.target_display = res.value;
       saveStoredKegiatan(kegiatanList);
       renderDashboardKegiatan();
       renderLandingKegiatan();
+      try {
+        await callAPI({ action: "saveKegiatan", kegiatan: k });
+      } catch (err) {
+        console.warn("Gagal perbarui visibilitas ke database:", err.message);
+      }
       Swal.fire('Akses Diperbarui', `Visibilitas sekarang: ${res.value.toUpperCase()}`, 'success');
     }
   });
@@ -8460,11 +8834,29 @@ function saveStoredTKInfo(data) {
   } catch (e) {
     console.warn("Error write ppdb_tk_info", e);
   }
+  callAPI({ action: "saveAppSetting", key: "ppdb_tk_info", val: data }).catch(err => {
+    console.warn("Gagal simpan data TK ke cloud database:", err.message);
+  });
 }
 
-function loadTKData() {
+async function loadTKData() {
   infoTKData = getStoredTKInfo();
   renderDashboardTK();
+  renderLandingTK();
+
+  try {
+    const cloudTK = await callAPI({ action: "getAppSetting", key: "ppdb_tk_info" });
+    if (cloudTK && typeof cloudTK === 'object' && cloudTK.nama) {
+      infoTKData = cloudTK;
+      try { localStorage.setItem('ppdb_tk_info', JSON.stringify(infoTKData)); } catch (e) { }
+      renderDashboardTK();
+      renderLandingTK();
+    } else if (infoTKData) {
+      callAPI({ action: "saveAppSetting", key: "ppdb_tk_info", val: infoTKData }).catch(() => {});
+    }
+  } catch (err) {
+    console.warn("Gagal sinkron data TK dari cloud:", err.message);
+  }
 }
 
 function renderDashboardTK() {
@@ -8841,7 +9233,77 @@ function saveInfoTK() {
   });
 }
 
+// ==================== FITUR MIGRASI & SINKRONISASI TOTAL KE CLOUD ====================
+async function syncAllSchoolDataToCloud() {
+  const result = await Swal.fire({
+    title: 'Sinkronkan Semua Data ke Cloud?',
+    text: 'Aplikasi akan memindahkan & menyinkronkan seluruh data (Warta Kegiatan, Buku Pelajaran, Bank Soal CBT, Hasil Ujian, dan Profil TK) langsung ke Google Spreadsheet.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Sinkronkan Sekarang! 🚀',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: 'var(--primary-color)'
+  });
+
+  if (!result.isConfirmed) return;
+
+  showLoader("Memindahkan data ke Google Spreadsheet...");
+  try {
+    // 1. Inisialisasi setup sheet di Spreadsheet jika belum ada
+    try {
+      await callAPI({ action: "initDatabase" });
+    } catch (e) { }
+
+    // 2. Kirim data Warta Kegiatan
+    const kList = (kegiatanList && kegiatanList.length > 0) ? kegiatanList : getStoredKegiatan();
+    for (const item of kList) {
+      try {
+        await callAPI({ action: "saveKegiatan", kegiatan: item });
+      } catch (e) { }
+    }
+
+    // 3. Kirim data Buku Pelajaran
+    if (bukuList && bukuList.length > 0) {
+      try {
+        await callAPI({ action: "saveBukuBatch", bukuList });
+      } catch (e) { }
+    }
+
+    // 4. Kirim data Profil & Peta TK
+    const tkData = infoTKData || getStoredTKInfo();
+    if (tkData) {
+      try {
+        await callAPI({ action: "saveAppSetting", key: "ppdb_tk_info", val: tkData });
+      } catch (e) { }
+    }
+
+    // 5. Kirim data Bank Soal CBT
+    if (window.cbtBankSoalList && window.cbtBankSoalList.length > 0) {
+      try {
+        await callAPI({ action: "saveBankSoalBatch", paketList: window.cbtBankSoalList });
+      } catch (e) { }
+    }
+
+    hideLoader();
+    Swal.fire({
+      icon: 'success',
+      title: 'Sinkronisasi Berhasil!',
+      text: 'Semua data pendataan sekolah telah berhasil dimasukkan dan tersimpan rapi di Google Spreadsheet Anda.',
+      confirmButtonColor: 'var(--primary-color)'
+    });
+  } catch (err) {
+    hideLoader();
+    console.error("Gagal sinkronisasi:", err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Sebagian Data Gagal Tersinkron',
+      text: err.message || 'Periksa koneksi internet atau deployment Apps Script.'
+    });
+  }
+}
+
 // Ekspos fungsi ke global window agar onclick di markup HTML dapat memanggilnya
+window.syncAllSchoolDataToCloud = syncAllSchoolDataToCloud;
 window.openModalKegiatan = openModalKegiatan;
 window.closeModalKegiatan = closeModalKegiatan;
 window.saveKegiatan = saveKegiatan;
