@@ -72,6 +72,21 @@ async function loadSekolahMitraData() {
   if (!sekolahMitraList || sekolahMitraList.length === 0) {
     sekolahMitraList = [
       {
+        id: 'SCH-AURA-UTAMA',
+        namaSekolah: 'PKBM "AURA ANUGERAH"',
+        npsn: 'P2960013',
+        statusSekolah: 'Sekolah Induk Penyelenggara',
+        bentukPendidikan: 'PKBM / Kesetaraan',
+        alamat: 'Sekretariat: Jalan Dobonsolo Raya, RT. 003 / RW. 001',
+        kabupaten: 'Kabupaten Jayapura',
+        provinsi: 'Papua',
+        namaKepala: 'Drs. H. ALI YANI, M.Pd.',
+        nipNiy: 'NIP. -',
+        kontakPic: '081248000000',
+        catatanIzin: 'Akte Notaris No. 54 Tanggal 06 Agustus 2020 NPSN : P2960013',
+        logoBase64: typeof ASSET_LOGO_AURA_B64 !== 'undefined' ? ASSET_LOGO_AURA_B64 : ''
+      },
+      {
         id: 'SCH-SAMPLE-01',
         namaSekolah: 'PKBM Harapan Bangsa Sentani',
         npsn: 'P9961234',
@@ -1462,15 +1477,45 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   const rapSiswa = (raportDataList || []).find(r => String(r.siswaId) === String(siswaId) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
   const targetSekolahId = forcedSekolahId || s.sekolahId || (rapSiswa ? rapSiswa.sekolahId : 'utama') || 'utama';
 
-  let namaSekolahKop = 'PKBM AURA ANUGERAH SENTANI';
-  let namaLembagaBiodata = 'PKBM Aura Anugerah Sentani';
-  let npsnKop = '69910495';
-  let izinKop = '421.1/043/DPMPTSP/2021';
-  let alamatKop = 'Sentani, Jayapura, Papua (99352)';
-  let kepalaNama = 'ANTHONIUS, S.Pd';
-  let kepalaNip = 'NIY. 201804.001';
-  let ttdJabatan = 'Ketua Penyelenggara PKBM Aura Anugerah,';
-  let logoBase64 = dapatkanLogoSekolahBase64();
+  let namaInstansiKop = 'PUSAT KEGIATAN BELAJAR MASYARAKAT';
+  let namaSekolahKop = 'PKBM "AURA ANUGERAH"';
+  let namaLembagaBiodata = 'PKBM Aura Anugerah';
+  let npsnKop = 'P2960013';
+  let izinKop = 'Akte Notaris No. 54 Tanggal 06 Agustus 2020 NPSN : P2960013';
+  let alamatKop = 'Sekretariat: Jalan Dobonsolo Raya, RT. 003 / RW. 001';
+  let tempatSurat = 'Kabupaten Jayapura';
+  let kepalaNama = 'Drs. H. ALI YANI, M.Pd.';
+  let kepalaNip = 'NIP. -';
+  let ttdJabatan = 'Kepala,';
+  
+  // Ambil profil data sekolah terbaru (PKBM Aura Anugerah) jika ada di memory/storage
+  try {
+    const tkStored = (typeof infoTKData !== 'undefined' && infoTKData) ? infoTKData : (typeof getStoredTKInfo === 'function' ? getStoredTKInfo() : null);
+    if (tkStored) {
+      if (tkStored.instansi) namaInstansiKop = tkStored.instansi;
+      if (tkStored.nama) namaSekolahKop = tkStored.nama.toUpperCase();
+      if (tkStored.satpen) namaLembagaBiodata = tkStored.satpen;
+      if (tkStored.npsn) npsnKop = tkStored.npsn;
+      if (tkStored.keterangan) izinKop = tkStored.keterangan;
+      if (tkStored.jalan) alamatKop = tkStored.jalan;
+      if (tkStored.tempat_surat) tempatSurat = tkStored.tempat_surat;
+      if (tkStored.kepala_sekolah) kepalaNama = tkStored.kepala_sekolah;
+      if (tkStored.nip_kepala) kepalaNip = tkStored.nip_kepala;
+      if (tkStored.jabatan_kepala) ttdJabatan = tkStored.jabatan_kepala;
+      if (tkStored.logo_kanan) logoKananBase64 = tkStored.logo_kanan;
+      if (tkStored.logo_kiri) logoKiriBase64 = tkStored.logo_kiri;
+    }
+  } catch (e) {
+    console.warn("Gagal membaca infoTKData untuk transkrip:", e);
+  }
+
+  // 2 Logo Kop: Logo Kiri Tut Wuri Handayani & Logo Kanan PKBM Aura Anugerah / Kustom
+  if (!logoKiriBase64) {
+    logoKiriBase64 = (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined') ? ASSET_LOGO_TUTWURI_B64 : null;
+  }
+  if (!logoKananBase64) {
+    logoKananBase64 = (typeof ASSET_LOGO_AURA_B64 !== 'undefined') ? ASSET_LOGO_AURA_B64 : dapatkanLogoSekolahBase64();
+  }
 
   if (targetSekolahId && targetSekolahId !== 'utama' && Array.isArray(sekolahMitraList)) {
     const sm = sekolahMitraList.find(m => String(m.id) === String(targetSekolahId));
@@ -1480,10 +1525,11 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
       npsnKop = sm.npsn || npsnKop;
       izinKop = sm.catatanIzin || sm.skIzin || izinKop;
       alamatKop = `${sm.alamat || ''}, ${sm.kabupaten || 'Jayapura'}, ${sm.provinsi || 'Papua'}`.trim().replace(/^,\s*/, '');
+      tempatSurat = sm.kabupaten || 'Kabupaten Jayapura';
       kepalaNama = sm.namaKepala || kepalaNama;
       kepalaNip = sm.nipNiy ? `NIP/NIY. ${sm.nipNiy}` : '-';
       ttdJabatan = `Ketua / Pimpinan ${sm.namaSekolah},`;
-      if (sm.logoBase64) logoBase64 = sm.logoBase64;
+      if (sm.logoBase64) logoKananBase64 = sm.logoBase64;
     }
   }
 
@@ -1495,32 +1541,39 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   doc.setLineWidth(0.25);
   doc.rect(9.5, 9.5, pageWidth - 19, pageHeight - 19);
 
-  // KOP RESMI DENGAN LOGO SEKOLAH
-  if (logoBase64) {
+  // KOP RESMI DENGAN 2 GAMBAR LOGO (KIRI: TUT WURI HANDAYANI, KANAN: LOGO LEMBAGA)
+  if (logoKiriBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', marginX + 2, 13, 23, 23);
+      doc.addImage(logoKiriBase64, 'JPEG', marginX + 1, 12, 22, 22);
     } catch (e) {
-      console.warn("Gagal render logo kop transkrip:", e.message);
+      console.warn("Gagal render logo kiri kop:", e.message);
+    }
+  }
+  if (logoKananBase64) {
+    try {
+      doc.addImage(logoKananBase64, 'PNG', pageWidth - marginX - 23, 12, 22, 22);
+    } catch (e) {
+      console.warn("Gagal render logo kanan kop:", e.message);
     }
   }
 
-  const kopCenterX = logoBase64 ? (pageWidth / 2) + 6 : pageWidth / 2;
+  const kopCenterX = pageWidth / 2;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
   doc.setTextColor(30, 41, 59);
-  doc.text('PEMERINTAH KABUPATEN JAYAPURA', kopCenterX, 17, { align: 'center' });
-  doc.text('DINAS PENDIDIKAN DAN KEBUDAYAAN', kopCenterX, 22, { align: 'center' });
-  doc.setFontSize(12);
+  doc.text(namaInstansiKop, kopCenterX, 16, { align: 'center' });
+  doc.setFontSize(13);
   doc.setTextColor(2, 132, 199);
-  doc.text(namaSekolahKop, kopCenterX, 28, { align: 'center' });
+  doc.text(namaSekolahKop, kopCenterX, 22.5, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(7.8);
   doc.setTextColor(71, 85, 105);
-  doc.text(`Penyelenggara Pendidikan Kesetaraan Terakreditasi Nasional | NPSN: ${npsnKop}`, kopCenterX, 32.5, { align: 'center' });
-  doc.text(`SK Izin Operasional: ${izinKop} | ${alamatKop}`, kopCenterX, 36.5, { align: 'center' });
+  doc.text(izinKop, kopCenterX, 28, { align: 'center' });
+  doc.text(alamatKop, kopCenterX, 32.5, { align: 'center' });
+  doc.text('Email: pkbm.auraanugerah@gmail.com | Website: https://pkbmauraanugerah.vercel.app', kopCenterX, 36.5, { align: 'center' });
 
-  // Garis Pembatas Kop
+  // Garis Pembatas Kop Ganda
   doc.setDrawColor(2, 132, 199);
   doc.setLineWidth(0.8);
   doc.line(marginX, 39.5, pageWidth - marginX, 39.5);
@@ -1531,11 +1584,15 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(15, 23, 42);
-  doc.text('TRANSKRIP NILAI AKADEMIK RESMI', pageWidth / 2, 48, { align: 'center' });
+  doc.text('TRANSKRIP NILAI', pageWidth / 2, 47.5, { align: 'center' });
+  const tw = doc.getTextWidth('TRANSKRIP NILAI');
+  doc.setLineWidth(0.4);
+  doc.line((pageWidth / 2) - (tw / 2), 48.5, (pageWidth / 2) + (tw / 2), 48.5);
+
   doc.setFontSize(9);
   doc.setTextColor(2, 132, 199);
   const noDokumen = formatNomorDokumenTranskrip(s);
-  doc.text(`Nomor Dokumen: ${noDokumen}`, pageWidth / 2, 53, { align: 'center' });
+  doc.text(`Nomor Dokumen : ${noDokumen}`, pageWidth / 2, 53.5, { align: 'center' });
 
   // BIODATA SISWA
   const bioY = 60;
@@ -1727,7 +1784,7 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(30, 41, 59);
-  doc.text(`Sentani, ${new Date().toLocaleDateString('id-ID')}`, kananX, ttdY);
+  doc.text(`${tempatSurat || 'Kabupaten Jayapura'}, ${new Date().toLocaleDateString('id-ID')}`, kananX, ttdY);
   doc.text(ttdJabatan, kananX, ttdY + 4);
   
   doc.line(kananX, ttdY + 24, kananX + 52, ttdY + 24);

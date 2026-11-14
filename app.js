@@ -1473,14 +1473,12 @@ function showDashboard() {
 
     const menuKeamanan = document.getElementById('menu-pengaturan-keamanan');
     const menuInfoSekolah = document.getElementById('menu-info-tk');
-    const menuMitraPengaturan = document.getElementById('menu-sekolah-mitra-pengaturan');
     if (currentUser.role === 'Super Admin') {
       if (dropPengaturan) dropPengaturan.classList.remove('hidden');
       menuUsers.classList.remove('hidden');
       if (menuApiKeys) menuApiKeys.classList.remove('hidden');
       if (menuKeamanan) menuKeamanan.classList.remove('hidden');
       if (menuInfoSekolah) menuInfoSekolah.classList.remove('hidden');
-      if (menuMitraPengaturan) menuMitraPengaturan.classList.remove('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = '';
       if (mobileSheetApi) mobileSheetApi.style.display = '';
     } else if (currentUser.role === 'Admin') {
@@ -1489,7 +1487,6 @@ function showDashboard() {
       if (menuApiKeys) menuApiKeys.classList.add('hidden');
       if (menuKeamanan) menuKeamanan.classList.add('hidden');
       if (menuInfoSekolah) menuInfoSekolah.classList.remove('hidden');
-      if (menuMitraPengaturan) menuMitraPengaturan.classList.remove('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = '';
       if (mobileSheetApi) mobileSheetApi.style.display = 'none';
     } else {
@@ -1498,7 +1495,6 @@ function showDashboard() {
       if (menuApiKeys) menuApiKeys.classList.add('hidden');
       if (menuKeamanan) menuKeamanan.classList.add('hidden');
       if (menuInfoSekolah) menuInfoSekolah.classList.add('hidden');
-      if (menuMitraPengaturan) menuMitraPengaturan.classList.add('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = 'none';
       if (mobileSheetApi) mobileSheetApi.style.display = 'none';
     }
@@ -8877,12 +8873,20 @@ function renderLandingKegiatan() {
 // ==================== FITUR: INFORMASI TK & MAPS LEAFLET =================
 // =========================================================================
 
-// Data Default Profil PKBM Aura Anugerah
+// Data Default Profil PKBM Aura Anugerah (Sesuai Arsip Resmi Transkrip & SK Izin)
 const DEFAULT_TK_INFO = {
-  nama: "PKBM Aura Anugerah",
-  jalan: "JL. Yahim KOMP.Buton Samping Hotel Citra Buana",
+  nama: 'PKBM "AURA ANUGERAH"',
+  instansi: "PUSAT KEGIATAN BELAJAR MASYARAKAT",
+  satpen: "PKBM Aura Anugerah",
+  npsn: "P2960013",
+  keterangan: "Akte Notaris No. 54 Tanggal 06 Agustus 2020 NPSN : P2960013",
+  jalan: "Sekretariat: Jalan Dobonsolo Raya, RT. 003 / RW. 001",
   kecamatan: "Sentani",
   kabupaten: "Kabupaten Jayapura, Papua (99352)",
+  tempat_surat: "Kabupaten Jayapura",
+  kepala_sekolah: "Drs. H. ALI YANI, M.Pd.",
+  jabatan_kepala: "Kepala,",
+  nip_kepala: "NIP. -",
   deskripsi: "Pusat Kegiatan Belajar Masyarakat (PKBM) Aura Anugerah menyelenggarakan program pendidikan kesetaraan Paket A (Setara SD), Paket B (Setara SMP), Paket C (Setara SMA), kursus keterampilan vokasi, keaksaraan, serta program pemberdayaan masyarakat terpadu di Sentani, Jayapura.",
   visi: "Mewujudkan masyarakat yang cerdas, berdaya saing, berakhlak mulia, dan mandiri melalui layanan pendidikan non-formal yang inklusif dan berkualitas di tanah Papua.",
   misi: "1. Menyelenggarakan pendidikan kesetaraan Paket A, B, dan C yang adaptif dan berkualitas.\n2. Memberikan pelatihan vokasi & kewirausahaan mandiri bagi warga belajar.\n3. Membangun kolaborasi sinergis antara pendidik, masyarakat, dan mitra kerja.",
@@ -8891,7 +8895,9 @@ const DEFAULT_TK_INFO = {
   telepon: "0812-4800-0000",
   email: "pkbm.auraanugerah@gmail.com",
   latlong: "-2.566100,140.505700", // Koordinat Sentani Yahim Kompleks Citra Buana
-  target_display: "both" // 'portal' | 'public' | 'both'
+  target_display: "both", // 'portal' | 'public' | 'both'
+  logo_kanan: "logo_PKBM_Aura_Anugerah_transparan.png",
+  logo_kiri: "tut_wuri.svg"
 };
 
 let infoTKData = null;
@@ -8901,7 +8907,15 @@ let leafletMapDashboard = null;
 function getStoredTKInfo() {
   try {
     const raw = localStorage.getItem('ppdb_tk_info');
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        ...DEFAULT_TK_INFO,
+        ...parsed,
+        logo_kanan: parsed.logo_kanan || DEFAULT_TK_INFO.logo_kanan,
+        logo_kiri: parsed.logo_kiri || DEFAULT_TK_INFO.logo_kiri
+      };
+    }
   } catch (e) {
     console.warn("Error read ppdb_tk_info", e);
   }
@@ -8921,6 +8935,7 @@ function saveStoredTKInfo(data) {
 
 async function loadTKData() {
   infoTKData = getStoredTKInfo();
+  applyAppBrandLogos();
   renderDashboardTK();
   renderLandingTK();
 
@@ -8929,6 +8944,7 @@ async function loadTKData() {
     if (cloudTK && typeof cloudTK === 'object' && cloudTK.nama) {
       infoTKData = cloudTK;
       try { localStorage.setItem('ppdb_tk_info', JSON.stringify(infoTKData)); } catch (e) { }
+      applyAppBrandLogos();
       renderDashboardTK();
       renderLandingTK();
     } else if (infoTKData) {
@@ -8965,13 +8981,23 @@ function renderDashboardTK() {
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
       <!-- Header Info PKBM -->
       <div class="stat-card" style="padding: 1.75rem; border: 1px solid var(--border-color); border-radius: 16px; flex-direction: column; align-items: stretch;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
-          <div>
-            <span style="font-size: 0.78rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px;">Profil Lembaga Pendidikan Kesetaraan</span>
-            <h2 style="font-size: 1.6rem; font-weight: 800; color: #0284c7; margin: 4px 0 6px 0;">${s.nama}</h2>
-            <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.9rem;">
-              <i data-lucide="map-pin" style="width: 15px; height: 15px; color: #0284c7;"></i>
-              <span>${s.jalan}, ${s.kecamatan}, ${s.kabupaten}</span>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="width: 52px; height: 52px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--surface-2); padding: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                <img src="${s.logo_kiri || 'tut_wuri.svg'}" alt="Logo Instansi (Kiri)" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+              </div>
+              <div style="width: 52px; height: 52px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--surface-2); padding: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                <img src="${s.logo_kanan || 'logo_PKBM_Aura_Anugerah_transparan.png'}" alt="Logo Sekolah (Kanan)" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+              </div>
+            </div>
+            <div>
+              <span style="font-size: 0.78rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.5px;">Profil Lembaga Pendidikan Kesetaraan</span>
+              <h2 style="font-size: 1.6rem; font-weight: 800; color: #0284c7; margin: 4px 0 6px 0;">${s.nama}</h2>
+              <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.9rem;">
+                <i data-lucide="map-pin" style="width: 15px; height: 15px; color: #0284c7;"></i>
+                <span>${s.jalan}, ${s.kecamatan}, ${s.kabupaten}</span>
+              </div>
             </div>
           </div>
           <div>${visBadge}</div>
@@ -9253,6 +9279,112 @@ function initLeafletMap(containerId, latlongStr, title, subtitle, useGeometry = 
   }
 }
 
+// ==================== TAMPILAN & LOGO LEMBAGA / APLIKASI ====================
+function applyAppBrandLogos() {
+  const s = infoTKData || getStoredTKInfo();
+  const logoKanan = s.logo_kanan || (typeof ASSET_LOGO_AURA_B64 !== 'undefined' ? ASSET_LOGO_AURA_B64 : 'logo_PKBM_Aura_Anugerah_transparan.png');
+  
+  // Terapkan ke elemen brand logo pada halaman
+  document.querySelectorAll('.brand-logo-img, .app-brand-logo, .login-logo-img, .pwa-banner-icon').forEach(img => {
+    img.src = logoKanan;
+  });
+
+  // Terapkan favicon browser jika didukung
+  const favIcon = document.querySelector("link[rel*='icon']");
+  if (favIcon && logoKanan.startsWith('data:image')) {
+    favIcon.href = logoKanan;
+  }
+}
+
+function handleUploadLogoTK(input, position) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const rawBase64 = e.target.result;
+      
+      // Jika file gambar JPEG / PNG / SVG, kompres ke ukuran ideal (maks 250px) agar ringan & aman disimpan
+      const img = new Image();
+      img.onload = function() {
+        let maxDim = 250;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        const cvs = document.createElement('canvas');
+        cvs.width = w;
+        cvs.height = h;
+        const ctx = cvs.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressedBase64 = cvs.toDataURL('image/png');
+
+        if (position === 'kanan') {
+          const hid = document.getElementById('tk-logo-kanan-b64');
+          const previewImg = document.getElementById('img-preview-logo-kanan');
+          const lbl = document.getElementById('lbl-status-logo-kanan');
+          if (hid) hid.value = compressedBase64;
+          if (previewImg) previewImg.src = compressedBase64;
+          if (lbl) lbl.textContent = 'Logo Baru Dipilih';
+        } else {
+          const hid = document.getElementById('tk-logo-kiri-b64');
+          const previewImg = document.getElementById('img-preview-logo-kiri');
+          const lbl = document.getElementById('lbl-status-logo-kiri');
+          if (hid) hid.value = compressedBase64;
+          if (previewImg) previewImg.src = compressedBase64;
+          if (lbl) lbl.textContent = 'Logo Baru Dipilih';
+        }
+      };
+      img.onerror = function() {
+        // Fallback jika SVG atau format lain langsung gunakan raw base64
+        if (position === 'kanan') {
+          const hid = document.getElementById('tk-logo-kanan-b64');
+          const previewImg = document.getElementById('img-preview-logo-kanan');
+          if (hid) hid.value = rawBase64;
+          if (previewImg) previewImg.src = rawBase64;
+        } else {
+          const hid = document.getElementById('tk-logo-kiri-b64');
+          const previewImg = document.getElementById('img-preview-logo-kiri');
+          if (hid) hid.value = rawBase64;
+          if (previewImg) previewImg.src = rawBase64;
+        }
+      };
+      img.src = rawBase64;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function resetLogoTK(position) {
+  if (position === 'kanan') {
+    const defaultKanan = (typeof ASSET_LOGO_AURA_B64 !== 'undefined') ? ASSET_LOGO_AURA_B64 : 'logo_PKBM_Aura_Anugerah_transparan.png';
+    const hid = document.getElementById('tk-logo-kanan-b64');
+    const img = document.getElementById('img-preview-logo-kanan');
+    const file = document.getElementById('tk-logo-kanan-file');
+    const lbl = document.getElementById('lbl-status-logo-kanan');
+    if (hid) hid.value = defaultKanan;
+    if (img) img.src = defaultKanan;
+    if (file) file.value = '';
+    if (lbl) lbl.textContent = 'Logo Default PKBM';
+  } else {
+    const defaultKiri = (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined') ? ASSET_LOGO_TUTWURI_B64 : 'tut_wuri.svg';
+    const hid = document.getElementById('tk-logo-kiri-b64');
+    const img = document.getElementById('img-preview-logo-kiri');
+    const file = document.getElementById('tk-logo-kiri-file');
+    const lbl = document.getElementById('lbl-status-logo-kiri');
+    if (hid) hid.value = defaultKiri;
+    if (img) img.src = defaultKiri;
+    if (file) file.value = '';
+    if (lbl) lbl.textContent = 'Logo Default Tut Wuri';
+  }
+}
+
 // Buka Modal Edit Info TK untuk Admin
 function openModalEditTK() {
   const modal = document.getElementById('modal-edit-tk');
@@ -9271,6 +9403,28 @@ function openModalEditTK() {
   document.getElementById('tk-telepon').value = s.telepon || '';
   document.getElementById('tk-latlong').value = s.latlong || '-2.566100,140.505700';
   document.getElementById('tk-target-display').value = s.target_display || 'both';
+
+  // Muat logo kanan / aplikasi
+  const logoKananVal = s.logo_kanan || (typeof ASSET_LOGO_AURA_B64 !== 'undefined' ? ASSET_LOGO_AURA_B64 : 'logo_PKBM_Aura_Anugerah_transparan.png');
+  const hidKanan = document.getElementById('tk-logo-kanan-b64');
+  const imgKanan = document.getElementById('img-preview-logo-kanan');
+  const fileKanan = document.getElementById('tk-logo-kanan-file');
+  const lblKanan = document.getElementById('lbl-status-logo-kanan');
+  if (hidKanan) hidKanan.value = logoKananVal;
+  if (imgKanan) imgKanan.src = logoKananVal;
+  if (fileKanan) fileKanan.value = '';
+  if (lblKanan) lblKanan.textContent = s.logo_kanan ? 'Logo Kustom Tersimpan' : 'Logo Default PKBM';
+
+  // Muat logo kiri kop (Tut Wuri)
+  const logoKiriVal = s.logo_kiri || (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined' ? ASSET_LOGO_TUTWURI_B64 : 'tut_wuri.svg');
+  const hidKiri = document.getElementById('tk-logo-kiri-b64');
+  const imgKiri = document.getElementById('img-preview-logo-kiri');
+  const fileKiri = document.getElementById('tk-logo-kiri-file');
+  const lblKiri = document.getElementById('lbl-status-logo-kiri');
+  if (hidKiri) hidKiri.value = logoKiriVal;
+  if (imgKiri) imgKiri.src = logoKiriVal;
+  if (fileKiri) fileKiri.value = '';
+  if (lblKiri) lblKiri.textContent = s.logo_kiri ? 'Logo Kustom Tersimpan' : 'Logo Default Tut Wuri';
 
   modal.classList.remove('hidden');
   if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
@@ -9299,12 +9453,18 @@ function saveInfoTK() {
   const latlong = document.getElementById('tk-latlong').value.trim();
   const target_display = document.getElementById('tk-target-display').value;
 
+  const logo_kanan = (document.getElementById('tk-logo-kanan-b64')?.value || '').trim();
+  const logo_kiri = (document.getElementById('tk-logo-kiri-b64')?.value || '').trim();
+
   if (!nama || !jalan || !latlong) {
     Swal.fire('Peringatan', 'Nama, alamat jalan, dan titik koordinat latlong wajib diisi!', 'warning');
     return;
   }
 
+  const existingTK = infoTKData || getStoredTKInfo();
+
   const updatedTK = {
+    ...existingTK,
     nama,
     jalan,
     kecamatan,
@@ -9314,13 +9474,16 @@ function saveInfoTK() {
     misi,
     wa,
     telepon,
-    email: telepon.includes('@') ? telepon : 'tk.auraanugerah@gmail.com',
+    email: telepon.includes('@') ? telepon : 'pkbm.auraanugerah@gmail.com',
     latlong,
-    target_display
+    target_display,
+    logo_kanan: logo_kanan || existingTK.logo_kanan,
+    logo_kiri: logo_kiri || existingTK.logo_kiri
   };
 
   infoTKData = updatedTK;
   saveStoredTKInfo(infoTKData);
+  applyAppBrandLogos();
   closeModalEditTK();
   renderDashboardTK();
   renderLandingTK();
@@ -9328,7 +9491,7 @@ function saveInfoTK() {
   Swal.fire({
     icon: 'success',
     title: 'Pengaturan Disimpan!',
-    text: `Informasi & peta ${nama} berhasil diperbarui.`,
+    text: `Informasi & logo ${nama} berhasil diperbarui.`,
     timer: 1800,
     showConfirmButton: false
   });
@@ -9418,6 +9581,9 @@ window.renderLandingKegiatan = renderLandingKegiatan;
 window.openModalEditTK = openModalEditTK;
 window.closeModalEditTK = closeModalEditTK;
 window.saveInfoTK = saveInfoTK;
+window.handleUploadLogoTK = handleUploadLogoTK;
+window.resetLogoTK = resetLogoTK;
+window.applyAppBrandLogos = applyAppBrandLogos;
 window.resetDefaultCoordinates = resetDefaultCoordinates;
 window.renderLandingTK = renderLandingTK;
 window.loadKegiatanData = loadKegiatanData;
