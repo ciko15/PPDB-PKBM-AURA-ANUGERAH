@@ -748,15 +748,6 @@
                 <span>Masuk Aplikasi</span>
               </button>
 
-              <!-- Tombol Akses Ujian Khusus Peserta Luar -->
-              <div style="margin-top: 10px; text-align: center;">
-                <button type="button" class="btn" onclick="bukaModalUjianLuar()"
-                  style="width: 100%; height: 38px; background: rgba(2, 132, 199, 0.08); border: 1.5px solid #0284c7; color: #0284c7; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 13px;">
-                  <i data-lucide="award" style="width: 15px; height: 15px;"></i>
-                  <span>Peserta Luar / Tamu? Klik Masuk Ujian</span>
-                </button>
-              </div>
-
               <!-- 9. Tombol Pasang / Instal Aplikasi (Muncul jika belum diinstal) -->
               <div id="login-install-app-container" style="display: none; margin-top: 12px;">
                 <button type="button" class="btn" onclick="triggerPWAInstall()"
@@ -864,10 +855,6 @@
                 <li class="nav-item" data-target="section-bayar" id="menu-bayar">
                   <i data-lucide="wallet" class="menu-icon"></i>
                   <span>SPP & Keuangan Siswa</span>
-                </li>
-                <li class="nav-item" data-target="section-sekolah-mitra" id="menu-sekolah-mitra">
-                  <i data-lucide="building-2" class="menu-icon"></i>
-                  <span>Sekolah Mitra / Numpang</span>
                 </li>
               </ul>
             </li>
@@ -2318,7 +2305,7 @@
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button class="btn btn-primary" onclick="bukaModalInputTranskripLuar()" id="btn-tambah-transkrip-luar"
                 style="display: inline-flex; align-items: center; gap: 6px; background: #059669; border: none; font-weight: 600;">
-                <i data-lucide="plus-circle" style="width: 15px; height: 15px;"></i> Tambah Transkrip Manual / Luar
+                <i data-lucide="plus-circle" style="width: 15px; height: 15px;"></i> Tambah Transkrip Manual
               </button>
               <button class="btn btn-primary" onclick="bukaModalImportTranskripExcel()" id="btn-import-transkrip-excel"
                 style="display: inline-flex; align-items: center; gap: 6px; background: #10b981; border: none; font-weight: 600;">
@@ -2347,10 +2334,6 @@
                 <input type="text" id="search-transkrip" placeholder="Cari nama peserta didik atau NISN..." oninput="filterTranskripTable()">
               </div>
               <div class="filter-controls-group">
-                <select id="filter-transkrip-sekolah" class="filter-select" onchange="filterTranskripTable()" style="max-width: 240px;">
-                  <option value="">Semua Asal Sekolah</option>
-                  <option value="utama">PKBM Aura Anugerah (Utama)</option>
-                </select>
                 <select id="filter-transkrip-program" class="filter-select" onchange="filterTranskripTable()">
                   <option value="">Semua Program Kesetaraan</option>
                   <option value="Paket A">Paket A (Setara SD)</option>
@@ -2369,14 +2352,13 @@
                   <th style="width: 45px;">No</th>
                   <th>Peserta Didik</th>
                   <th>NISN / NIK</th>
-                  <th>Asal Lembaga / Sekolah</th>
                   <th>Program Kesetaraan</th>
                   <th style="text-align: center;">IPK / Rata Kumulatif</th>
                   <th style="text-align: right; width: 170px;">Cetak Transkrip</th>
                 </tr>
               </thead>
               <tbody id="table-transkrip-body">
-                <tr><td colspan="7" style="text-align: center; padding: 24px;">Memuat data siswa...</td></tr>
+                <tr><td colspan="6" style="text-align: center; padding: 24px;">Memuat data siswa...</td></tr>
               </tbody>
             </table>
           </div>
@@ -2472,55 +2454,6 @@
                   <td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">Belum ada riwayat
                     transaksi pembayaran atau tabungan.</td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- ==================== SECTION: SEKOLAH MITRA / NUMPANG ==================== -->
-        <div id="section-sekolah-mitra" class="content-section hidden">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 1.25rem;">
-            <div>
-              <h1 style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 8px;">
-                <i data-lucide="building-2" style="color: #0284c7;"></i> Kelola Sekolah Mitra / Numpang
-              </h1>
-              <p class="sub" style="margin: 4px 0 0 0;">
-                Master data identitas sekolah/lembaga luar yang menumpang ujian CBT, cetak transkrip, atau pembuatan raport tanpa mengganggu database utama PKBM.
-              </p>
-            </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button class="btn btn-primary" onclick="bukaModalFormSekolahMitra()" style="display: inline-flex; align-items: center; gap: 6px; background: #0284c7; border: none;">
-                <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Tambah Sekolah Mitra
-              </button>
-            </div>
-          </div>
-
-          <!-- Filter Toolbar Sekolah Mitra -->
-          <div class="filter-toolbar" style="margin-bottom: 1.25rem;">
-            <div class="filter-toolbar-top">
-              <div class="filter-search-box">
-                <i data-lucide="search"></i>
-                <input type="text" id="search-sekolah-mitra" placeholder="Cari nama sekolah mitra, NPSN, atau pimpinan..." oninput="filterSekolahMitraTable()">
-              </div>
-            </div>
-          </div>
-
-          <!-- Tabel Sekolah Mitra -->
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 45px;">No</th>
-                  <th>Logo & Nama Sekolah</th>
-                  <th>NPSN & Bentuk</th>
-                  <th>Alamat & Wilayah</th>
-                  <th>Kepala Lembaga</th>
-                  <th>Kontak / PIC</th>
-                  <th style="text-align: right; width: 140px;">Aksi</th>
-                </tr>
-              </thead>
-              <tbody id="table-sekolah-mitra-body">
-                <tr><td colspan="7" style="text-align: center; padding: 24px;">Memuat data sekolah mitra...</td></tr>
               </tbody>
             </table>
           </div>
@@ -2828,23 +2761,6 @@
                   <div>
                     <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Pengaturan Data Sekolah</div>
                     <div style="font-size: 12px; color: var(--text-muted);">Ubah nama, alamat, kontak, & lokasi resmi PKBM</div>
-                  </div>
-                </div>
-                <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
-              </div>
-
-              <!-- Menu Khusus Admin: Sekolah Mitra / Numpang -->
-              <div id="more-menu-admin-mitra" class="card-panel menu-list-row hidden"
-                onclick="switchMobileTab('section-sekolah-mitra')"
-                style="padding: 14px 16px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); background: var(--surface-color);">
-                <div style="display: flex; align-items: center; gap: 14px;">
-                  <div
-                    style="width: 38px; height: 38px; border-radius: 10px; background: rgba(2, 132, 199, 0.12); color: #0284c7; display: flex; align-items: center; justify-content: center;">
-                    <i data-lucide="building-2" style="width: 20px; height: 20px;"></i>
-                  </div>
-                  <div>
-                    <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Sekolah Mitra / Numpang</div>
-                    <div style="font-size: 12px; color: var(--text-muted);">Kelola data sekolah luar & peserta numpang</div>
                   </div>
                 </div>
                 <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
@@ -3764,76 +3680,6 @@
     </div>
   </div>
 
-  <!-- ==================== MODAL CBT KHUSUS PESERTA LUAR / TAMU ==================== -->
-  <div id="modal-ujian-luar" class="login-modal hidden" style="z-index: 99998;">
-    <div class="login-modal-overlay" onclick="closeModalUjianLuar()"></div>
-    <div class="login-card modal-content" style="max-width: 520px; text-align: left; padding: 22px;">
-      <button class="btn-close-modal" onclick="closeModalUjianLuar()">&times;</button>
-      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(2, 132, 199, 0.12); display: flex; align-items: center; justify-content: center; color: #0284c7;">
-          <i data-lucide="award" style="width: 20px; height: 20px;"></i>
-        </div>
-        <div>
-          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">Portal Ujian CBT Peserta Luar</h3>
-          <span style="font-size: 11.5px; color: var(--text-muted);">Khusus peserta tamu / sekolah mitra</span>
-        </div>
-      </div>
-      <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px; line-height: 1.4;">
-        Silakan isi identitas Anda dan masukkan Token Ujian yang diberikan oleh pengawas/panitia. Anda hanya dapat mengakses lembar soal ujian ini tanpa akun terdaftar.
-      </p>
-
-      <form id="form-ujian-luar" onsubmit="event.preventDefault(); prosesMulaiCbtLuar();">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label style="font-size: 12.5px; font-weight: 600;">Nama Lengkap Peserta <span style="color:red">*</span></label>
-          <input type="text" id="ujian-luar-nama" class="form-control" required placeholder="Contoh: Budi Santoso" style="height: 38px;">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label style="font-size: 12.5px; font-weight: 600;">Asal Sekolah / Lembaga / Instansi <span style="color:red">*</span></label>
-          <input type="text" id="ujian-luar-sekolah" class="form-control" required placeholder="Contoh: SMA Negeri 1 Sentani / Umum" style="height: 38px;">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label style="font-size: 12.5px; font-weight: 600;">Pilih Paket Ujian CBT <span style="color:red">*</span></label>
-          <select id="ujian-luar-pilih-paket" class="form-control" required onchange="updateCbtLuarInfoPaket(this.value)" style="height: 38px;">
-            <option value="">-- Pilih Paket Soal --</option>
-          </select>
-        </div>
-
-        <!-- Info Box Paket -->
-        <div id="box-info-ujian-luar"
-          style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px;">
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-muted);">Waktu Pengerjaan:</span>
-            <strong id="ujian-luar-durasi" style="color: #0284c7;">-</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-top: 4px;">
-            <span style="color: var(--text-muted);">Jumlah Butir Soal:</span>
-            <strong id="ujian-luar-jumlah-soal">-</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-top: 4px;">
-            <span style="color: var(--text-muted);">Status Ujian:</span>
-            <span id="ujian-luar-status-badge" class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700;">AKTIF</span>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 16px;">
-          <label style="font-size: 12.5px; font-weight: 600;">Token Ujian (Diberikan Pengawas) <span style="color:red">*</span></label>
-          <input type="text" id="ujian-luar-token" class="form-control" required placeholder="Masukkan Token Ujian"
-            style="text-transform: uppercase; font-family: monospace; font-size: 15px; font-weight: 800; letter-spacing: 2px; height: 40px;">
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button type="button" class="btn btn-outline" onclick="closeModalUjianLuar()" style="height: 38px;">Batal</button>
-          <button type="submit" class="btn btn-primary"
-            style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; height: 38px;">
-            <i data-lucide="play" style="width: 14px; height: 14px;"></i> Mulai Ujian Sekarang
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- ==================== MODAL PILIH UJIAN CBT SISWA (TOKEN DIALOG) ==================== -->
   <div id="modal-pilih-cbt" class="login-modal hidden" style="z-index: 99998;">
     <div class="login-modal-overlay" onclick="closeModalPilihUjianCBT()"></div>
@@ -3913,15 +3759,9 @@
       <form id="form-raport-siswa" onsubmit="event.preventDefault(); simpanDataRaport();" style="display: flex; flex-direction: column; flex: 1; overflow-y: auto; padding-right: 4px;">
         <input type="hidden" id="raport-edit-id">
 
-        <!-- Baris 1: Pilih Asal Sekolah & Siswa, Tahun Ajaran, Semester -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 14px;">
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700;">Asal Sekolah / Lembaga <span style="color:red">*</span></label>
-            <select id="raport-select-sekolah" class="form-control" required style="height: 38px;">
-              <option value="utama">PKBM Aura Anugerah (Sekolah Utama)</option>
-              <!-- Diisi dinamis opsi sekolah mitra -->
-            </select>
-          </div>
+        <!-- Baris 1: Pilih Siswa, Jenjang, Tingkat Kelas, Tahun Ajaran, Semester -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 14px;">
+          <input type="hidden" id="raport-select-sekolah" value="utama">
           <div class="form-group">
             <label style="font-size: 12px; font-weight: 700;">Pilih Peserta Didik <span style="color:red">*</span></label>
             <select id="raport-select-siswa" class="form-control" required onchange="onRaportSiswaChange()" style="height: 38px;">
@@ -4033,106 +3873,6 @@
           <button type="button" class="btn btn-outline" onclick="closeModalFormRaport()">Batal</button>
           <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="save" style="width: 15px; height: 15px;"></i> Simpan Raport
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ==================== MODAL FORM INPUT / EDIT SEKOLAH MITRA ==================== -->
-  <div id="modal-form-sekolah-mitra" class="login-modal hidden" style="z-index: 99998;">
-    <div class="login-modal-overlay" onclick="closeModalFormSekolahMitra()"></div>
-    <div class="modal-content" style="max-width: 640px; width: 92%; max-height: 90vh; display: flex; flex-direction: column; padding: 22px; text-align: left;">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(2, 132, 199, 0.12); display: flex; align-items: center; justify-content: center; color: #0284c7;">
-            <i data-lucide="building-2" style="width: 22px; height: 22px;"></i>
-          </div>
-          <div>
-            <h3 id="modal-sekolah-mitra-title" style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">Data Sekolah Mitra / Numpang</h3>
-            <span style="font-size: 12px; color: var(--text-muted);">Informasi identitas lembaga untuk keperluan kop raport & transkrip</span>
-          </div>
-        </div>
-        <button class="btn-close-modal" onclick="closeModalFormSekolahMitra()">&times;</button>
-      </div>
-
-      <form id="form-sekolah-mitra" onsubmit="event.preventDefault(); simpanDataSekolahMitra();" style="display: flex; flex-direction: column; flex: 1; overflow-y: auto; padding-right: 4px;">
-        <input type="hidden" id="sekolah-mitra-id">
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label style="font-size: 12px; font-weight: 700;">Nama Resmi Lembaga / Sekolah <span style="color:red">*</span></label>
-          <input type="text" id="sekolah-mitra-nama" class="form-control" required placeholder="Contoh: PKBM Harapan Bangsa Sentani" style="height: 38px;">
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700;">Nomor Pokok Sekolah Nasional (NPSN) <span style="color:red">*</span></label>
-            <input type="text" id="sekolah-mitra-npsn" class="form-control" required placeholder="Contoh: P9912345" style="height: 38px;">
-          </div>
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700;">Bentuk Pendidikan / Jenjang</label>
-            <select id="sekolah-mitra-bentuk" class="form-control" style="height: 38px;">
-              <option value="PKBM / Kesetaraan">PKBM / Kesetaraan (Paket A, B, C)</option>
-              <option value="SMA / MA">SMA / MA Terbuka</option>
-              <option value="SMP / MTs">SMP / MTs Terbuka</option>
-              <option value="LKP / Lembaga Kursus">LKP / Vokasi</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label style="font-size: 12px; font-weight: 700;">Alamat Lengkap Lembaga</label>
-          <input type="text" id="sekolah-mitra-alamat" class="form-control" placeholder="Contoh: Jl. Kemiri No. 12, Sentani Kota" style="height: 38px;">
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700;">Kabupaten / Kota</label>
-            <input type="text" id="sekolah-mitra-kabupaten" class="form-control" value="Kabupaten Jayapura" style="height: 38px;">
-          </div>
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700;">Provinsi</label>
-            <input type="text" id="sekolah-mitra-provinsi" class="form-control" value="Papua" style="height: 38px;">
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700;">Nama Kepala Sekolah / Pimpinan <span style="color:red">*</span></label>
-            <input type="text" id="sekolah-mitra-kepala" class="form-control" required placeholder="Nama lengkap & gelar" style="height: 38px;">
-          </div>
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700;">NIP / NIY Pimpinan</label>
-            <input type="text" id="sekolah-mitra-nip" class="form-control" placeholder="Contoh: 19800512 200501 1 003" style="height: 38px;">
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700;">No. WhatsApp / Kontak PIC</label>
-            <input type="text" id="sekolah-mitra-kontak" class="form-control" placeholder="Contoh: 08124800xxxx" style="height: 38px;">
-          </div>
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700;">Nomor SK Izin Operasional</label>
-            <input type="text" id="sekolah-mitra-izin" class="form-control" placeholder="Contoh: 421.1/099/DISDIK/2022" style="height: 38px;">
-          </div>
-        </div>
-
-        <!-- Upload File Logo Sekolah Mitra -->
-        <div class="form-group" style="margin-bottom: 14px;">
-          <label style="font-size: 12px; font-weight: 700;">Logo Sekolah Mitra (Opsional untuk Kop PDF)</label>
-          <input type="file" id="sekolah-mitra-logo-file" accept="image/png, image/jpeg" class="form-control" onchange="handleUploadLogoMitra(this)" style="font-size: 12px; height: 36px;">
-          <input type="hidden" id="sekolah-mitra-logo-base64">
-          <div id="preview-logo-mitra-box" style="margin-top: 6px; display: none; align-items: center; gap: 8px;">
-            <img id="img-preview-logo-mitra" src="" style="width: 36px; height: 36px; object-fit: contain; border: 1px solid var(--border-color); border-radius: 6px; padding: 2px;">
-            <span style="font-size: 11.5px; color: #059669;">✓ Logo siap disematkan pada kop dokumen resmi.</span>
-          </div>
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-color);">
-          <button type="button" class="btn btn-outline" onclick="closeModalFormSekolahMitra()">Batal</button>
-          <button type="submit" class="btn btn-primary" style="background: #0284c7; border: none; display: inline-flex; align-items: center; gap: 6px;">
-            <i data-lucide="save" style="width: 15px; height: 15px;"></i> Simpan Sekolah Mitra
           </button>
         </div>
       </form>
@@ -4322,14 +4062,6 @@
           </select>
         </div>
 
-        <div class="form-group" style="margin-bottom: 16px;">
-          <label style="font-size: 12.5px; font-weight: 700;">Asal Sekolah / Lembaga</label>
-          <select id="export-raport-sekolah" class="form-control" style="height: 38px;">
-            <option value="">Semua Sekolah (PKBM & Mitra Numpang)</option>
-            <option value="utama">Hanya PKBM Aura Anugerah (Internal)</option>
-          </select>
-        </div>
-
         <div style="background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.2); border-radius: 8px; padding: 10px 12px; margin-bottom: 16px;">
           <small style="color: var(--text-color); font-size: 11.5px; line-height: 1.4; display: block;">
             💡 <b>Format 1 Halaman Rapi</b>: Setiap buku raport peserta didik di-generate kompak tepat 1 lembar halaman A4 dengan kop resmi, capaian mapel, ekskul, presensi, dan tanda tangan legalitas.
@@ -4502,14 +4234,6 @@
           </select>
         </div>
 
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label style="font-size: 12.5px; font-weight: 700;">Asal Satuan Pendidikan / Sekolah Penyelenggara</label>
-          <select id="export-transkrip-sekolah" class="form-control" style="height: 38px;">
-            <option value="">Semua Sekolah (PKBM & Mitra Numpang)</option>
-            <option value="utama">Hanya PKBM Aura Anugerah (Utama)</option>
-          </select>
-        </div>
-
         <div class="form-group" style="margin-bottom: 16px;">
           <label style="font-size: 12.5px; font-weight: 700;">Status Peserta Didik</label>
           <select id="export-transkrip-status" class="form-control" style="height: 38px;">
@@ -4528,7 +4252,7 @@
     </div>
   </div>
 
-  <!-- ==================== MODAL INPUT / EDIT TRANSKRIP NILAI SISWA SEKOLAH LAIN ==================== -->
+  <!-- ==================== MODAL INPUT / EDIT TRANSKRIP NILAI MANUAL SISWA PKBM ==================== -->
   <div id="modal-form-transkrip-luar" class="login-modal hidden" style="z-index: 99998;">
     <div class="login-modal-overlay" onclick="closeModalInputTranskripLuar()"></div>
     <div class="modal-content" style="max-width: 780px; width: 94%; max-height: 92vh; display: flex; flex-direction: column; padding: 22px; text-align: left;">
@@ -4538,8 +4262,8 @@
             <i data-lucide="plus-circle" style="width: 22px; height: 22px;"></i>
           </div>
           <div>
-            <h3 id="modal-transkrip-luar-title" style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">Entri Transkrip Nilai Siswa Sekolah Lain</h3>
-            <span style="font-size: 12px; color: var(--text-muted);">Masukkan transkrip resmi siswa sekolah mitra atau titipan ujian</span>
+            <h3 id="modal-transkrip-luar-title" style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">Entri Transkrip Nilai Manual</h3>
+            <span style="font-size: 12px; color: var(--text-muted);">Masukkan nilai transkrip kelulusan siswa PKBM Aura Anugerah (Paket A, B, atau C)</span>
           </div>
         </div>
         <button class="btn-close-modal" onclick="closeModalInputTranskripLuar()">&times;</button>
@@ -4547,15 +4271,10 @@
 
       <form id="form-transkrip-luar" onsubmit="event.preventDefault(); simpanDataTranskripLuar();" style="display: flex; flex-direction: column; flex: 1; overflow-y: auto; padding-right: 4px;">
         <input type="hidden" id="transkrip-luar-id">
+        <input type="hidden" id="transkrip-luar-sekolah" value="utama">
 
-        <!-- Baris 1: Asal Sekolah & Jenjang Program -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-          <div class="form-group">
-            <label style="font-size: 12px; font-weight: 700;">Asal Sekolah / Lembaga Mitra <span style="color:red">*</span></label>
-            <select id="transkrip-luar-sekolah" class="form-control" required style="height: 38px;">
-              <!-- Diisi otomatis oleh updateDropdownPilihanSekolahMitra -->
-            </select>
-          </div>
+        <!-- Baris 1: Jenjang Program -->
+        <div style="margin-bottom: 12px;">
           <div class="form-group">
             <label style="font-size: 12px; font-weight: 700;">Program / Jenjang Kesetaraan <span style="color:red">*</span></label>
             <select id="transkrip-luar-program" class="form-control" required onchange="onJenjangTranskripLuarChange(this.value)" style="height: 38px;">
@@ -4633,7 +4352,7 @@
         <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-color);">
           <button type="button" class="btn btn-outline" onclick="closeModalInputTranskripLuar()">Batal</button>
           <button type="submit" class="btn btn-primary" style="background: #059669; border: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
-            <i data-lucide="save" style="width: 15px; height: 15px;"></i> Simpan Transkrip Sekolah Luar
+            <i data-lucide="save" style="width: 15px; height: 15px;"></i> Simpan Data Transkrip
           </button>
         </div>
       </form>
@@ -4661,64 +4380,14 @@
           </small>
         </div>
 
-        <div class="form-group" style="margin-top: 14px;">
-          <label style="font-weight: 700; margin-bottom: 6px; display: block;">Asal Peserta Didik</label>
-          <div style="display: flex; gap: 12px; background: var(--surface-2); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; margin: 0; font-weight: 600;">
-              <input type="radio" name="asal-peserta-kartu" value="internal" checked onchange="toggleAsalPesertaKartu(this.value)">
-              <span>🏫 Siswa PKBM Aura Anugerah (Database)</span>
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; margin: 0; font-weight: 600;">
-              <input type="radio" name="asal-peserta-kartu" value="eksternal" onchange="toggleAsalPesertaKartu(this.value)">
-              <span>🌐 Siswa Tamu / Sekolah Lain (Ad-hoc)</span>
-            </label>
-          </div>
-        </div>
+        <input type="hidden" name="asal-peserta-kartu" value="internal">
 
-        <!-- Opsi 1: Siswa Internal Terdaftar -->
+        <!-- Opsi Siswa Internal Terdaftar -->
         <div id="wrapper-peserta-internal" class="form-group" style="margin-top: 12px;">
           <label>Target Peserta Didik <span style="color:red">*</span></label>
           <select id="cetak-kartu-pilih-siswa" class="form-control">
             <option value="SEMUA">👥 Cetak Semua Siswa Terdaftar (Sesuai Jenjang/Kelas)</option>
           </select>
-        </div>
-
-        <!-- Opsi 2: Siswa Tamu / Sekolah Lain (Ad-hoc tanpa beban database) -->
-        <div id="wrapper-peserta-eksternal" style="display: none; margin-top: 12px; background: var(--surface-2); border: 1.5px dashed var(--border-color); border-radius: 10px; padding: 14px;">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-            <i data-lucide="building-2" style="width: 16px; height: 16px; color: var(--primary-color);"></i>
-            <strong style="font-size: 13px; color: var(--text-color);">Data Peserta Sekolah / PKBM Tamu</strong>
-          </div>
-          <p style="font-size: 11.5px; color: var(--text-muted); margin: 0 0 10px 0; line-height: 1.4;">
-            💡 <b>Bebas Beban Database:</b> Data ini hanya digunakan untuk men-generate Kartu Ujian (PDF) dan akun sesi ujian temporer tanpa mengotori database siswa reguler Anda.
-          </p>
-
-          <div class="form-group" style="margin-bottom: 10px;">
-            <label style="font-size: 12px;">Nama Sekolah / PKBM Asal <span style="color:red">*</span></label>
-            <input type="text" id="kartu-tamu-sekolah-asal" placeholder="Contoh: PKBM Harapan Bangsa / SMA Negeri 1" class="form-control">
-          </div>
-
-          <div class="form-group-row" style="gap: 8px; margin-bottom: 10px;">
-            <div class="form-group half">
-              <label style="font-size: 12px;">Nama Lengkap Siswa <span style="color:red">*</span></label>
-              <input type="text" id="kartu-tamu-nama" placeholder="Nama Peserta Ujian" class="form-control">
-            </div>
-            <div class="form-group half">
-              <label style="font-size: 12px;">NISN / NIK <span style="color:red">*</span></label>
-              <input type="text" id="kartu-tamu-nisn" placeholder="Nomor NISN / NIK" class="form-control">
-            </div>
-          </div>
-
-          <div class="form-group-row" style="gap: 8px;">
-            <div class="form-group half">
-              <label style="font-size: 12px;">Ruang / Lokasi CBT</label>
-              <input type="text" id="kartu-tamu-ruang" value="Lab Komputer PKBM Aura Anugerah" class="form-control">
-            </div>
-            <div class="form-group half">
-              <label style="font-size: 12px;">No. Peserta / Kursi</label>
-              <input type="text" id="kartu-tamu-nopes" placeholder="Contoh: EXT-001" class="form-control">
-            </div>
-          </div>
         </div>
 
         <!-- Info Preview Ringkas -->

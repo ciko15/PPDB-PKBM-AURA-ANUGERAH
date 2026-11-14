@@ -103,12 +103,6 @@ function doPost(e) {
       result = saveRaportToDB(params.raport);
     } else if (action === "deleteRaport") {
       result = deleteRaportFromDB(params.id);
-    } else if (action === "getSekolahMitra") {
-      result = getSekolahMitraListFromDB();
-    } else if (action === "saveSekolahMitra") {
-      result = saveSekolahMitraToDB(params.sekolah);
-    } else if (action === "deleteSekolahMitra") {
-      result = deleteSekolahMitraFromDB(params.id);
     } else if (action === "getTranskrip") {
       result = getTranskripListFromDB();
     } else if (action === "saveTranskrip") {

@@ -509,113 +509,6 @@ function closeModalPilihCBT() {
 }
 const closeModalPilihUjianCBT = closeModalPilihCBT;
 
-// ==================== CBT KHUSUS PESERTA LUAR / TAMU ====================
-function bukaModalUjianLuar(presetPaketId) {
-  const modal = document.getElementById('modal-ujian-luar');
-  if (!modal) return;
-
-  const selectPaket = document.getElementById('ujian-luar-pilih-paket');
-  if (selectPaket) {
-    selectPaket.innerHTML = '<option value="">-- Pilih Paket Soal CBT --</option>';
-    if (typeof cbtBankSoalList !== 'undefined' && cbtBankSoalList.length > 0) {
-      // Tampilkan paket soal yang AKTIF
-      cbtBankSoalList.forEach(pkt => {
-        const isAktif = (pkt.statusUjian || 'AKTIF') === 'AKTIF';
-        if (isAktif) {
-          const opt = document.createElement('option');
-          opt.value = pkt.id;
-          opt.textContent = `[${pkt.jenisUjian || 'Ujian'}] ${pkt.judul} (${pkt.jenjang || 'Umum'})`;
-          if (presetPaketId && String(pkt.id) === String(presetPaketId)) {
-            opt.selected = true;
-          }
-          selectPaket.appendChild(opt);
-        }
-      });
-    }
-  }
-
-  const initialVal = selectPaket ? selectPaket.value : '';
-  updateCbtLuarInfoPaket(initialVal);
-
-  const inputToken = document.getElementById('ujian-luar-token');
-  if (inputToken) inputToken.value = '';
-
-  modal.classList.remove('hidden');
-}
-
-function closeModalUjianLuar() {
-  const modal = document.getElementById('modal-ujian-luar');
-  if (modal) modal.classList.add('hidden');
-}
-
-function updateCbtLuarInfoPaket(paketId) {
-  const elDurasi = document.getElementById('ujian-luar-durasi');
-  const elJumlah = document.getElementById('ujian-luar-jumlah-soal');
-  const elBadge = document.getElementById('ujian-luar-status-badge');
-
-  if (!paketId) {
-    if (elDurasi) elDurasi.textContent = '-';
-    if (elJumlah) elJumlah.textContent = '-';
-    return;
-  }
-
-  const pkt = (typeof cbtBankSoalList !== 'undefined') ? cbtBankSoalList.find(x => x.id === paketId) : null;
-  if (pkt) {
-    if (elDurasi) elDurasi.textContent = `${pkt.durasiMenit || 30} Menit`;
-    if (elJumlah) elJumlah.textContent = `${pkt.soalList ? pkt.soalList.length : 0} Butir Pilihan Ganda`;
-    if (elBadge) {
-      elBadge.textContent = pkt.statusUjian || 'AKTIF';
-      elBadge.style.background = (pkt.statusUjian === 'NON AKTIF') ? '#fee2e2' : '#dcfce7';
-      elBadge.style.color = (pkt.statusUjian === 'NON AKTIF') ? '#b91c1c' : '#15803d';
-    }
-  }
-}
-
-function prosesMulaiCbtLuar() {
-  const namaPeserta = (document.getElementById('ujian-luar-nama')?.value || '').trim();
-  const asalSekolah = (document.getElementById('ujian-luar-sekolah')?.value || '').trim();
-  const paketId = document.getElementById('ujian-luar-pilih-paket')?.value;
-  const inputToken = (document.getElementById('ujian-luar-token')?.value || '').trim().toUpperCase();
-
-  if (!namaPeserta || !asalSekolah || !paketId) {
-    Swal.fire('Perhatian', 'Lengkapi nama peserta, asal sekolah, dan paket ujian terlebih dahulu!', 'warning');
-    return;
-  }
-
-  const pkt = (typeof cbtBankSoalList !== 'undefined') ? cbtBankSoalList.find(x => x.id === paketId) : null;
-  if (!pkt) {
-    Swal.fire('Error', 'Paket soal tidak ditemukan atau belum aktif!', 'error');
-    return;
-  }
-
-  if (pkt.statusUjian && pkt.statusUjian === 'NON AKTIF') {
-    Swal.fire('Ujian Ditutup', 'Paket ujian ini saat ini berstatus <b>NON AKTIF</b> (ditutup oleh Pengawas/Guru).', 'warning');
-    return;
-  }
-
-  const requiredToken = (pkt.token || pkt.kode || 'AURA1').toUpperCase();
-  if (inputToken !== requiredToken) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Token Ujian Salah!',
-      html: `Token yang Anda masukkan (<b>${inputToken || '-'}</b>) tidak sesuai.<br>Silakan tanyakan token resmi kepada pengawas ujian.`
-    });
-    return;
-  }
-
-  // Siapkan objek student tamu
-  const guestStudent = {
-    id: 'GUEST-' + Date.now(),
-    nama: `${namaPeserta} [${asalSekolah}]`,
-    program: 'Peserta Luar',
-    isExternal: true,
-    asalSekolah: asalSekolah
-  };
-
-  closeModalUjianLuar();
-  launchCbtDariPaketSoal(pkt, guestStudent);
-}
-
 function updateCbtInfoPaket(pilihanId) {
   const elDurasi = document.getElementById('cbt-info-durasi');
   const elJumlah = document.getElementById('cbt-info-jumlah');
@@ -2847,15 +2740,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderBankSoalTable();
     // Pulihkan sesi ujian jika reload halaman
     restoreActiveCbtSessionIfAny();
-
-    // Auto-open modal ujian luar jika diakses via query string ?ujian=ID atau ?cbt-luar=1
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const targetUjian = urlParams.get('ujian') || urlParams.get('soal');
-      if (urlParams.has('cbt-luar') || targetUjian) {
-        bukaModalUjianLuar(targetUjian);
-      }
-    } catch (e) { }
   }, 600);
 });
 
@@ -2975,26 +2859,10 @@ function cetakKartuUjianSiswaLogin(paketId) {
 }
 
 /**
- * Toggle antara Siswa Internal PKBM vs Siswa Tamu / Sekolah Luar
- */
-function toggleAsalPesertaKartu(tipe) {
-  const wrapInternal = document.getElementById('wrapper-peserta-internal');
-  const wrapEksternal = document.getElementById('wrapper-peserta-eksternal');
-  if (tipe === 'eksternal') {
-    if (wrapInternal) wrapInternal.style.display = 'none';
-    if (wrapEksternal) wrapEksternal.style.display = 'block';
-  } else {
-    if (wrapInternal) wrapInternal.style.display = 'block';
-    if (wrapEksternal) wrapEksternal.style.display = 'none';
-  }
-}
-
-/**
  * Proses unduh PDF dari form modal
  */
 function prosesCetakKartuUjianDariModal() {
   const paketId = document.getElementById('cetak-kartu-pilih-paket')?.value;
-  const asalPeserta = document.querySelector('input[name="asal-peserta-kartu"]:checked')?.value || 'internal';
 
   if (!paketId) {
     Swal.fire('Peringatan', 'Pilih paket ujian terlebih dahulu!', 'warning');
@@ -3004,37 +2872,7 @@ function prosesCetakKartuUjianDariModal() {
   const pkt = cbtBankSoalList.find(p => p.id === paketId);
   if (!pkt) return;
 
-  if (asalPeserta === 'eksternal') {
-    // Siswa Tamu / Sekolah Lain (Ad-hoc)
-    const sekolahAsal = (document.getElementById('kartu-tamu-sekolah-asal')?.value || '').trim();
-    const namaSiswa = (document.getElementById('kartu-tamu-nama')?.value || '').trim();
-    const nisn = (document.getElementById('kartu-tamu-nisn')?.value || '').trim();
-    const ruang = (document.getElementById('kartu-tamu-ruang')?.value || 'Lab Komputer PKBM Aura Anugerah').trim();
-    const nopesManual = (document.getElementById('kartu-tamu-nopes')?.value || '').trim();
-
-    if (!sekolahAsal || !namaSiswa) {
-      Swal.fire('Form Belum Lengkap', 'Mohon isi Nama Sekolah Asal dan Nama Siswa Tamu.', 'warning');
-      return;
-    }
-
-    const siswaTamu = {
-      id: 'EXT-' + Date.now().toString().slice(-4),
-      nama: namaSiswa,
-      nisn: nisn || '-',
-      nik: '-',
-      program: pkt.jenjang,
-      kelas: pkt.kelas !== 'Semua Kelas' ? pkt.kelas : 'Kelas X',
-      sekolahAsal: sekolahAsal,
-      ruangCbt: ruang,
-      nomorPesertaCustom: nopesManual
-    };
-
-    cetakKartuUjianResmi(pkt, siswaTamu);
-    closeModalPilihCetakKartuUjian();
-    return;
-  }
-
-  // Siswa Internal dari Database PKBM
+  // Siswa dari Database PKBM Aura Anugerah
   const targetSiswaId = document.getElementById('cetak-kartu-pilih-siswa')?.value;
   const allSiswa = (typeof siswaDataList !== 'undefined' && Array.isArray(siswaDataList)) ? siswaDataList : [];
 
@@ -3331,10 +3169,6 @@ function gambarHalamanKartuUjian(doc, pkt, s) {
 }
 
 // Ekspos fungsi ke global window agar dapat dipanggil dari elemen HTML
-window.bukaModalUjianLuar = bukaModalUjianLuar;
-window.closeModalUjianLuar = closeModalUjianLuar;
-window.updateCbtLuarInfoPaket = updateCbtLuarInfoPaket;
-window.prosesMulaiCbtLuar = prosesMulaiCbtLuar;
 window.bukaModalPilihCetakKartuUjian = bukaModalPilihCetakKartuUjian;
 window.closeModalPilihCetakKartuUjian = closeModalPilihCetakKartuUjian;
 window.onPaketKartuUjianChange = onPaketKartuUjianChange;
@@ -3342,7 +3176,6 @@ window.cetakKartuUjianPaketLangsung = cetakKartuUjianPaketLangsung;
 window.cetakKartuUjianSiswaLogin = cetakKartuUjianSiswaLogin;
 window.prosesCetakKartuUjianDariModal = prosesCetakKartuUjianDariModal;
 window.cetakKartuUjianResmi = cetakKartuUjianResmi;
-window.toggleAsalPesertaKartu = toggleAsalPesertaKartu;
 window.simpanPaketSoal = simpanPaketSoalBaru;
 window.bukaModalAmbilBankSoalMaster = bukaModalAmbilBankSoalMaster;
 window.closeModalAmbilBankSoalMaster = closeModalAmbilBankSoalMaster;

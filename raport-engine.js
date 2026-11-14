@@ -106,338 +106,6 @@ function dapatkanLogoSekolahBase64() {
   return null;
 }
 
-// ==================== MASTER SEKOLAH MITRA / NUMPANG ====================
-let sekolahMitraList = [];
-
-async function loadSekolahMitraData() {
-  try {
-    const local = localStorage.getItem('ppdb_sekolah_mitra_list');
-    if (local) sekolahMitraList = JSON.parse(local);
-  } catch (e) {}
-
-  if (!sekolahMitraList || sekolahMitraList.length === 0) {
-    sekolahMitraList = [
-      {
-        id: 'SCH-AURA-UTAMA',
-        namaSekolah: 'PKBM "AURA ANUGERAH"',
-        npsn: 'P2960013',
-        statusSekolah: 'Sekolah Induk Penyelenggara',
-        bentukPendidikan: 'PKBM / Kesetaraan',
-        alamat: 'Sekretariat: Jalan Dobonsolo Raya, RT. 003 / RW. 001',
-        kabupaten: 'Kabupaten Jayapura',
-        provinsi: 'Papua',
-        namaKepala: 'Drs. H. ALI YANI, M.Pd.',
-        nipNiy: 'NIP. -',
-        kontakPic: '081248000000',
-        catatanIzin: 'Akte Notaris No. 54 Tanggal 06 Agustus 2020 NPSN : P2960013',
-        logoBase64: typeof ASSET_LOGO_AURA_B64 !== 'undefined' ? ASSET_LOGO_AURA_B64 : ''
-      },
-      {
-        id: 'SCH-SAMPLE-01',
-        namaSekolah: 'PKBM Harapan Bangsa Sentani',
-        npsn: 'P9961234',
-        statusSekolah: 'Mitra Numpang',
-        bentukPendidikan: 'PKBM / Kesetaraan',
-        alamat: 'Jl. Kemiri No. 12, Sentani Kota',
-        kabupaten: 'Kabupaten Jayapura',
-        provinsi: 'Papua',
-        namaKepala: 'Drs. YOHANES WAMANG, M.Pd',
-        nipNiy: '19750812 200301 1 005',
-        kontakPic: '081248001122',
-        catatanIzin: '421.1/088/DISDIK/2022',
-        logoBase64: ''
-      }
-    ];
-    saveSekolahMitraToStorage();
-  }
-
-  renderSekolahMitraTable();
-  updateDropdownPilihanSekolahMitra();
-
-  if (typeof callAPI === 'function') {
-    callAPI({ action: "getSekolahMitra" }).then(cloud => {
-      if (Array.isArray(cloud) && cloud.length > 0) {
-        sekolahMitraList = cloud;
-        try { localStorage.setItem('ppdb_sekolah_mitra_list', JSON.stringify(sekolahMitraList)); } catch (e) {}
-        renderSekolahMitraTable();
-        updateDropdownPilihanSekolahMitra();
-      }
-    }).catch(err => {
-      console.warn("Gagal ambil sekolah mitra dari cloud:", err.message);
-    });
-  }
-}
-
-function saveSekolahMitraToStorage(newSekolah = null) {
-  try {
-    localStorage.setItem('ppdb_sekolah_mitra_list', JSON.stringify(sekolahMitraList));
-  } catch (e) {}
-
-  if (newSekolah && typeof callAPI === 'function') {
-    callAPI({ action: "saveSekolahMitra", sekolah: newSekolah }).catch(err => {
-      console.warn("Gagal simpan sekolah mitra ke cloud:", err.message);
-    });
-  }
-}
-
-function renderSekolahMitraTable(data = null) {
-  const tbody = document.getElementById('table-sekolah-mitra-body');
-  if (!tbody) return;
-
-  const list = data || sekolahMitraList;
-  if (!list || list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">Belum ada data sekolah mitra yang terdaftar.</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = list.map((m, idx) => {
-    const logoImg = m.logoBase64 ? 
-      `<img src="${m.logoBase64}" style="width: 32px; height: 32px; object-fit: contain; border-radius: 6px; border: 1px solid var(--border-color); padding: 2px;">` :
-      `<div style="width: 32px; height: 32px; border-radius: 6px; background: rgba(2, 132, 199, 0.12); color: #0284c7; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">🏫</div>`;
-
-    return `
-      <tr>
-        <td style="text-align: center;">${idx + 1}</td>
-        <td>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            ${logoImg}
-            <div>
-              <strong>${m.namaSekolah}</strong>
-              <br><small style="color: var(--text-muted);">${m.catatanIzin ? 'Izin: ' + m.catatanIzin : '-'}</small>
-            </div>
-          </div>
-        </td>
-        <td>
-          <span style="font-weight: 600;">NPSN: ${m.npsn || '-'}</span>
-          <br><small class="tag def">${m.bentukPendidikan || 'PKBM'}</small>
-        </td>
-        <td>
-          <small>${m.alamat || '-'}</small>
-          <br><small style="color: var(--text-muted); font-weight: 600;">${m.kabupaten || 'Sentani, Jayapura'}</small>
-        </td>
-        <td>
-          <strong>${m.namaKepala || '-'}</strong>
-          <br><small style="color: var(--text-muted);">${m.nipNiy ? 'NIP: ' + m.nipNiy : ''}</small>
-        </td>
-        <td>
-          <small>${m.kontakPic || '-'}</small>
-        </td>
-        <td style="text-align: right; white-space: nowrap;">
-          <button class="btn btn-sm btn-outline" onclick="editDataSekolahMitra('${m.id}')" title="Edit Data Sekolah Mitra" style="padding: 4px 8px;">
-            <i data-lucide="edit" style="width: 13px; height: 13px;"></i>
-          </button>
-          <button class="btn btn-icon btn-danger-text" onclick="hapusDataSekolahMitra('${m.id}')" title="Hapus Sekolah Mitra">
-            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-          </button>
-        </td>
-      </tr>
-    `;
-  }).join('');
-
-  if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    window.lucide.createIcons();
-  }
-}
-
-function filterSekolahMitraTable() {
-  const query = (document.getElementById('search-sekolah-mitra')?.value || '').toLowerCase().trim();
-  const filtered = (sekolahMitraList || []).filter(m => {
-    return !query || 
-      (m.namaSekolah || '').toLowerCase().includes(query) ||
-      (m.npsn || '').toLowerCase().includes(query) ||
-      (m.namaKepala || '').toLowerCase().includes(query);
-  });
-  renderSekolahMitraTable(filtered);
-}
-
-function updateDropdownPilihanSekolahMitra() {
-  const selectRaport = document.getElementById('raport-select-sekolah');
-  if (selectRaport) {
-    const prevVal = selectRaport.value || 'utama';
-    selectRaport.innerHTML = '<option value="utama">PKBM Aura Anugerah (Sekolah Penyelenggara)</option>' +
-      (sekolahMitraList || []).map(m => `<option value="${m.id}">${m.namaSekolah} (NPSN: ${m.npsn})</option>`).join('');
-    selectRaport.value = prevVal;
-  }
-
-  // Dropdown pada Modal Input Transkrip Siswa Sekolah Luar
-  const selectTranskripLuar = document.getElementById('transkrip-luar-sekolah');
-  if (selectTranskripLuar) {
-    const prevLuar = selectTranskripLuar.value || '';
-    selectTranskripLuar.innerHTML = (sekolahMitraList && sekolahMitraList.length > 0)
-      ? sekolahMitraList.map(m => `<option value="${m.id}">${m.namaSekolah} (NPSN: ${m.npsn})</option>`).join('')
-      : '<option value="utama">PKBM Aura Anugerah (Utama)</option>';
-    if (prevLuar) selectTranskripLuar.value = prevLuar;
-  }
-
-  // Filter toolbar di Transkrip Nilai
-  const filterTranskripSkh = document.getElementById('filter-transkrip-sekolah');
-  if (filterTranskripSkh) {
-    const prevFilter = filterTranskripSkh.value || '';
-    filterTranskripSkh.innerHTML = '<option value="">Semua Asal Sekolah</option><option value="utama">PKBM Aura Anugerah (Utama)</option>' +
-      (sekolahMitraList || []).map(m => `<option value="${m.id}">${m.namaSekolah}</option>`).join('');
-    if (prevFilter) filterTranskripSkh.value = prevFilter;
-  }
-}
-
-function bukaModalFormSekolahMitra() {
-  const modal = document.getElementById('modal-form-sekolah-mitra');
-  if (!modal) return;
-
-  document.getElementById('modal-sekolah-mitra-title').textContent = 'Tambah Sekolah Mitra / Numpang';
-  document.getElementById('sekolah-mitra-id').value = '';
-  document.getElementById('sekolah-mitra-nama').value = '';
-  document.getElementById('sekolah-mitra-npsn').value = '';
-  document.getElementById('sekolah-mitra-bentuk').value = 'PKBM / Kesetaraan';
-  document.getElementById('sekolah-mitra-alamat').value = '';
-  document.getElementById('sekolah-mitra-kabupaten').value = 'Kabupaten Jayapura';
-  document.getElementById('sekolah-mitra-provinsi').value = 'Papua';
-  document.getElementById('sekolah-mitra-kepala').value = '';
-  document.getElementById('sekolah-mitra-nip').value = '';
-  document.getElementById('sekolah-mitra-kontak').value = '';
-  document.getElementById('sekolah-mitra-izin').value = '';
-  document.getElementById('sekolah-mitra-logo-base64').value = '';
-  document.getElementById('preview-logo-mitra-box').style.display = 'none';
-
-  modal.classList.remove('hidden');
-}
-
-function closeModalFormSekolahMitra() {
-  const modal = document.getElementById('modal-form-sekolah-mitra');
-  if (modal) modal.classList.add('hidden');
-}
-
-function handleUploadLogoMitra(input) {
-  if (input.files && input.files[0]) {
-    const file = input.files[0];
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      document.getElementById('sekolah-mitra-logo-base64').value = e.target.result;
-      const previewImg = document.getElementById('img-preview-logo-mitra');
-      previewImg.src = e.target.result;
-      document.getElementById('preview-logo-mitra-box').style.display = 'flex';
-    };
-    reader.readAsDataURL(file);
-  }
-}
-
-function simpanDataSekolahMitra() {
-  const id = document.getElementById('sekolah-mitra-id').value;
-  const nama = document.getElementById('sekolah-mitra-nama').value.trim();
-  const npsn = document.getElementById('sekolah-mitra-npsn').value.trim();
-  const bentuk = document.getElementById('sekolah-mitra-bentuk').value;
-  const alamat = document.getElementById('sekolah-mitra-alamat').value.trim();
-  const kab = document.getElementById('sekolah-mitra-kabupaten').value.trim();
-  const prov = document.getElementById('sekolah-mitra-provinsi').value.trim();
-  const kepala = document.getElementById('sekolah-mitra-kepala').value.trim();
-  const nip = document.getElementById('sekolah-mitra-nip').value.trim();
-  const kontak = document.getElementById('sekolah-mitra-kontak').value.trim();
-  const izin = document.getElementById('sekolah-mitra-izin').value.trim();
-  const logo = document.getElementById('sekolah-mitra-logo-base64').value;
-
-  if (!nama) {
-    Swal.fire('Error', 'Nama sekolah mitra wajib diisi.', 'error');
-    return;
-  }
-
-  const newMitra = {
-    id: id || ('SCH-' + Date.now()),
-    namaSekolah: nama,
-    npsn: npsn,
-    statusSekolah: 'Mitra Numpang',
-    bentukPendidikan: bentuk,
-    alamat: alamat,
-    kabupaten: kab,
-    provinsi: prov,
-    namaKepala: kepala,
-    nipNiy: nip,
-    kontakPic: kontak,
-    catatanIzin: izin,
-    logoBase64: logo
-  };
-
-  if (id) {
-    const idx = sekolahMitraList.findIndex(x => x.id === id);
-    if (idx !== -1) sekolahMitraList[idx] = newMitra;
-  } else {
-    sekolahMitraList.unshift(newMitra);
-  }
-
-  saveSekolahMitraToStorage(newMitra);
-  renderSekolahMitraTable();
-  updateDropdownPilihanSekolahMitra();
-  closeModalFormSekolahMitra();
-
-  Swal.fire({
-    icon: 'success',
-    title: 'Sekolah Mitra Tersimpan',
-    text: `Identitas lembaga ${nama} berhasil disimpan ke database.`,
-    confirmButtonColor: '#0284c7'
-  });
-}
-
-function editDataSekolahMitra(id) {
-  const m = sekolahMitraList.find(x => x.id === id);
-  if (!m) return;
-
-  bukaModalFormSekolahMitra();
-  document.getElementById('modal-sekolah-mitra-title').textContent = 'Edit Data Sekolah Mitra';
-  document.getElementById('sekolah-mitra-id').value = m.id;
-  document.getElementById('sekolah-mitra-nama').value = m.namaSekolah || '';
-  document.getElementById('sekolah-mitra-npsn').value = m.npsn || '';
-  document.getElementById('sekolah-mitra-bentuk').value = m.bentukPendidikan || 'PKBM / Kesetaraan';
-  document.getElementById('sekolah-mitra-alamat').value = m.alamat || '';
-  document.getElementById('sekolah-mitra-kabupaten').value = m.kabupaten || 'Kabupaten Jayapura';
-  document.getElementById('sekolah-mitra-provinsi').value = m.provinsi || 'Papua';
-  document.getElementById('sekolah-mitra-kepala').value = m.namaKepala || '';
-  document.getElementById('sekolah-mitra-nip').value = m.nipNiy || '';
-  document.getElementById('sekolah-mitra-kontak').value = m.kontakPic || '';
-  document.getElementById('sekolah-mitra-izin').value = m.catatanIzin || '';
-
-  if (m.logoBase64) {
-    document.getElementById('sekolah-mitra-logo-base64').value = m.logoBase64;
-    document.getElementById('img-preview-logo-mitra').src = m.logoBase64;
-    document.getElementById('preview-logo-mitra-box').style.display = 'flex';
-  }
-}
-
-function hapusDataSekolahMitra(id) {
-  Swal.fire({
-    title: 'Hapus Sekolah Mitra?',
-    text: 'Data sekolah mitra ini akan dihapus dari arsip lembaga.',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Ya, Hapus',
-    cancelButtonText: 'Batal',
-    confirmButtonColor: '#e11d48'
-  }).then(res => {
-    if (res.isConfirmed) {
-      sekolahMitraList = sekolahMitraList.filter(x => x.id !== id);
-      saveSekolahMitraToStorage();
-      renderSekolahMitraTable();
-      updateDropdownPilihanSekolahMitra();
-      if (typeof callAPI === 'function') {
-        callAPI({ action: "deleteSekolahMitra", id: id }).catch(() => {});
-      }
-      Swal.fire('Terhapus', 'Data sekolah mitra telah dihapus.', 'success');
-    }
-  });
-}
-
-// Inisialisasi Sekolah Mitra saat load raport-engine
-loadSekolahMitraData();
-
-// Ekspos fungsi sekolah mitra ke window
-window.loadSekolahMitraData = loadSekolahMitraData;
-window.renderSekolahMitraTable = renderSekolahMitraTable;
-window.filterSekolahMitraTable = filterSekolahMitraTable;
-window.bukaModalFormSekolahMitra = bukaModalFormSekolahMitra;
-window.closeModalFormSekolahMitra = closeModalFormSekolahMitra;
-window.handleUploadLogoMitra = handleUploadLogoMitra;
-window.simpanDataSekolahMitra = simpanDataSekolahMitra;
-window.editDataSekolahMitra = editDataSekolahMitra;
-window.hapusDataSekolahMitra = hapusDataSekolahMitra;
-window.updateDropdownPilihanSekolahMitra = updateDropdownPilihanSekolahMitra;
-
 async function loadRaportData() {
   try {
     const local = localStorage.getItem('ppdb_raport_list');
@@ -1041,18 +709,18 @@ function cetakBukuRaportPDF(id, options = {}) {
   let kepalaNipKop = 'NIY. 201804.001';
   let logoBase64 = dapatkanLogoSekolahBase64();
 
-  if (r.sekolahId && r.sekolahId !== 'utama' && Array.isArray(sekolahMitraList)) {
-    const sm = sekolahMitraList.find(m => String(m.id) === String(r.sekolahId));
-    if (sm) {
-      namaSekolahKop = (sm.namaSekolah || namaSekolahKop).toUpperCase();
-      npsnKop = sm.npsn || npsnKop;
-      izinKop = sm.skIzin || izinKop;
-      alamatKop = `${sm.alamat || ''}, ${sm.kabupaten || ''}, ${sm.provinsi || ''}`;
-      kepalaNamaKop = sm.namaKepala || kepalaNamaKop;
-      kepalaNipKop = sm.nipKepala ? `NIP/NIY. ${sm.nipKepala}` : '-';
-      if (sm.logoBase64) logoBase64 = sm.logoBase64;
+  // Ambil profil terbaru PKBM Aura Anugerah dari database Pengaturan jika tersedia
+  try {
+    const tkStored = (typeof infoTKData !== 'undefined' && infoTKData) ? infoTKData : (typeof getStoredTKInfo === 'function' ? getStoredTKInfo() : null);
+    if (tkStored) {
+      if (tkStored.nama) namaSekolahKop = tkStored.nama.toUpperCase();
+      if (tkStored.npsn) npsnKop = tkStored.npsn;
+      if (tkStored.keterangan) izinKop = tkStored.keterangan;
+      if (tkStored.jalan) alamatKop = tkStored.jalan;
+      if (tkStored.kepala_sekolah) kepalaNamaKop = tkStored.kepala_sekolah;
+      if (tkStored.nip_kepala) kepalaNipKop = tkStored.nip_kepala;
     }
-  }
+  } catch (e) {}
 
   if (logoBase64) {
     try {
@@ -1463,7 +1131,6 @@ function saveTranskripLuarData(item = null, isBatch = false) {
 // ==================== SECTION TRANSKRIP NILAI RESMI ====================
 function loadTranskripData() {
   loadTranskripLuarData();
-  updateDropdownPilihanSekolahMitra();
   renderTranskripTable();
 }
 
@@ -1519,16 +1186,15 @@ function renderTranskripTable(data = null) {
       });
     });
 
-    // 2. Siswa Transkrip Sekolah Luar / Manual
+    // 2. Siswa Transkrip Manual / Import Excel
     (transkripLuarList || []).forEach(tl => {
-      const sm = (sekolahMitraList || []).find(m => String(m.id) === String(tl.sekolahId));
       const jnj = normalisasiJenjang(tl.program);
       combinedList.push({
         ...tl,
         transkripProgram: jnj,
         program: jnj,
         isLuar: true,
-        namaSekolahAsal: sm ? sm.namaSekolah : (tl.namaSekolah || 'Sekolah Mitra')
+        namaSekolahAsal: 'PKBM Aura Anugerah'
       });
     });
   }
@@ -1542,7 +1208,7 @@ function renderTranskripTable(data = null) {
   }
 
   if (!combinedList || combinedList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">Belum ada data peserta didik untuk transkrip nilai.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">Belum ada data peserta didik untuk transkrip nilai.</td></tr>';
     return;
   }
 
@@ -1579,10 +1245,6 @@ function renderTranskripTable(data = null) {
       }
     }
 
-    const badgeSekolah = s.isLuar 
-      ? `<span class="tag" style="background: rgba(14, 165, 233, 0.12); color: #0284c7; font-weight: 700;">🏫 ${s.namaSekolahAsal || 'Sekolah Mitra'}</span>`
-      : `<span class="tag" style="background: rgba(5, 150, 105, 0.12); color: #059669; font-weight: 600;">Induk PKBM</span>`;
-
     const statusNilaiHtml = hasNilai
       ? `<span style="font-weight: 800; font-size: 14px; color: #0284c7; background: rgba(2, 132, 199, 0.1); padding: 3px 10px; border-radius: 6px;">${ipkKumulatif}</span>`
       : `<span style="font-size: 11.5px; color: var(--text-muted); font-style: italic; background: rgba(100, 116, 139, 0.1); padding: 3px 8px; border-radius: 6px;">Belum Dinilai</span>`;
@@ -1597,9 +1259,6 @@ function renderTranskripTable(data = null) {
         <td>
           <span style="font-weight: 600;">${s.nisn || '-'}</span>
           <br><small style="color: var(--text-muted);">NIK: ${s.nik || '-'}</small>
-        </td>
-        <td>
-          ${badgeSekolah}
         </td>
         <td>
           <span class="tag def" style="font-weight: 700;">${targetProgram}</span>
@@ -1644,7 +1303,6 @@ function renderTranskripTable(data = null) {
 function filterTranskripTable() {
   const query = (document.getElementById('search-transkrip')?.value || '').toLowerCase().trim();
   const program = document.getElementById('filter-transkrip-program')?.value || '';
-  const sekolah = document.getElementById('filter-transkrip-sekolah')?.value || '';
 
   // Buat combined list dulu dengan multi-jenjang
   let combined = [];
@@ -1667,21 +1325,20 @@ function filterTranskripTable() {
         transkripProgram: jnj,
         program: jnj,
         isLuar: false,
-        sekolahId: s.sekolahId || 'utama',
+        sekolahId: 'utama',
         namaSekolahAsal: 'PKBM Aura Anugerah'
       });
     });
   });
 
   (transkripLuarList || []).forEach(tl => {
-    const sm = (sekolahMitraList || []).find(m => String(m.id) === String(tl.sekolahId));
     const jnj = normalisasiJenjang(tl.program);
     combined.push({
       ...tl,
       transkripProgram: jnj,
       program: jnj,
       isLuar: true,
-      namaSekolahAsal: sm ? sm.namaSekolah : (tl.namaSekolah || 'Sekolah Mitra')
+      namaSekolahAsal: 'PKBM Aura Anugerah'
     });
   });
 
@@ -1690,24 +1347,20 @@ function filterTranskripTable() {
     const matchQuery = !query || 
       (s.nama || '').toLowerCase().includes(query) || 
       (s.nisn || '').includes(query) || 
-      (s.nik || '').includes(query) ||
-      (s.namaSekolahAsal || '').toLowerCase().includes(query);
+      (s.nik || '').includes(query);
     const matchProgram = !program || (progStr && progStr.includes(program));
-    const matchSekolah = !sekolah || (sekolah === 'utama' ? (!s.isLuar || s.sekolahId === 'utama') : String(s.sekolahId) === String(sekolah));
-    return matchQuery && matchProgram && matchSekolah;
+    return matchQuery && matchProgram;
   });
 
   renderTranskripTable(filtered);
 }
 
-// ==================== MODAL FORM ENTRI TRANSKRIP SEKOLAH LUAR ====================
+// ==================== MODAL FORM ENTRI TRANSKRIP MANUAL ====================
 function bukaModalInputTranskripLuar() {
   const modal = document.getElementById('modal-form-transkrip-luar');
   if (!modal) return;
 
-  updateDropdownPilihanSekolahMitra();
-
-  document.getElementById('modal-transkrip-luar-title').textContent = 'Entri Transkrip Nilai Siswa Sekolah Lain';
+  document.getElementById('modal-transkrip-luar-title').textContent = 'Entri Transkrip Nilai Manual';
   document.getElementById('transkrip-luar-id').value = '';
   document.getElementById('transkrip-luar-nama').value = '';
   document.getElementById('transkrip-luar-nisn').value = '';
@@ -1799,7 +1452,7 @@ function tambahBarisMapelTranskripLuar() {
 
 function simpanDataTranskripLuar() {
   const id = document.getElementById('transkrip-luar-id').value;
-  const skhId = document.getElementById('transkrip-luar-sekolah').value;
+  const skhId = 'utama';
   const program = document.getElementById('transkrip-luar-program').value;
   const nama = document.getElementById('transkrip-luar-nama').value.trim();
   const nisn = document.getElementById('transkrip-luar-nisn').value.trim();
@@ -1809,8 +1462,8 @@ function simpanDataTranskripLuar() {
   const tahunLulus = document.getElementById('transkrip-luar-tahun').value.trim() || String(new Date().getFullYear());
   const nomorTranskrip = document.getElementById('transkrip-luar-nomor').value.trim();
 
-  if (!nama || !nisn || !skhId) {
-    Swal.fire('Peringatan', 'Asal sekolah mitra, nama siswa, dan NISN wajib diisi!', 'warning');
+  if (!nama || !nisn) {
+    Swal.fire('Peringatan', 'Nama lengkap siswa dan NISN wajib diisi!', 'warning');
     return;
   }
 
@@ -1832,13 +1485,11 @@ function simpanDataTranskripLuar() {
     return;
   }
 
-  const sm = (sekolahMitraList || []).find(m => String(m.id) === String(skhId));
-
   const transkripItem = {
-    id: id || ('TRL-' + Date.now()),
+    id: id || ('TR-' + Date.now()),
     isLuar: true,
-    sekolahId: skhId,
-    namaSekolah: sm ? sm.namaSekolah : 'Sekolah Mitra',
+    sekolahId: 'utama',
+    namaSekolah: 'PKBM Aura Anugerah',
     nama,
     nisn,
     nik,
@@ -1865,7 +1516,7 @@ function simpanDataTranskripLuar() {
   Swal.fire({
     icon: 'success',
     title: 'Transkrip Disimpan',
-    text: `Transkrip nilai untuk ${nama} (${transkripItem.namaSekolah}) berhasil disimpan.`,
+    text: `Transkrip nilai untuk ${nama} (${program}) berhasil disimpan.`,
     confirmButtonColor: '#059669'
   });
 }
@@ -1875,9 +1526,8 @@ function editDataTranskripLuar(id) {
   if (!item) return;
 
   bukaModalInputTranskripLuar();
-  document.getElementById('modal-transkrip-luar-title').textContent = 'Edit Transkrip Nilai Siswa Sekolah Lain';
+  document.getElementById('modal-transkrip-luar-title').textContent = 'Edit Transkrip Nilai Siswa';
   document.getElementById('transkrip-luar-id').value = item.id;
-  document.getElementById('transkrip-luar-sekolah').value = item.sekolahId || '';
   document.getElementById('transkrip-luar-program').value = item.program || 'Paket C';
   document.getElementById('transkrip-luar-nama').value = item.nama || '';
   document.getElementById('transkrip-luar-nisn').value = item.nisn || '';
@@ -1988,22 +1638,6 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   }
   if (!logoKananBase64) {
     logoKananBase64 = (typeof ASSET_LOGO_AURA_B64 !== 'undefined') ? ASSET_LOGO_AURA_B64 : dapatkanLogoSekolahBase64();
-  }
-
-  if (targetSekolahId && targetSekolahId !== 'utama' && Array.isArray(sekolahMitraList)) {
-    const sm = sekolahMitraList.find(m => String(m.id) === String(targetSekolahId));
-    if (sm) {
-      namaSekolahKop = (sm.namaSekolah || namaSekolahKop).toUpperCase();
-      namaLembagaBiodata = sm.namaSekolah || namaLembagaBiodata;
-      npsnKop = sm.npsn || npsnKop;
-      izinKop = sm.catatanIzin || sm.skIzin || izinKop;
-      alamatKop = `${sm.alamat || ''}, ${sm.kabupaten || 'Jayapura'}, ${sm.provinsi || 'Papua'}`.trim().replace(/^,\s*/, '');
-      tempatSurat = sm.kabupaten || 'Kabupaten Jayapura';
-      kepalaNama = sm.namaKepala || kepalaNama;
-      kepalaNip = sm.nipNiy ? `NIP/NIY. ${sm.nipNiy}` : '-';
-      ttdJabatan = `Ketua / Pimpinan ${sm.namaSekolah},`;
-      if (sm.logoBase64) logoKananBase64 = sm.logoBase64;
-    }
   }
 
   // Bingkai / Border Keaslian Dokumen Resmi
@@ -2348,18 +1982,6 @@ function bukaModalExportGlobalRaport() {
   const modal = document.getElementById('modal-export-global-raport');
   if (!modal) return;
 
-  // Isi dropdown sekolah mitra jika ada
-  const selectSekolah = document.getElementById('export-raport-sekolah');
-  if (selectSekolah) {
-    selectSekolah.innerHTML = '<option value="">Semua Sekolah (PKBM & Mitra Numpang)</option><option value="utama">Hanya PKBM Aura Anugerah (Internal)</option>';
-    (sekolahMitraList || []).forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m.id;
-      opt.textContent = `${m.namaSekolah} (${m.npsn || 'Mitra'})`;
-      selectSekolah.appendChild(opt);
-    });
-  }
-
   modal.classList.remove('hidden');
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons();
@@ -2375,15 +1997,13 @@ function prosesExportGlobalRaport() {
   const thn = document.getElementById('export-raport-thn')?.value || '';
   const smt = document.getElementById('export-raport-smt')?.value || '';
   const kls = document.getElementById('export-raport-kelas')?.value || '';
-  const skh = document.getElementById('export-raport-sekolah')?.value || '';
 
   // Filter raportDataList
   const filtered = (raportDataList || []).filter(r => {
     const matchThn = !thn || r.tahunAjaran === thn;
     const matchSmt = !smt || r.semester === smt;
     const matchKls = !kls || (r.tingkatKelas && r.tingkatKelas.includes(kls)) || (r.program && r.program.includes(kls));
-    const matchSkh = !skh || (skh === 'utama' ? (!r.sekolahId || r.sekolahId === 'utama') : String(r.sekolahId) === String(skh));
-    return matchThn && matchSmt && matchKls && matchSkh;
+    return matchThn && matchSmt && matchKls;
   });
 
   if (filtered.length === 0) {
@@ -2431,18 +2051,6 @@ function prosesExportGlobalRaport() {
 function bukaModalExportGlobalTranskrip() {
   const modal = document.getElementById('modal-export-global-transkrip');
   if (modal) {
-    // Isi dropdown sekolah mitra
-    const selectSekolah = document.getElementById('export-transkrip-sekolah');
-    if (selectSekolah) {
-      selectSekolah.innerHTML = '<option value="">Semua Sekolah (PKBM & Mitra Numpang)</option><option value="utama">Hanya PKBM Aura Anugerah (Utama)</option>';
-      (sekolahMitraList || []).forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m.id;
-        opt.textContent = `${m.namaSekolah} (${m.npsn || 'Mitra'})`;
-        selectSekolah.appendChild(opt);
-      });
-    }
-
     modal.classList.remove('hidden');
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
       window.lucide.createIcons();
@@ -2458,26 +2066,16 @@ function closeModalExportGlobalTranskrip() {
 function prosesExportGlobalTranskrip() {
   const prog = document.getElementById('export-transkrip-program')?.value || '';
   const thn = document.getElementById('export-transkrip-tahun')?.value || new Date().getFullYear();
-  const skh = document.getElementById('export-transkrip-sekolah')?.value || '';
   const status = document.getElementById('export-transkrip-status')?.value || '';
 
   const list = (siswaDataList || []).filter(s => {
     const matchProg = !prog || (s.program && s.program.includes(prog));
     const matchStatus = !status || (status === 'aktif' ? (s.statusValidasi === 'diterima' || s.statusValidasi === 'sesuai' || !s.statusValidasi) : true);
-    
-    // Filter sekolah: cek dari raport tersimpan atau properti siswa
-    let matchSkh = true;
-    if (skh) {
-      const rapSiswa = (raportDataList || []).find(r => String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
-      const siswaSkhId = s.sekolahId || (rapSiswa ? rapSiswa.sekolahId : 'utama') || 'utama';
-      matchSkh = (skh === 'utama') ? (siswaSkhId === 'utama' || !siswaSkhId) : (String(siswaSkhId) === String(skh));
-    }
-
-    return matchProg && matchStatus && matchSkh;
+    return matchProg && matchStatus;
   });
 
   if (list.length === 0) {
-    Swal.fire('Data Kosong', 'Tidak ada siswa yang sesuai dengan filter kriteria program dan sekolah yang dipilih.', 'warning');
+    Swal.fire('Data Kosong', 'Tidak ada siswa yang sesuai dengan filter kriteria program yang dipilih.', 'warning');
     return;
   }
 
@@ -2503,14 +2101,12 @@ function prosesExportGlobalTranskrip() {
         }
         cetakTranskripNilaiResmi(siswa.id, { 
           docInstance: globalDoc, 
-          isBatch: true,
-          forcedSekolahId: skh && skh !== 'utama' ? skh : null 
+          isBatch: true
         });
       });
 
       const progTag = prog ? prog.replace(/\s+/g, '_') : 'Semua_Program';
-      const skhTag = skh ? (skh === 'utama' ? '_PKBM' : '_Mitra') : '';
-      const namaFileGlobal = `Transkrip_Nilai_Global_${progTag}${skhTag}_${thn}.pdf`;
+      const namaFileGlobal = `Transkrip_Nilai_Global_${progTag}_${thn}.pdf`;
       Swal.close();
       tampilkanPratinjauPDF(globalDoc, `Transkrip Nilai Global (${list.length} Siswa · ${prog || 'Semua Program'} ${thn})`, namaFileGlobal);
     } catch (err) {
@@ -2890,7 +2486,6 @@ function unduhTemplateTranskripExcel() {
     'Tempat Lahir',
     'Tanggal Lahir',
     'Program Kesetaraan',
-    'Asal Sekolah / Lembaga',
     'Tahun Kelulusan',
     'Nomor Transkrip'
   ];
@@ -2899,7 +2494,7 @@ function unduhTemplateTranskripExcel() {
     headers.push(m.nama);
   });
 
-  // Contoh baris dummy panduan
+  // Contoh baris dummy panduan khusus PKBM Aura Anugerah
   const sampleRow1 = [
     'Contoh Siswa 1',
     '0061234567',
@@ -2907,22 +2502,20 @@ function unduhTemplateTranskripExcel() {
     'Sentani',
     '15 Mei 2005',
     jenjang,
-    'PKBM Aura Anugerah',
     '2026',
     'PKBM-AA/TR/2026/001'
   ];
   mapels.forEach(m => sampleRow1.push(m.kkm || 75));
 
   const sampleRow2 = [
-    'Contoh Siswa Mitra 2',
+    'Contoh Siswa 2',
     '0067654321',
     '9103010202020002',
     'Jayapura',
     '20 Agustus 2004',
     jenjang,
-    'PKBM Mitra Belajar',
     '2026',
-    'PKBM-MB/TR/2026/002'
+    'PKBM-AA/TR/2026/002'
   ];
   mapels.forEach(m => sampleRow2.push(80));
 

@@ -399,7 +399,6 @@ function switchMobileTab(targetId, btnEl, recordHistory = true) {
   if (targetId === 'section-ujian') loadUjianData();
   if (targetId === 'section-raport') loadRaportData();
   if (targetId === 'section-transkrip') loadTranskripData();
-  if (targetId === 'section-sekolah-mitra') loadSekolahMitraData();
   if (targetId === 'section-users') loadAllUsers();
   if (targetId === 'section-api-keys') loadApiKeys();
   if (targetId === 'section-kegiatan') loadKegiatanData();
@@ -423,7 +422,6 @@ function loadMoreMenuSection() {
   }
 
   const btnUsers = document.getElementById('more-menu-admin-users');
-  const btnMitra = document.getElementById('more-menu-admin-mitra');
   const btnProfilSkh = document.getElementById('more-menu-admin-profil-sekolah');
   const btnApi = document.getElementById('more-menu-admin-api');
   const btnKeamanan = document.getElementById('more-menu-admin-keamanan');
@@ -432,13 +430,6 @@ function loadMoreMenuSection() {
       btnProfilSkh.classList.remove('hidden');
     } else {
       btnProfilSkh.classList.add('hidden');
-    }
-  }
-  if (btnMitra) {
-    if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
-      btnMitra.classList.remove('hidden');
-    } else {
-      btnMitra.classList.add('hidden');
     }
   }
   if (btnUsers) {
@@ -529,7 +520,6 @@ function setupEventListeners() {
       if (targetId === 'section-ujian') loadUjianData();
       if (targetId === 'section-raport') loadRaportData();
       if (targetId === 'section-transkrip') loadTranskripData();
-      if (targetId === 'section-sekolah-mitra') loadSekolahMitraData();
       if (targetId === 'section-users') loadAllUsers();
       if (targetId === 'section-api-keys') loadApiKeys();
       if (targetId === 'section-kegiatan') loadKegiatanData();
