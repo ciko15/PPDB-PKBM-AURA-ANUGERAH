@@ -926,98 +926,123 @@ function closeModalPreviewPDF() {
 }
 
 // ==================== GENERATOR PDF RESMI BUKU RAPORT ====================
-// Berstandar A4 Portrait Permendikbudristek No. 21 Tahun 2022
+// Berstandar A4 Portrait Permendikbudristek No. 21 Tahun 2022 (Pas 1 Halaman Rapi)
 function cetakBukuRaportPDF(id, options = {}) {
-  const { previewOnly = true } = options;
+  const { previewOnly = true, docInstance = null, isBatch = false } = options;
   const r = raportDataList.find(x => x.id === id);
-  if (!r) return;
+  if (!r) return null;
 
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    Swal.fire('Error', 'Library PDF belum termuat.', 'error');
-    return;
+    if (!isBatch) Swal.fire('Error', 'Library PDF belum termuat.', 'error');
+    return null;
   }
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const doc = docInstance || new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = 210;
   const pageHeight = 297;
-  const marginX = 14;
+  const marginX = 12;
+
+  // Bingkai Tipis Dokumen Resmi Raport
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.3);
+  doc.rect(7, 7, pageWidth - 14, pageHeight - 14);
 
   // 1. KOP SURAT RESMI LEMBAGA PKBM DENGAN LOGO RESMI
-  const logoBase64 = dapatkanLogoSekolahBase64();
-  if (logoBase64) {
-    try {
-      doc.addImage(logoBase64, 'PNG', marginX + 1, 11, 23, 23);
-    } catch (e) {
-      console.warn("Gagal render logo kop:", e.message);
+  let namaSekolahKop = 'PKBM AURA ANUGERAH';
+  let npsnKop = '69910495';
+  let izinKop = '421.1/043/DPMPTSP/2021';
+  let alamatKop = 'JL. Yahim KOMP.Buton Samping Hotel Citra Buana, Sentani, Jayapura, Papua - Kode Pos 99352';
+  let kepalaNamaKop = 'ANTHONIUS, S.Pd';
+  let kepalaNipKop = 'NIY. 201804.001';
+  let logoBase64 = dapatkanLogoSekolahBase64();
+
+  if (r.sekolahId && r.sekolahId !== 'utama' && Array.isArray(sekolahMitraList)) {
+    const sm = sekolahMitraList.find(m => String(m.id) === String(r.sekolahId));
+    if (sm) {
+      namaSekolahKop = (sm.namaSekolah || namaSekolahKop).toUpperCase();
+      npsnKop = sm.npsn || npsnKop;
+      izinKop = sm.skIzin || izinKop;
+      alamatKop = `${sm.alamat || ''}, ${sm.kabupaten || ''}, ${sm.provinsi || ''}`;
+      kepalaNamaKop = sm.namaKepala || kepalaNamaKop;
+      kepalaNipKop = sm.nipKepala ? `NIP/NIY. ${sm.nipKepala}` : '-';
+      if (sm.logoBase64) logoBase64 = sm.logoBase64;
     }
   }
 
-  const kopCenterX = logoBase64 ? (pageWidth / 2) + 6 : pageWidth / 2;
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', marginX + 1, 9, 18, 18);
+    } catch (e) {
+      console.warn("Gagal render logo kop raport:", e.message);
+    }
+  }
+
+  const kopCenterX = logoBase64 ? (pageWidth / 2) + 5 : pageWidth / 2;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(8.5);
   doc.setTextColor(30, 41, 59);
-  doc.text('PEMERINTAH KABUPATEN JAYAPURA', kopCenterX, 14, { align: 'center' });
-  doc.text('DINAS PENDIDIKAN DAN KEBUDAYAAN', kopCenterX, 19, { align: 'center' });
-  doc.setFontSize(13);
+  doc.text('PEMERINTAH KABUPATEN JAYAPURA', kopCenterX, 12, { align: 'center' });
+  doc.text('DINAS PENDIDIKAN DAN KEBUDAYAAN', kopCenterX, 16, { align: 'center' });
+  doc.setFontSize(11.5);
   doc.setTextColor(5, 150, 105);
-  doc.text('PKBM AURA ANUGERAH', kopCenterX, 25, { align: 'center' });
+  doc.text(namaSekolahKop, kopCenterX, 21, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.8);
+  doc.setFontSize(6.8);
   doc.setTextColor(71, 85, 105);
-  doc.text('NPSN: 69910495 | Izin Operasional: 421.1/043/DPMPTSP/2021 | Terakreditasi', kopCenterX, 29.5, { align: 'center' });
-  doc.text('Alamat: JL. Yahim KOMP.Buton Samping Hotel Citra Buana, Sentani, Jayapura, Papua - Kode Pos 99352', kopCenterX, 33.5, { align: 'center' });
+  doc.text(`NPSN: ${npsnKop} | Izin Operasional: ${izinKop} | Terakreditasi`, kopCenterX, 24.5, { align: 'center' });
+  doc.text(alamatKop, kopCenterX, 27.5, { align: 'center' });
 
   // Garis Pembatas Kop Ganda
   doc.setDrawColor(5, 150, 105);
-  doc.setLineWidth(0.8);
-  doc.line(marginX, 36.5, pageWidth - marginX, 36.5);
-  doc.setLineWidth(0.25);
-  doc.line(marginX, 37.5, pageWidth - marginX, 37.5);
+  doc.setLineWidth(0.6);
+  doc.line(marginX, 30.5, pageWidth - marginX, 30.5);
+  doc.setLineWidth(0.2);
+  doc.line(marginX, 31.3, pageWidth - marginX, 31.3);
 
   // 2. JUDUL RAPOR
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
+  doc.setFontSize(9.5);
   doc.setTextColor(15, 23, 42);
-  doc.text('LAPORAN HASIL BELAJAR (RAPOR)', pageWidth / 2, 44, { align: 'center' });
-  doc.setFontSize(9);
+  doc.text('LAPORAN HASIL BELAJAR (RAPOR)', pageWidth / 2, 36.5, { align: 'center' });
+  doc.setFontSize(7.5);
   doc.setTextColor(5, 150, 105);
-  doc.text(`PROGRAM PENDIDIKAN KESETARAAN ${r.program ? r.program.toUpperCase() : 'PAKET C'} (KURIKULUM MERDEKA)`, pageWidth / 2, 49, { align: 'center' });
+  doc.text(`PROGRAM PENDIDIKAN KESETARAAN ${r.program ? r.program.toUpperCase() : 'PAKET C'} (KURIKULUM MERDEKA)`, pageWidth / 2, 40.5, { align: 'center' });
 
-  // 3. IDENTITAS PESERTA DIDIK (TABEL HEADER)
-  const bioY = 56;
-  doc.setFontSize(8.2);
+  // 3. IDENTITAS PESERTA DIDIK
+  const bioY = 46;
+  doc.setFontSize(7.5);
   doc.setTextColor(30, 41, 59);
 
   // Kolom Kiri
   doc.setFont('helvetica', 'normal'); doc.text('Nama Peserta Didik', marginX, bioY);
-  doc.text(':', marginX + 34, bioY);
-  doc.setFont('helvetica', 'bold'); doc.text(r.namaSiswa || '-', marginX + 37, bioY);
+  doc.text(':', marginX + 32, bioY);
+  doc.setFont('helvetica', 'bold'); doc.text(r.namaSiswa || '-', marginX + 35, bioY);
 
-  doc.setFont('helvetica', 'normal'); doc.text('NISN / NIK', marginX, bioY + 5);
-  doc.text(':', marginX + 34, bioY + 5);
-  doc.setFont('helvetica', 'bold'); doc.text(r.nisn || '-', marginX + 37, bioY + 5);
+  doc.setFont('helvetica', 'normal'); doc.text('NISN / NIK', marginX, bioY + 4);
+  doc.text(':', marginX + 32, bioY + 4);
+  doc.setFont('helvetica', 'bold'); doc.text(r.nisn || '-', marginX + 35, bioY + 4);
 
-  doc.setFont('helvetica', 'normal'); doc.text('Satuan Pendidikan', marginX, bioY + 10);
-  doc.text(':', marginX + 34, bioY + 10);
-  doc.setFont('helvetica', 'bold'); doc.text('PKBM Aura Anugerah', marginX + 37, bioY + 10);
+  doc.setFont('helvetica', 'normal'); doc.text('Satuan Pendidikan', marginX, bioY + 8);
+  doc.text(':', marginX + 32, bioY + 8);
+  doc.setFont('helvetica', 'bold'); doc.text(namaSekolahKop, marginX + 35, bioY + 8);
 
   // Kolom Kanan
   const colRightX = 120;
   doc.setFont('helvetica', 'normal'); doc.text('Kelas / Fase', colRightX, bioY);
-  doc.text(':', colRightX + 26, bioY);
-  doc.setFont('helvetica', 'bold'); doc.text(r.tingkatKelas || 'Kelas X (Fase E)', colRightX + 29, bioY);
+  doc.text(':', colRightX + 24, bioY);
+  doc.setFont('helvetica', 'bold'); doc.text(r.tingkatKelas || 'Kelas X (Fase E)', colRightX + 27, bioY);
 
-  doc.setFont('helvetica', 'normal'); doc.text('Semester', colRightX, bioY + 5);
-  doc.text(':', colRightX + 26, bioY + 5);
-  doc.setFont('helvetica', 'bold'); doc.text(r.semester || 'Ganjil', colRightX + 29, bioY + 5);
+  doc.setFont('helvetica', 'normal'); doc.text('Semester', colRightX, bioY + 4);
+  doc.text(':', colRightX + 24, bioY + 4);
+  doc.setFont('helvetica', 'bold'); doc.text(r.semester || 'Ganjil', colRightX + 27, bioY + 4);
 
-  doc.setFont('helvetica', 'normal'); doc.text('Tahun Ajaran', colRightX, bioY + 10);
-  doc.text(':', colRightX + 26, bioY + 10);
-  doc.setFont('helvetica', 'bold'); doc.text(r.tahunAjaran || '2026/2027', colRightX + 29, bioY + 10);
+  doc.setFont('helvetica', 'normal'); doc.text('Tahun Ajaran', colRightX, bioY + 8);
+  doc.text(':', colRightX + 24, bioY + 8);
+  doc.setFont('helvetica', 'bold'); doc.text(r.tahunAjaran || '2026/2027', colRightX + 27, bioY + 8);
 
-  // 4. TABEL NILAI CAPAIAN HASIL BELAJAR (AUTOTABLE)
+  // 4. TABEL NILAI CAPAIAN HASIL BELAJAR (AUTOTABLE KOMPAK)
   const mapelRows = (r.nilaiMapel || []).map((m, i) => [
     i + 1,
     m.mapel,
@@ -1026,7 +1051,7 @@ function cetakBukuRaportPDF(id, options = {}) {
   ]);
 
   doc.autoTable({
-    startY: bioY + 15,
+    startY: bioY + 12,
     margin: { left: marginX, right: marginX },
     head: [['No', 'Mata Pelajaran', 'Nilai Akhir', 'Capaian Kompetensi / Keterangan Kemajuan Belajar']],
     body: mapelRows,
@@ -1035,35 +1060,30 @@ function cetakBukuRaportPDF(id, options = {}) {
       fillColor: [5, 150, 105],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 8,
+      fontSize: 7.2,
       halign: 'center',
-      valign: 'middle'
+      valign: 'middle',
+      cellPadding: 1.8
     },
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center', fontSize: 7.5 },
-      1: { cellWidth: 55, fontSize: 8, fontStyle: 'bold' },
-      2: { cellWidth: 20, halign: 'center', fontSize: 8.5, fontStyle: 'bold' },
-      3: { cellWidth: 'auto', fontSize: 7.5 }
+      0: { cellWidth: 8, halign: 'center', fontSize: 7 },
+      1: { cellWidth: 52, fontSize: 7.2, fontStyle: 'bold' },
+      2: { cellWidth: 18, halign: 'center', fontSize: 7.8, fontStyle: 'bold' },
+      3: { cellWidth: 'auto', fontSize: 6.8 }
     },
-    styles: { cellPadding: 2.5, textColor: [30, 41, 59], lineColor: [203, 213, 225], lineWidth: 0.2 }
+    styles: { cellPadding: 1.6, textColor: [30, 41, 59], lineColor: [203, 213, 225], lineWidth: 0.18 }
   });
 
-  let currentY = doc.lastAutoTable.finalY + 6;
+  let currentY = doc.lastAutoTable.finalY + 3.5;
 
-  // Cek apakah halaman cukup untuk catatan & absensi
-  if (currentY > 225) {
-    doc.addPage();
-    currentY = 20;
-  }
-
-  // 5. EKSTRAKURIKULER & PEMBERDAYAAN
+  // 5. EKSTRAKURIKULER & PEMBERDAYAAN (SATU BARIS KOMPAK)
   const ekskulRows = (Array.isArray(r.ekskul) && r.ekskul.length > 0) ? r.ekskul.map((e, idx) => [
     idx + 1,
     e.kegiatan || '-',
     e.predikat || 'Sangat Baik',
     e.keterangan || 'Mampu berkolaborasi dan menerapkan keterampilan secara mandiri.'
   ]) : [
-    [1, 'Keterampilan Komputer & Kewirausahaan', 'Baik', 'Aktif mengikuti pelatihan vokasional keterampilan kerja.']
+    [1, 'Keterampilan Komputer & Kewirausahaan Mandiri', 'Baik', 'Aktif mengikuti pelatihan vokasional keterampilan kerja.']
   ];
 
   doc.autoTable({
@@ -1072,130 +1092,130 @@ function cetakBukuRaportPDF(id, options = {}) {
     head: [['No', 'Kegiatan Pemberdayaan / Keterampilan / Ekskul', 'Predikat', 'Keterangan']],
     body: ekskulRows,
     theme: 'grid',
-    headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+    headStyles: { fillColor: [2, 132, 199], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6.8, cellPadding: 1.5 },
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center', fontSize: 7.5 },
-      1: { cellWidth: 70, fontSize: 7.5 },
-      2: { cellWidth: 25, halign: 'center', fontSize: 7.5 },
-      3: { cellWidth: 'auto', fontSize: 7.5 }
+      0: { cellWidth: 8, halign: 'center', fontSize: 6.8 },
+      1: { cellWidth: 65, fontSize: 6.8 },
+      2: { cellWidth: 20, halign: 'center', fontSize: 6.8 },
+      3: { cellWidth: 'auto', fontSize: 6.5 }
     },
-    styles: { cellPadding: 2, textColor: [30, 41, 59] }
+    styles: { cellPadding: 1.5, textColor: [30, 41, 59] }
   });
 
-  currentY = doc.lastAutoTable.finalY + 5;
+  currentY = doc.lastAutoTable.finalY + 3.5;
 
-  // 6. KOTAK KETIDAKHADIRAN & CATATAN AKADEMIK (DUAL BOX)
-  const boxAbsenW = 60;
-  const boxCatatanW = pageWidth - (marginX * 2) - boxAbsenW - 5;
+  // 6. KOTAK KETIDAKHADIRAN & CATATAN AKADEMIK (DUAL BOX KOMPAK)
+  const boxAbsenW = 54;
+  const boxCatatanW = pageWidth - (marginX * 2) - boxAbsenW - 4;
+  const boxHeight = 19;
 
   // Kotak Absensi
   doc.setDrawColor(203, 213, 225);
   doc.setFillColor(248, 250, 252);
-  doc.rect(marginX, currentY, boxAbsenW, 26, 'FD');
+  doc.rect(marginX, currentY, boxAbsenW, boxHeight, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.8);
   doc.setTextColor(5, 150, 105);
-  doc.text('KETIDAKHADIRAN', marginX + 4, currentY + 5);
+  doc.text('KETIDAKHADIRAN', marginX + 3, currentY + 4);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.5);
   doc.setTextColor(51, 65, 85);
   const sakit = r.kehadiran ? (r.kehadiran.sakit || 0) : 0;
   const izin = r.kehadiran ? (r.kehadiran.izin || 0) : 0;
   const alpa = r.kehadiran ? (r.kehadiran.tanpaKeterangan || 0) : 0;
 
-  doc.text(`1. Sakit                : ${sakit} hari`, marginX + 4, currentY + 11);
-  doc.text(`2. Izin                  : ${izin} hari`, marginX + 4, currentY + 16);
-  doc.text(`3. Tanpa Keterangan : ${alpa} hari`, marginX + 4, currentY + 21);
+  doc.text(`1. Sakit                : ${sakit} hari`, marginX + 3, currentY + 8.5);
+  doc.text(`2. Izin                  : ${izin} hari`, marginX + 3, currentY + 12.5);
+  doc.text(`3. Tanpa Keterangan : ${alpa} hari`, marginX + 3, currentY + 16.5);
 
   // Kotak Catatan Akademik & Karakter
-  const catX = marginX + boxAbsenW + 5;
-  doc.rect(catX, currentY, boxCatatanW, 26, 'FD');
+  const catX = marginX + boxAbsenW + 4;
+  doc.rect(catX, currentY, boxCatatanW, boxHeight, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.8);
   doc.setTextColor(2, 132, 199);
-  doc.text('CATATAN AKADEMIK & PROFIL PELAJAR PANCASILA', catX + 4, currentY + 5);
+  doc.text('CATATAN AKADEMIK & PROFIL PELAJAR PANCASILA', catX + 3, currentY + 4);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
+  doc.setFontSize(6.5);
   doc.setTextColor(51, 65, 85);
   const catatanText = r.catatanAkademik || 'Peserta didik menunjukkan sikap disiplin, gotong royong, dan nalar kritis yang berkembang sangat memuaskan.';
-  const splitCatatan = doc.splitTextToSize(catatanText, boxCatatanW - 8);
-  doc.text(splitCatatan, catX + 4, currentY + 10);
+  const splitCatatan = doc.splitTextToSize(catatanText, boxCatatanW - 6);
+  doc.text(splitCatatan, catX + 3, currentY + 8.5);
 
-  currentY += 31;
+  currentY += boxHeight + 3;
 
   // 7. STATUS KENAIKAN / KELULUSAN
   doc.setFillColor(240, 253, 244);
   doc.setDrawColor(5, 150, 105);
-  doc.rect(marginX, currentY, pageWidth - (marginX * 2), 9, 'FD');
+  doc.rect(marginX, currentY, pageWidth - (marginX * 2), 7, 'FD');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7.2);
   doc.setTextColor(5, 150, 105);
-  doc.text(`Keputusan: Berdasarkan hasil capaian pembelajaran, peserta didik dinyatakan: ${r.statusKenaikanLulus || 'Naik ke Kelas Berikutnya'}`, marginX + 4, currentY + 5.5);
+  doc.text(`Keputusan: Berdasarkan hasil capaian pembelajaran, peserta didik dinyatakan: ${r.statusKenaikanLulus || 'Naik ke Kelas Berikutnya'}`, marginX + 4, currentY + 4.8);
 
-  currentY += 14;
+  currentY += 10.5;
 
-  // 8. TANDA TANGAN RESMI (Orang Tua, Tutor Wali, & Kepala PKBM)
-  if (currentY > 245) {
-    doc.addPage();
-    currentY = 25;
-  }
-
-  const ttdY = currentY;
-  doc.setFontSize(7.8);
+  // 8. TANDA TANGAN RESMI
+  const ttdY = Math.min(currentY, 260);
+  doc.setFontSize(7);
   doc.setTextColor(30, 41, 59);
 
   // Kiri: Orang Tua / Wali
   doc.text('Mengetahui,', marginX + 5, ttdY);
-  doc.text('Orang Tua / Wali Peserta Didik,', marginX + 5, ttdY + 4);
-  doc.line(marginX + 5, ttdY + 22, marginX + 55, ttdY + 22);
-  doc.setFontSize(7);
-  doc.text('( ................................................ )', marginX + 5, ttdY + 26);
+  doc.text('Orang Tua / Wali Peserta Didik,', marginX + 5, ttdY + 3.5);
+  doc.line(marginX + 5, ttdY + 18, marginX + 50, ttdY + 18);
+  doc.setFontSize(6.5);
+  doc.text('( ................................................ )', marginX + 5, ttdY + 21.5);
 
   // Tengah: Tutor Wali Kelas
   const tengahX = 85;
-  doc.setFontSize(7.8);
+  doc.setFontSize(7);
   doc.text('Sentani, ' + (r.tglRapor || new Date().toLocaleDateString('id-ID')), tengahX, ttdY);
-  doc.text('Tutor Pembimbing Akademik,', tengahX, ttdY + 4);
-  doc.line(tengahX, ttdY + 22, tengahX + 50, ttdY + 22);
+  doc.text('Tutor Pembimbing Akademik,', tengahX, ttdY + 3.5);
+  doc.line(tengahX, ttdY + 18, tengahX + 48, ttdY + 18);
   doc.setFont('helvetica', 'bold');
-  doc.text('TIM TUTOR PKBM', tengahX, ttdY + 26);
+  doc.text('TIM TUTOR PKBM', tengahX, ttdY + 21.5);
 
-  // Kanan: Kepala PKBM
-  const kananX = 148;
+  // Kanan: Kepala Sekolah / Pimpinan
+  const kananX = 145;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.8);
+  doc.setFontSize(7);
   doc.text('Mengetahui & Mengesahkan:', kananX, ttdY);
-  doc.text('Ketua PKBM Aura Anugerah,', kananX, ttdY + 4);
-  doc.line(kananX, ttdY + 22, kananX + 48, ttdY + 22);
+  doc.text(`Ketua ${namaSekolahKop},`, kananX, ttdY + 3.5);
+  doc.line(kananX, ttdY + 18, kananX + 50, ttdY + 18);
   doc.setFont('helvetica', 'bold');
-  doc.text('ANTHONIUS, S.Pd', kananX, ttdY + 26);
+  doc.text(kepalaNamaKop, kananX, ttdY + 21.5);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.8);
-  doc.text('NIY. 201804.001', kananX, ttdY + 29.5);
+  doc.setFontSize(6.2);
+  doc.text(kepalaNipKop, kananX, ttdY + 24.5);
 
   // Footer Dokumen
   doc.setFont('helvetica', 'italic');
-  doc.setFontSize(6.5);
+  doc.setFontSize(6);
   doc.setTextColor(148, 163, 184);
-  doc.text(`Dokumen resmi Laporan Hasil Belajar diterbitkan oleh Sistem Informasi Akademik PKBM Aura Anugerah pada ${new Date().toLocaleString('id-ID')}`, marginX, pageHeight - 6);
+  doc.text(`Dokumen resmi Laporan Hasil Belajar diterbitkan oleh Sistem Informasi Akademik SIGAP AURA pada ${new Date().toLocaleString('id-ID')}`, marginX, pageHeight - 4.5);
 
   const namaFile = `Rapor_${(r.namaSiswa || 'Siswa').replace(/\s+/g, '_')}_${(r.semester || 'Smt')}_${(r.tingkatKelas || 'Kelas')}.pdf`;
 
-  if (previewOnly) {
-    tampilkanPratinjauPDF(doc, `Buku Raport: ${r.namaSiswa || 'Siswa'} (${r.tingkatKelas || ''})`, namaFile);
-  } else {
-    doc.save(namaFile);
-    Swal.fire({
-      icon: 'success',
-      title: 'Buku Raport Berhasil Diterbitkan',
-      text: `File ${namaFile} telah diunduh siap dicetak resmi.`,
-      confirmButtonColor: '#059669'
-    });
+  if (!isBatch) {
+    if (previewOnly) {
+      tampilkanPratinjauPDF(doc, `Buku Raport: ${r.namaSiswa || 'Siswa'} (${r.tingkatKelas || ''})`, namaFile);
+    } else {
+      doc.save(namaFile);
+      Swal.fire({
+        icon: 'success',
+        title: 'Buku Raport Berhasil Diterbitkan',
+        text: `File ${namaFile} telah diunduh siap dicetak resmi.`,
+        confirmButtonColor: '#059669'
+      });
+    }
   }
+
+  return doc;
 }
 
 // ==================== PENGATURAN FORMULA TRANSKRIP & TEMPLATE NOMOR ====================
@@ -1710,62 +1730,159 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   return doc;
 }
 
-// ==================== UNDUH SEMUA TRANSKRIP NILAI PDF (GLOBAL BATCH) ====================
-function unduhSemuaTranskripPDF() {
-  const list = siswaDataList || [];
-  if (!list.length) {
-    Swal.fire('Perhatian', 'Tidak ada data siswa untuk diunduh.', 'warning');
+// ==================== EXPORT & PRATINJAU GLOBAL RAPORT (PER TAHUN AJARAN / KELAS) ====================
+function bukaModalExportGlobalRaport() {
+  const modal = document.getElementById('modal-export-global-raport');
+  if (!modal) return;
+
+  // Isi dropdown sekolah mitra jika ada
+  const selectSekolah = document.getElementById('export-raport-sekolah');
+  if (selectSekolah) {
+    selectSekolah.innerHTML = '<option value="">Semua Sekolah (PKBM & Mitra Numpang)</option><option value="utama">Hanya PKBM Aura Anugerah (Internal)</option>';
+    (sekolahMitraList || []).forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = `${m.namaSekolah} (${m.npsn || 'Mitra'})`;
+      selectSekolah.appendChild(opt);
+    });
+  }
+
+  modal.classList.remove('hidden');
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+function closeModalExportGlobalRaport() {
+  const modal = document.getElementById('modal-export-global-raport');
+  if (modal) modal.classList.add('hidden');
+}
+
+function prosesExportGlobalRaport() {
+  const thn = document.getElementById('export-raport-thn')?.value || '';
+  const smt = document.getElementById('export-raport-smt')?.value || '';
+  const kls = document.getElementById('export-raport-kelas')?.value || '';
+  const skh = document.getElementById('export-raport-sekolah')?.value || '';
+
+  // Filter raportDataList
+  const filtered = (raportDataList || []).filter(r => {
+    const matchThn = !thn || r.tahunAjaran === thn;
+    const matchSmt = !smt || r.semester === smt;
+    const matchKls = !kls || (r.tingkatKelas && r.tingkatKelas.includes(kls)) || (r.program && r.program.includes(kls));
+    const matchSkh = !skh || (skh === 'utama' ? (!r.sekolahId || r.sekolahId === 'utama') : String(r.sekolahId) === String(skh));
+    return matchThn && matchSmt && matchKls && matchSkh;
+  });
+
+  if (filtered.length === 0) {
+    Swal.fire('Data Tidak Ditemukan', 'Tidak ada data raport yang sesuai kriteria filter yang Anda pilih.', 'warning');
     return;
   }
 
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    Swal.fire('Error', 'Library PDF belum termuat.', 'error');
-    return;
-  }
+  closeModalExportGlobalRaport();
 
   Swal.fire({
-    title: 'Pratinjau Semua Transkrip Nilai?',
-    text: `Sistem akan menggabungkan transkrip nilai ${list.length} siswa ke dalam 1 dokumen PDF global dan membukanya dalam mode pratinjau. Lanjutkan?`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonColor: '#0284c7',
-    cancelButtonColor: '#64748b',
-    confirmButtonText: 'Ya, Buka Pratinjau',
-    cancelButtonText: 'Batal'
-  }).then((result) => {
-    if (!result.isConfirmed) return;
-
-    Swal.fire({
-      title: 'Menyiapkan Pratinjau Global...',
-      text: `Sedang memproses transkrip ${list.length} siswa, mohon tunggu...`,
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
-
-    setTimeout(() => {
-      try {
-        const { jsPDF } = window.jspdf;
-        const globalDoc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-        list.forEach((siswa, index) => {
-          if (index > 0) {
-            globalDoc.addPage();
-          }
-          cetakTranskripNilaiResmi(siswa.id, { docInstance: globalDoc, isBatch: true });
-        });
-
-        const tahun = new Date().getFullYear();
-        const namaFileGlobal = `Transkrip_Nilai_Global_PKBM_Aura_Anugerah_${tahun}.pdf`;
-        Swal.close();
-        tampilkanPratinjauPDF(globalDoc, `Pratinjau Transkrip Nilai Global (${list.length} Siswa)`, namaFileGlobal);
-      } catch (err) {
-        console.error("Gagal pratinjau global transkrip:", err);
-        Swal.fire('Gagal', 'Terjadi kesalahan saat memproses pratinjau: ' + err.message, 'error');
-      }
-    }, 400);
+    title: 'Menyiapkan Pratinjau Global Raport...',
+    text: `Sedang menyusun raport ${filtered.length} siswa ke dalam 1 lembar rapi per siswa...`,
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
   });
+
+  setTimeout(() => {
+    try {
+      const { jsPDF } = window.jspdf;
+      const globalDoc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      filtered.forEach((r, idx) => {
+        if (idx > 0) {
+          globalDoc.addPage('a4', 'portrait');
+        }
+        cetakBukuRaportPDF(r.id, { docInstance: globalDoc, isBatch: true, previewOnly: false });
+      });
+
+      const labelTa = thn ? thn.replace('/', '-') : 'SemuaTA';
+      const labelSmt = smt || 'SemuaSmt';
+      const namaFile = `Buku_Raport_Global_${labelTa}_${labelSmt}_${filtered.length}_Siswa.pdf`;
+
+      Swal.close();
+      tampilkanPratinjauPDF(globalDoc, `Pratinjau Raport Global (${filtered.length} Siswa · ${thn || 'Semua TA'} ${smt || ''})`, namaFile);
+    } catch (err) {
+      console.error("Gagal export global raport:", err);
+      Swal.fire('Gagal', 'Terjadi kesalahan saat membuat dokumen global: ' + err.message, 'error');
+    }
+  }, 400);
+}
+
+// ==================== EXPORT & PRATINJAU GLOBAL TRANSKRIP (PER PROGRAM / TAHUN) ====================
+function bukaModalExportGlobalTranskrip() {
+  const modal = document.getElementById('modal-export-global-transkrip');
+  if (modal) {
+    modal.classList.remove('hidden');
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  }
+}
+
+function closeModalExportGlobalTranskrip() {
+  const modal = document.getElementById('modal-export-global-transkrip');
+  if (modal) modal.classList.add('hidden');
+}
+
+function prosesExportGlobalTranskrip() {
+  const prog = document.getElementById('export-transkrip-program')?.value || '';
+  const thn = document.getElementById('export-transkrip-tahun')?.value || new Date().getFullYear();
+  const status = document.getElementById('export-transkrip-status')?.value || '';
+
+  const list = (siswaDataList || []).filter(s => {
+    const matchProg = !prog || (s.program && s.program.includes(prog));
+    const matchStatus = !status || (status === 'aktif' ? (s.statusValidasi === 'diterima' || s.statusValidasi === 'sesuai' || !s.statusValidasi) : true);
+    return matchProg && matchStatus;
+  });
+
+  if (list.length === 0) {
+    Swal.fire('Data Kosong', 'Tidak ada siswa yang sesuai dengan filter program kelulusan yang dipilih.', 'warning');
+    return;
+  }
+
+  closeModalExportGlobalTranskrip();
+
+  Swal.fire({
+    title: 'Menyiapkan Transkrip Kelulusan...',
+    text: `Sedang memproses transkrip ${list.length} siswa, mohon tunggu...`,
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  setTimeout(() => {
+    try {
+      const { jsPDF } = window.jspdf;
+      const globalDoc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      list.forEach((siswa, index) => {
+        if (index > 0) {
+          globalDoc.addPage('a4', 'portrait');
+        }
+        cetakTranskripNilaiResmi(siswa.id, { docInstance: globalDoc, isBatch: true });
+      });
+
+      const progTag = prog ? prog.replace(/\s+/g, '_') : 'Semua_Program';
+      const namaFileGlobal = `Transkrip_Nilai_Global_${progTag}_${thn}.pdf`;
+      Swal.close();
+      tampilkanPratinjauPDF(globalDoc, `Transkrip Nilai Global (${list.length} Siswa · ${prog || 'Semua Program'} ${thn})`, namaFileGlobal);
+    } catch (err) {
+      console.error("Gagal pratinjau global transkrip:", err);
+      Swal.fire('Gagal', 'Terjadi kesalahan saat memproses pratinjau: ' + err.message, 'error');
+    }
+  }, 400);
+}
+
+// ==================== UNDUH SEMUA TRANSKRIP NILAI PDF (GLOBAL BATCH FALLBACK) ====================
+function unduhSemuaTranskripPDF() {
+  bukaModalExportGlobalTranskrip();
 }
 
 // ==================== MODAL PREVIEW DETAIL TRANSKRIP SISWA ====================
@@ -1873,6 +1990,13 @@ function closeModalDetailTranskrip() {
 }
 
 // Ekspos semua fungsi ke window global
+window.bukaModalExportGlobalRaport = bukaModalExportGlobalRaport;
+window.closeModalExportGlobalRaport = closeModalExportGlobalRaport;
+window.prosesExportGlobalRaport = prosesExportGlobalRaport;
+window.bukaModalExportGlobalTranskrip = bukaModalExportGlobalTranskrip;
+window.closeModalExportGlobalTranskrip = closeModalExportGlobalTranskrip;
+window.prosesExportGlobalTranskrip = prosesExportGlobalTranskrip;
+
 window.loadRaportData = loadRaportData;
 window.renderRaportTable = renderRaportTable;
 window.filterRaportTable = filterRaportTable;
