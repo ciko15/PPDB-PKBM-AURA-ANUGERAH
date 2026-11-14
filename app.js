@@ -5456,15 +5456,7 @@ function normalizeJenjangKeyPortal(prog) {
 }
 
 function bukaUjianCBTLangsungDariPortal(paketVal, namaSiswa) {
-  bukaModalPilihUjianCBT(null, namaSiswa);
-  const selectBuku = document.getElementById('cbt-pilih-buku');
-  if (selectBuku && paketVal) {
-    selectBuku.value = paketVal;
-    if (typeof updateCbtInfoPaket === 'function') updateCbtInfoPaket(paketVal);
-    if (typeof makeSearchableSelect === 'function') {
-      makeSearchableSelect(selectBuku, { searchPlaceholder: 'Cari paket ujian / modul CBT...' });
-    }
-  }
+  bukaModalPilihUjianCBT(paketVal, namaSiswa);
 }
 
 function renderStudentLearningJourney(siswaParam = null) {
@@ -5519,21 +5511,40 @@ function renderStudentLearningJourney(siswaParam = null) {
   const cardsHtml = paketJenjang.map(pkt => {
     const kkm = Number(pkt.kkm) || 70;
     const judulLower = String(pkt.judul || '').toLowerCase();
-    // Cari apakah siswa sudah mengerjakan paket ini
-    const matchHasil = hasilSiswa.find(u =>
+    // Cari apakah siswa sudah mengerjakan paket ini (ambil nilai terbaik jika sudah mengulang)
+    const matchingRecords = hasilSiswa.filter(u =>
       String(u.paketId) === String(pkt.id) ||
       String(u.bukuId) === String(pkt.id) ||
       String(u.bukuJudul || '').toLowerCase() === judulLower
     );
+    const matchHasil = matchingRecords.length > 0
+      ? matchingRecords.reduce((best, cur) => (Number(cur.nilai) || 0) >= (Number(best.nilai) || 0) ? cur : best, matchingRecords[0])
+      : null;
+
+    // Cek syarat halaman & waktu belajar jika dikaitkan ke modul
+    const cekModul = (pkt.bukuId && typeof cekKelayakanUjianModulSiswa === 'function')
+      ? cekKelayakanUjianModulSiswa(pkt.bukuId, s.id, pkt)
+      : { layak: true };
 
     let badgeHtml = `<span style="background: rgba(100,116,139,0.12); color: var(--text-muted); padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;">⏳ Belum Dikerjakan</span>`;
     let borderTopColor = '#64748b';
-    let nilaiInfoHtml = `<div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Standar KKM: <b>${kkm}</b> · Durasi: <b>${pkt.durasiMenit || 30} mnt</b></div>`;
+    let nilaiInfoHtml = `<div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Nilai Min. Lulus (KKM): <b>${kkm}</b> · Durasi: <b>${pkt.durasiMenit || 30} mnt</b></div>`;
     let actionBtnHtml = `
       <button class="btn btn-sm btn-primary" onclick="bukaUjianCBTLangsungDariPortal('PAKET:${pkt.id}', '${(s.nama || '').replace(/'/g, "\\'")}')" style="width: 100%; margin-top: 10px; font-size: 12px; justify-content: center;">
         🚀 Kerjakan Ujian Sekarang
       </button>
     `;
+
+    if (!matchHasil && !cekModul.layak) {
+      borderTopColor = '#dc2626';
+      badgeHtml = `<span style="background: rgba(239,68,68,0.12); color: #dc2626; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;">🔒 Soal Terkunci</span>`;
+      nilaiInfoHtml = `<div style="font-size: 11.5px; color: #dc2626; margin-top: 6px;">Syarat: Baca <b>${cekModul.persen}%/${cekModul.minPersen}%</b> hal. & Waktu <b>${cekModul.menitBelajar}/${cekModul.minMenit} mnt</b> · KKM: <b>${kkm}</b></div>`;
+      actionBtnHtml = `
+        <button class="btn btn-sm btn-outline" onclick="mulaiBelajarBuku('${pkt.bukuId}')" style="width: 100%; margin-top: 10px; font-size: 12px; justify-content: center; border-color: var(--primary-color); color: var(--primary-color);">
+          📖 Baca Modul Dulu (Buka Soal)
+        </button>
+      `;
+    }
 
     if (matchHasil) {
       const nilai = Number(matchHasil.nilai) || 0;
@@ -5541,20 +5552,20 @@ function renderStudentLearningJourney(siswaParam = null) {
       if (isTuntas) {
         tuntasCount++;
         borderTopColor = '#10b981';
-        badgeHtml = `<span style="background: #dcfce7; color: #166534; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;">✅ Tuntas KKM (${nilai})</span>`;
-        nilaiInfoHtml = `<div style="font-size: 12px; color: #059669; font-weight: 600; margin-top: 6px;">Nilai Anda: <b>${nilai}</b> (KKM: ${kkm}) · Predikat: ${matchHasil.predikat || 'Baik'}</div>`;
+        badgeHtml = `<span style="background: #dcfce7; color: #166534; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;">✅ Lulus KKM (${nilai})</span>`;
+        nilaiInfoHtml = `<div style="font-size: 12px; color: #059669; font-weight: 600; margin-top: 6px;">Nilai Anda: <b>${nilai}</b> (Min. Lulus: ${kkm}) · ${matchHasil.predikat || 'Baik'}</div>`;
         actionBtnHtml = `
           <button class="btn btn-sm btn-outline" onclick="cetakSertifikatUjian('${matchHasil.id}')" style="width: 100%; margin-top: 10px; font-size: 12px; justify-content: center;">
-            🏅 Lihat Sertifikat Nilai
+            🏅 Lihat Sertifikat Lulus
           </button>
         `;
       } else {
         borderTopColor = '#f59e0b';
-        badgeHtml = `<span style="background: #fef3c7; color: #b45309; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;">⚠️ Remedial (${nilai} < ${kkm})</span>`;
-        nilaiInfoHtml = `<div style="font-size: 12px; color: #d97706; font-weight: 600; margin-top: 6px;">Nilai Anda: <b>${nilai}</b> (Di bawah KKM ${kkm})</div>`;
+        badgeHtml = `<span style="background: #fef3c7; color: #b45309; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;">⚠️ Wajib Ulang (${nilai} < ${kkm})</span>`;
+        nilaiInfoHtml = `<div style="font-size: 12px; color: #d97706; font-weight: 600; margin-top: 6px;">Nilai Anda: <b>${nilai}</b> (Wajib mencapai Passing Grade <b>${kkm}</b>)</div>`;
         actionBtnHtml = `
-          <button class="btn btn-sm btn-outline" onclick="bukaUjianCBTLangsungDariPortal('PAKET:${pkt.id}', '${(s.nama || '').replace(/'/g, "\\'")}')" style="width: 100%; margin-top: 10px; font-size: 12px; justify-content: center; border-color: #f59e0b; color: #d97706;">
-            🔄 Ujian Ulang / Perbaikan
+          <button class="btn btn-sm btn-outline" onclick="bukaUjianCBTLangsungDariPortal('PAKET:${pkt.id}', '${(s.nama || '').replace(/'/g, "\\'")}')" style="width: 100%; margin-top: 10px; font-size: 12px; justify-content: center; border-color: #f59e0b; color: #d97706; font-weight: 700;">
+            🔄 Ulangi Ujian (Wajib Lulus ${kkm})
           </button>
         `;
       }
@@ -6547,7 +6558,7 @@ function getCurrentUserId() {
 // ==================== BUKU & READING HISTORIES SYNC ====================
 
 // Kirim request ke backend Node.js untuk menyimpan last_page
-async function saveReadingHistoryBackend(bookId, lastPage, totalPages = 28, bookTitle = '', cover = '') {
+async function saveReadingHistoryBackend(bookId, lastPage, totalPages = 28, bookTitle = '', cover = '', addedMinutes = 0) {
   const userId = getCurrentUserId();
   if (!bookId) return;
 
@@ -6556,9 +6567,12 @@ async function saveReadingHistoryBackend(bookId, lastPage, totalPages = 28, book
     const existingIdx = readingHistoriesList.findIndex(h => String(h.user_id) === String(userId) && String(h.book_id) === String(bookId));
     const nowIso = new Date().toISOString();
     if (existingIdx >= 0) {
-      readingHistoriesList[existingIdx].last_page = lastPage;
+      readingHistoriesList[existingIdx].last_page = Math.max(parseInt(readingHistoriesList[existingIdx].last_page || 1, 10), parseInt(lastPage || 1, 10));
       if (totalPages) readingHistoriesList[existingIdx].total_pages = totalPages;
       if (bookTitle) readingHistoriesList[existingIdx].book_title = bookTitle;
+      if (addedMinutes > 0) {
+        readingHistoriesList[existingIdx].study_minutes = (parseInt(readingHistoriesList[existingIdx].study_minutes || 0, 10)) + addedMinutes;
+      }
       readingHistoriesList[existingIdx].updated_at = nowIso;
     } else {
       readingHistoriesList.unshift({
@@ -6569,6 +6583,7 @@ async function saveReadingHistoryBackend(bookId, lastPage, totalPages = 28, book
         total_pages: totalPages,
         book_title: bookTitle,
         cover: cover,
+        study_minutes: addedMinutes > 0 ? addedMinutes : 0,
         updated_at: nowIso
       });
     }
@@ -7945,8 +7960,8 @@ function closeReaderModal(triggerConfirm = true) {
     const totalHal = session.totalHalaman || 28;
     const persenSelesai = Math.min(100, Math.round((halTerbaca / totalHal) * 100));
 
-    // 📖 Simpan halaman terakhir ke backend Node.js saat sesi ditutup/selesai
-    saveReadingHistoryBackend(session.bukuId, halTerbaca, totalHal, session.bukuJudul);
+    // 📖 Simpan halaman terakhir & durasi belajar ke backend / localStorage saat sesi ditutup/selesai
+    saveReadingHistoryBackend(session.bukuId, halTerbaca, totalHal, session.bukuJudul, '', durasiMnt);
 
     // 🔔 Kirim Notifikasi Push Detail ke Admin & Super Admin saat siswa selesai belajar
     if (typeof sendAppPushNotification === 'function') {
@@ -8023,14 +8038,15 @@ function tampilkanResumeSelesaiBelajar(session, durasiMnt, halTerbaca, totalHal,
   } else if (!cekSyarat.layak) {
     infoUjianHtml = `
       <div style="margin-top: 10px; font-size: 12px; color: #dc2626; background: rgba(239, 68, 68, 0.08); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">
-        ⚠️ <b>Belum Memenuhi Batas Belajar Ujian:</b><br>
-        Telah membaca <b>${persenSelesai}%</b> materi. Modul ini mensyaratkan minimal <b>${cekSyarat.minPersen}%</b> halaman dibaca untuk dapat mengajukan/mengikuti ujian.
+        ⚠️ <b>Syarat Buka Soal Ujian Belum Terpenuhi:</b><br>
+        • Halaman dibaca: <b>${persenSelesai}%</b> (Syarat min. <b>${cekSyarat.minPersen}%</b>)<br>
+        • Waktu belajar: <b>${cekSyarat.menitBelajar || durasiMnt} menit</b> (Syarat min. <b>${cekSyarat.minMenit || 5} menit</b>)
       </div>
     `;
   } else {
     infoUjianHtml = `
       <div style="margin-top: 10px; font-size: 12px; color: #15803d; background: rgba(34, 197, 94, 0.08); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(34, 197, 94, 0.2);">
-        ✓ <b>Syarat Ujian Terpenuhi:</b> Telah membaca ${persenSelesai}% materi (syarat min. ${cekSyarat.minPersen}%). Paket soal CBT siap dikerjakan.
+        ✓ <b>Syarat Buka Soal Ujian Terpenuhi:</b> Telah membaca ${persenSelesai}% halaman (min. ${cekSyarat.minPersen}%) & waktu belajar ${cekSyarat.menitBelajar || durasiMnt} menit (min. ${cekSyarat.minMenit || 5} menit). Soal siap dikerjakan!
       </div>
     `;
   }
@@ -8116,8 +8132,10 @@ function catatLogBelajarBaru(session) {
     tanggal: session.tanggal,
     jamMulai: session.jamMulai,
     namaSiswa: session.namaSiswa,
+    bukuId: session.bukuId,
     bukuJudul: session.bukuJudul,
-    halamanTerbaca: `Hal. 1`,
+    halamanTerbaca: `Hal. 1 - ${session.halamanSekarang || 1}`,
+    halamanAngka: session.halamanSekarang || 1,
     durasiDetik: 0,
     status: 'Aktif Membaca 🟢'
   });
@@ -8153,6 +8171,7 @@ function updateLogBelajarSession(session) {
   const item = sesiBelajarLog.find(x => x.id === session.sessionId);
   if (item) {
     item.halamanTerbaca = `Hal. 1 - ${session.halamanSekarang}`;
+    item.halamanAngka = Math.max(item.halamanAngka || 1, session.halamanSekarang || 1);
     item.durasiDetik = session.durasiDetik;
     const durasiMenit = Math.max(1, Math.ceil(session.durasiDetik / 60));
     item.status = session.status === 'Selesai Belajar' ? `Selesai (${durasiMenit} mnt) ✅` : `Aktif Membaca (${durasiMenit} mnt) 🟢`;
@@ -8200,11 +8219,32 @@ function saveLogBelajarToStorage() {
 
 // ==================== MODAL TAMBAH & EDIT BUKU ====================
 
+function onBukuFormJenjangChange(jenjang, selectedKelas = '') {
+  const selKelas = document.getElementById('buku-kelas');
+  if (!selKelas) return;
+  let opts = [];
+  if (jenjang === 'Paket A') {
+    opts = ['Kelas IV', 'Kelas V', 'Kelas VI', 'Semua Kelas'];
+  } else if (jenjang === 'Paket B') {
+    opts = ['Kelas VII', 'Kelas VIII', 'Kelas IX', 'Semua Kelas'];
+  } else {
+    opts = ['Kelas X', 'Kelas XI', 'Kelas XII', 'Semua Kelas'];
+  }
+  selKelas.innerHTML = opts.map(k => `<option value="${k}" ${k === selectedKelas ? 'selected' : ''}>${k} (${jenjang})</option>`).join('');
+}
+window.onBukuFormJenjangChange = onBukuFormJenjangChange;
+
 function showAddBukuModal() {
   document.getElementById('buku-form-title').textContent = 'Tambah Buku Pelajaran Baru';
   document.getElementById('buku-id').value = '';
   document.getElementById('buku-nama').value = '';
+  document.getElementById('buku-jenjang').value = 'Paket C';
+  onBukuFormJenjangChange('Paket C', 'Kelas X');
   document.getElementById('buku-total-hal').value = '30';
+  const elMinProg = document.getElementById('buku-min-progress');
+  if (elMinProg) elMinProg.value = '50';
+  const elMinWaktu = document.getElementById('buku-min-waktu-menit');
+  if (elMinWaktu) elMinWaktu.value = '5';
   document.getElementById('buku-keterangan').value = '';
   document.getElementById('buku-file-url').value = '';
   document.getElementById('modal-form-buku').classList.remove('hidden');
@@ -8217,11 +8257,14 @@ function showEditBukuModal(id) {
   document.getElementById('buku-form-title').textContent = 'Edit Buku Pelajaran';
   document.getElementById('buku-id').value = b.id;
   document.getElementById('buku-nama').value = b.nama;
-  document.getElementById('buku-jenjang').value = b.jenjang;
-  document.getElementById('buku-kategori').value = b.kategori;
+  document.getElementById('buku-jenjang').value = b.jenjang || 'Paket C';
+  onBukuFormJenjangChange(b.jenjang || 'Paket C', b.kelas || 'Kelas X');
+  document.getElementById('buku-kategori').value = b.kategori || b.mapel || 'Bahasa Indonesia';
   document.getElementById('buku-total-hal').value = b.totalHal || 30;
   const elMinProgress = document.getElementById('buku-min-progress');
   if (elMinProgress) elMinProgress.value = (b.minProgress !== undefined && b.minProgress !== null) ? b.minProgress : 50;
+  const elMinWaktu = document.getElementById('buku-min-waktu-menit');
+  if (elMinWaktu) elMinWaktu.value = (b.minStudyMinutes !== undefined && b.minStudyMinutes !== null) ? b.minStudyMinutes : 5;
   document.getElementById('buku-keterangan').value = b.keterangan || '';
   document.getElementById('buku-file-url').value = b.file || '';
   document.getElementById('modal-form-buku').classList.remove('hidden');
@@ -8235,9 +8278,11 @@ function simpanBukuData() {
   const id = document.getElementById('buku-id').value;
   const nama = document.getElementById('buku-nama').value.trim();
   const jenjang = document.getElementById('buku-jenjang').value;
+  const kelas = document.getElementById('buku-kelas')?.value || 'Semua Kelas';
   const kategori = document.getElementById('buku-kategori').value;
   const totalHal = parseInt(document.getElementById('buku-total-hal').value, 10) || 30;
   const minProgress = parseInt(document.getElementById('buku-min-progress')?.value, 10) || 50;
+  const minStudyMinutes = parseInt(document.getElementById('buku-min-waktu-menit')?.value, 10) || 0;
   const keterangan = document.getElementById('buku-keterangan').value.trim();
   const file = document.getElementById('buku-file-url').value.trim();
 
@@ -8250,7 +8295,7 @@ function simpanBukuData() {
     // Edit mode
     const idx = bukuList.findIndex(x => x.id === id);
     if (idx !== -1) {
-      bukuList[idx] = { ...bukuList[idx], nama, jenjang, kategori, totalHal, minProgress, keterangan, file };
+      bukuList[idx] = { ...bukuList[idx], nama, jenjang, kelas, kategori, mapel: kategori, totalHal, minProgress, minStudyMinutes, keterangan, file };
     }
   } else {
     // Tambah baru
@@ -8258,9 +8303,12 @@ function simpanBukuData() {
       id: 'BK-' + String(bukuList.length + 1).padStart(3, '0'),
       nama,
       jenjang,
+      kelas,
       kategori,
+      mapel: kategori,
       totalHal,
       minProgress,
+      minStudyMinutes,
       keterangan,
       file,
       dibaca: 0
@@ -8323,17 +8371,59 @@ function restoreActiveBelajarSessionIfAny() {
 
 function populateUjianSelectOptions() {
   const selectSiswa = document.getElementById('ujian-siswa-id');
-  const selectBuku = document.getElementById('ujian-buku-id');
-  if (!selectSiswa || !selectBuku) return;
-
-  // Isi data siswa dari siswaDataList
-  selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>' +
-    siswaDataList.map(s => `<option value="${s.id}">${s.nama} (${s.program || 'Paket C'})</option>`).join('');
-
-  // Isi data buku
-  selectBuku.innerHTML = '<option value="">-- Pilih Buku / Modul --</option>' +
-    bukuList.map(b => `<option value="${b.id}">${b.nama} [${b.jenjang}]</option>`).join('');
+  if (selectSiswa) {
+    selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>' +
+      siswaDataList.map(s => `<option value="${s.id}">${s.nama} (${s.program || 'Paket C'}${s.kelas ? ' · ' + s.kelas : ''})</option>`).join('');
+  }
+  populateUjianBukuOptions();
 }
+
+function onUjianSiswaSelectChange(siswaId) {
+  const s = siswaDataList.find(x => String(x.id) === String(siswaId));
+  if (s) {
+    const selJenjang = document.getElementById('ujian-filter-jenjang');
+    const normJenjang = normalizeJenjangKeyPortal(s.program);
+    if (selJenjang && ['Paket A', 'Paket B', 'Paket C'].includes(normJenjang)) {
+      selJenjang.value = normJenjang;
+      onUjianFilterJenjangChange(normJenjang, s.kelas || '');
+    }
+  }
+}
+
+function onUjianFilterJenjangChange(jenjang, selectedKelas = '') {
+  const selKelas = document.getElementById('ujian-filter-kelas');
+  if (selKelas) {
+    let opts = [];
+    if (jenjang === 'Paket A') opts = ['Kelas IV', 'Kelas V', 'Kelas VI'];
+    else if (jenjang === 'Paket B') opts = ['Kelas VII', 'Kelas VIII', 'Kelas IX'];
+    else if (jenjang === 'Paket C') opts = ['Kelas X', 'Kelas XI', 'Kelas XII'];
+    else opts = ['Kelas IV', 'Kelas V', 'Kelas VI', 'Kelas VII', 'Kelas VIII', 'Kelas IX', 'Kelas X', 'Kelas XI', 'Kelas XII'];
+
+    selKelas.innerHTML = `<option value="">Semua Kelas ${jenjang || ''}</option>` +
+      opts.map(k => `<option value="${k}" ${k === selectedKelas ? 'selected' : ''}>${k}</option>`).join('');
+  }
+  populateUjianBukuOptions();
+}
+
+function populateUjianBukuOptions(selectedBukuId = '') {
+  const selectBuku = document.getElementById('ujian-buku-id');
+  if (!selectBuku) return;
+  const jenjang = document.getElementById('ujian-filter-jenjang')?.value || '';
+  const kelas = document.getElementById('ujian-filter-kelas')?.value || '';
+
+  const filtered = bukuList.filter(b => {
+    const mJenjang = !jenjang || b.jenjang === jenjang;
+    const mKelas = !kelas || !b.kelas || b.kelas === 'Semua Kelas' || b.kelas.includes(kelas);
+    return mJenjang && mKelas;
+  });
+
+  selectBuku.innerHTML = '<option value="">-- Pilih Buku / Modul (' + filtered.length + ' Tersedia) --</option>' +
+    filtered.map(b => `<option value="${b.id}" ${String(b.id) === String(selectedBukuId) ? 'selected' : ''}>${b.nama} [${b.jenjang} · ${b.kelas || 'Semua Kelas'}]</option>`).join('');
+}
+
+window.onUjianSiswaSelectChange = onUjianSiswaSelectChange;
+window.onUjianFilterJenjangChange = onUjianFilterJenjangChange;
+window.populateUjianBukuOptions = populateUjianBukuOptions;
 
 function hitungPredikatNilai(val) {
   const num = Number(val);

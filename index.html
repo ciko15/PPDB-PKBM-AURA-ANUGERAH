@@ -3370,33 +3370,53 @@
         <div class="form-group-row" style="margin-top: 12px;">
           <div class="form-group half">
             <label>Jenjang / Program <span style="color:red">*</span></label>
-            <select id="buku-jenjang" class="form-control" required>
+            <select id="buku-jenjang" class="form-control" required onchange="onBukuFormJenjangChange(this.value)">
               <option value="Paket A">Paket A (Setara SD)</option>
               <option value="Paket B">Paket B (Setara SMP)</option>
               <option value="Paket C" selected>Paket C (Setara SMA)</option>
             </select>
           </div>
           <div class="form-group half">
-            <label>Kategori Mata Pelajaran <span style="color:red">*</span></label>
-            <select id="buku-kategori" class="form-control" required>
-              <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-              <option value="Matematika">Matematika</option>
-              <option value="IPA / Sains">IPA / Sains</option>
-              <option value="IPS / Sejarah">IPS / Sejarah</option>
-              <option value="Kewarganegaraan">PPKn / Kewarganegaraan</option>
-              <option value="Keterampilan">Keterampilan Mandiri</option>
+            <label>Kelas / Tingkat <span style="color:red">*</span></label>
+            <select id="buku-kelas" class="form-control" required>
+              <option value="Kelas X" selected>Kelas X (Paket C)</option>
+              <option value="Kelas XI">Kelas XI (Paket C)</option>
+              <option value="Kelas XII">Kelas XII (Paket C)</option>
+              <option value="Semua Kelas">Semua Kelas</option>
             </select>
           </div>
         </div>
         <div class="form-group-row" style="margin-top: 12px;">
           <div class="form-group half">
+            <label>Kategori Mata Pelajaran <span style="color:red">*</span></label>
+            <select id="buku-kategori" class="form-control" required>
+              <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+              <option value="Bahasa Inggris">Bahasa Inggris</option>
+              <option value="Matematika">Matematika</option>
+              <option value="IPA / Sains">IPA / Sains</option>
+              <option value="IPS / Sejarah">IPS / Sejarah</option>
+              <option value="Kewarganegaraan">PPKn / Kewarganegaraan</option>
+              <option value="Geografi">Geografi</option>
+              <option value="Sosiologi">Sosiologi</option>
+              <option value="Ekonomi">Ekonomi</option>
+              <option value="Keterampilan">Keterampilan Mandiri</option>
+            </select>
+          </div>
+          <div class="form-group half">
             <label>Jumlah Halaman Modul <span style="color:red">*</span></label>
             <input type="number" id="buku-total-hal" value="30" min="1" max="1000" required>
           </div>
-          <div class="form-group half">
-            <label>Batas Syarat Ujian (%) <span style="color:red">*</span></label>
+        </div>
+        <div class="form-group-row" style="margin-top: 12px; background: var(--surface-2); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <div class="form-group half" style="margin-bottom: 0;">
+            <label style="font-size: 12px;">Syarat Min. Baca Halaman (%) <span style="color:red">*</span></label>
             <input type="number" id="buku-min-progress" value="50" min="1" max="100" required placeholder="Default 50%">
-            <small style="color: var(--text-muted); font-size: 11px;">Min. % halaman dibaca siswa untuk bisa ujian</small>
+            <small style="color: var(--text-muted); font-size: 10.5px;">Min. % halaman dibaca agar soal terbuka</small>
+          </div>
+          <div class="form-group half" style="margin-bottom: 0;">
+            <label style="font-size: 12px;">Syarat Min. Waktu Belajar (Menit) <span style="color:red">*</span></label>
+            <input type="number" id="buku-min-waktu-menit" value="5" min="0" max="600" required placeholder="Default 5 Menit">
+            <small style="color: var(--text-muted); font-size: 10.5px;">Min. durasi membaca modul sebelum ujian</small>
           </div>
         </div>
         <div class="form-group" style="margin-top: 12px;">
@@ -3429,12 +3449,32 @@
       <form id="form-nilai-ujian" onsubmit="event.preventDefault(); simpanNilaiUjian();">
         <div class="form-group">
           <label>Pilih Peserta Didik <span style="color:red">*</span></label>
-          <select id="ujian-siswa-id" class="form-control" required>
+          <select id="ujian-siswa-id" class="form-control" required onchange="onUjianSiswaSelectChange(this.value)">
             <option value="">-- Pilih Siswa --</option>
           </select>
         </div>
+        <div class="form-group-row" style="margin-top: 12px;">
+          <div class="form-group half">
+            <label>Jenjang Paket <span style="color:red">*</span></label>
+            <select id="ujian-filter-jenjang" class="form-control" onchange="onUjianFilterJenjangChange(this.value)">
+              <option value="">Semua Jenjang</option>
+              <option value="Paket A">Paket A (Setara SD)</option>
+              <option value="Paket B">Paket B (Setara SMP)</option>
+              <option value="Paket C" selected>Paket C (Setara SMA)</option>
+            </select>
+          </div>
+          <div class="form-group half">
+            <label>Kelas / Tingkat</label>
+            <select id="ujian-filter-kelas" class="form-control" onchange="populateUjianBukuOptions()">
+              <option value="">Semua Kelas</option>
+              <option value="Kelas X">Kelas X</option>
+              <option value="Kelas XI">Kelas XI</option>
+              <option value="Kelas XII">Kelas XII</option>
+            </select>
+          </div>
+        </div>
         <div class="form-group" style="margin-top: 12px;">
-          <label>Materi / Mata Uji <span style="color:red">*</span></label>
+          <label>Materi / Modul Pelajaran (Sesuai Jenjang & Kelas) <span style="color:red">*</span></label>
           <select id="ujian-buku-id" class="form-control" required>
             <option value="">-- Pilih Buku / Modul --</option>
           </select>
@@ -3510,7 +3550,7 @@
           </div>
           <div class="form-group half">
             <label>Rombel / Kelas Target</label>
-            <select id="paket-kelas" class="form-control">
+            <select id="paket-kelas" class="form-control" onchange="onPaketKelasChange()">
               <option value="Semua Kelas">Semua Kelas</option>
               <option value="Kelas X" selected>Kelas X</option>
               <option value="Kelas XI">Kelas XI</option>
@@ -3520,7 +3560,7 @@
         </div>
 
         <div class="form-group" id="group-paket-buku" style="margin-top: 12px;">
-          <label>Tautkan Modul Pembelajaran (Opsional)</label>
+          <label>Tautkan Modul Pembelajaran (Disesuaikan Jenjang & Kelas)</label>
           <select id="paket-buku-id" class="form-control" onchange="isiJudulOtomatisDariBuku(this.value)">
             <option value="">-- Pilih Buku / Modul Pelajaran --</option>
           </select>
@@ -3528,12 +3568,25 @@
 
         <div class="form-group-row" style="margin-top: 12px;">
           <div class="form-group half">
-            <label>Alokasi Waktu (Menit) <span style="color:red">*</span></label>
+            <label>Alokasi Waktu Ujian (Menit) <span style="color:red">*</span></label>
             <input type="number" id="paket-durasi-menit" value="15" min="5" max="180" required>
           </div>
           <div class="form-group half">
-            <label>Nilai Standar KKM <span style="color:red">*</span></label>
-            <input type="number" id="paket-kkm" value="70" min="50" max="100" required>
+            <label>Nilai Minimum Lulus / KKM <span style="color:red">*</span></label>
+            <input type="number" id="paket-kkm" value="70" min="50" max="100" required title="Jika nilai kurang dari KKM ini, peserta wajib mengulang ujian">
+          </div>
+        </div>
+
+        <div class="form-group-row" style="margin-top: 12px; background: var(--surface-2); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <div class="form-group half" style="margin-bottom: 0;">
+            <label style="font-size: 12px;">Syarat Min. Halaman Dibaca (%)</label>
+            <input type="number" id="paket-min-progress" value="50" min="0" max="100" placeholder="Default 50%">
+            <small style="color: var(--text-muted); font-size: 10.5px;">Min. % halaman modul selesai dibaca</small>
+          </div>
+          <div class="form-group half" style="margin-bottom: 0;">
+            <label style="font-size: 12px;">Syarat Min. Waktu Belajar (Menit)</label>
+            <input type="number" id="paket-min-waktu" value="5" min="0" max="600" placeholder="Default 5 Menit">
+            <small style="color: var(--text-muted); font-size: 10.5px;">Min. lama waktu membaca modul sebelum ujian</small>
           </div>
         </div>
 
@@ -3767,13 +3820,34 @@
       <form id="form-pilih-cbt" onsubmit="event.preventDefault(); prosesMulaiCBT();">
         <div class="form-group">
           <label>Peserta Ujian <span style="color:red">*</span></label>
-          <select id="cbt-pilih-siswa" class="form-control" required>
+          <select id="cbt-pilih-siswa" class="form-control" required onchange="onCbtPilihSiswaChange(this.value)">
             <option value="">-- Pilih Siswa --</option>
           </select>
         </div>
 
+        <div class="form-group-row" style="margin-top: 12px;">
+          <div class="form-group half">
+            <label>Pilih Jenjang Paket <span style="color:red">*</span></label>
+            <select id="cbt-filter-jenjang" class="form-control" onchange="onCbtFilterJenjangChange(this.value)">
+              <option value="">Semua Jenjang</option>
+              <option value="Paket A">Paket A (Setara SD)</option>
+              <option value="Paket B">Paket B (Setara SMP)</option>
+              <option value="Paket C" selected>Paket C (Setara SMA)</option>
+            </select>
+          </div>
+          <div class="form-group half">
+            <label>Pilih Kelas / Tingkat <span style="color:red">*</span></label>
+            <select id="cbt-filter-kelas" class="form-control" onchange="populateCbtPaketOptions()">
+              <option value="">Semua Kelas</option>
+              <option value="Kelas X">Kelas X</option>
+              <option value="Kelas XI">Kelas XI</option>
+              <option value="Kelas XII">Kelas XII</option>
+            </select>
+          </div>
+        </div>
+
         <div class="form-group" style="margin-top: 12px;">
-          <label>Pilih Paket Ujian / Modul CBT <span style="color:red">*</span></label>
+          <label>Pilih Paket Ujian / Modul CBT (Sesuai Jenjang & Kelas) <span style="color:red">*</span></label>
           <select id="cbt-pilih-buku" class="form-control" required onchange="updateCbtInfoPaket(this.value)">
             <option value="">-- Pilih Paket Ujian --</option>
           </select>
@@ -3783,12 +3857,20 @@
         <div id="box-info-cbt-paket"
           style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-top: 12px; font-size: 13px;">
           <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-muted);">Alokasi Waktu:</span>
+            <span style="color: var(--text-muted);">Alokasi Waktu Ujian:</span>
             <strong id="cbt-dialog-durasi" style="color: var(--primary-color);">15 Menit</strong>
           </div>
           <div style="display: flex; justify-content: space-between; margin-top: 4px;">
             <span style="color: var(--text-muted);">Jumlah Butir Soal:</span>
             <strong id="cbt-dialog-jumlah-soal">5 Soal Pilihan Ganda</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+            <span style="color: var(--text-muted);">Nilai Minimum Lulus (KKM):</span>
+            <strong id="cbt-dialog-kkm" style="color: #059669;">70 (Wajib Lulus)</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+            <span style="color: var(--text-muted);">Syarat Buka Soal:</span>
+            <strong id="cbt-dialog-syarat-baca" style="color: #d97706;">Min. 50% Hal. & 5 Menit Belajar</strong>
           </div>
           <div style="display: flex; justify-content: space-between; margin-top: 4px;">
             <span style="color: var(--text-muted);">Status Ujian:</span>

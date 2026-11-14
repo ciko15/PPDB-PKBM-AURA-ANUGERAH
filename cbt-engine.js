@@ -295,50 +295,110 @@ function ambilPaketSoalTerkaitBuku(bukuId) {
 }
 
 // Helper: Cek kelayakan / batasan siswa untuk mengikuti / mengajukan ujian modul
-// Batasan default 50% halaman modul terbaca (dapat diatur per modul via b.minProgress)
-function cekKelayakanUjianModulSiswa(bukuId, studentId = null) {
+// Batasan default 50% halaman modul terbaca & minimal waktu belajar (dapat diatur per modul atau per paket soal)
+function cekKelayakanUjianModulSiswa(bukuId, studentId = null, customPaket = null) {
   const result = {
     layak: true,
     persen: 0,
     minPersen: 50,
     halTerbaca: 0,
     totalHal: 30,
+    menitBelajar: 0,
+    minMenit: 5,
     pesan: ''
   };
 
   const b = (typeof bukuList !== 'undefined') ? bukuList.find(x => String(x.id) === String(bukuId)) : null;
-  if (!b) return result;
+  const pkt = customPaket || (typeof ambilPaketSoalTerkaitBuku === 'function' ? ambilPaketSoalTerkaitBuku(bukuId) : null);
 
-  const minProgress = (b.minProgress !== undefined && b.minProgress !== null && !isNaN(b.minProgress))
-    ? parseInt(b.minProgress, 10)
-    : 50;
+  if (!b && !pkt) return result;
+
+  const minProgress = (pkt && pkt.minProgress !== undefined && pkt.minProgress !== null && !isNaN(pkt.minProgress))
+    ? parseInt(pkt.minProgress, 10)
+    : ((b && b.minProgress !== undefined && b.minProgress !== null && !isNaN(b.minProgress))
+      ? parseInt(b.minProgress, 10)
+      : 50);
+
+  const minMenit = (pkt && pkt.minStudyMinutes !== undefined && pkt.minStudyMinutes !== null && !isNaN(pkt.minStudyMinutes))
+    ? parseInt(pkt.minStudyMinutes, 10)
+    : ((b && b.minStudyMinutes !== undefined && b.minStudyMinutes !== null && !isNaN(b.minStudyMinutes))
+      ? parseInt(b.minStudyMinutes, 10)
+      : 5);
+
   result.minPersen = minProgress;
-  result.totalHal = b.totalHal || 30;
+  result.minMenit = minMenit;
+  result.totalHal = (b && b.totalHal) ? b.totalHal : 30;
 
-  // Cek progress baca siswa dari readingHistoriesList atau localStorage
+  // Cek progress baca siswa dari readingHistoriesList atau localStorage atau sesiBelajarLog
   let userId = studentId;
   if (!userId && typeof getCurrentUserId === 'function') {
     userId = getCurrentUserId();
   }
 
-  let lastPage = 0;
-  if (typeof readingHistoriesList !== 'undefined' && readingHistoriesList && readingHistoriesList.length > 0) {
-    const rec = readingHistoriesList.find(h => (!userId || String(h.user_id) === String(userId)) && String(h.book_id) === String(bukuId));
-    if (rec && rec.last_page) lastPage = parseInt(rec.last_page, 10) || 0;
+  let studentNama = '';
+  if (typeof siswaDataList !== 'undefined' && studentId) {
+    const sObj = siswaDataList.find(x => String(x.id) === String(studentId));
+    if (sObj) studentNama = (sObj.nama || '').toLowerCase().trim();
+  } else if (typeof currentUser !== 'undefined' && currentUser) {
+    studentNama = (currentUser.nama || '').toLowerCase().trim();
   }
 
-  // Jika tidak ada di array readingHistoriesList, periksa sesi lokal yang sedang aktif
-  if (!lastPage && typeof activeBelajarSession !== 'undefined' && activeBelajarSession && String(activeBelajarSession.bukuId) === String(bukuId)) {
-    lastPage = activeBelajarSession.halamanSekarang || 0;
+  let lastPage = 0;
+  let studyMinutes = 0;
+
+  if (typeof readingHistoriesList !== 'undefined' && readingHistoriesList && readingHistoriesList.length > 0) {
+    const rec = readingHistoriesList.find(h => (!userId || String(h.user_id) === String(userId)) && String(h.book_id) === String(bukuId));
+    if (rec) {
+      if (rec.last_page) lastPage = parseInt(rec.last_page, 10) || 0;
+      if (rec.study_minutes) studyMinutes = parseInt(rec.study_minutes, 10) || 0;
+    }
+  }
+
+  // Periksa juga dari sesiBelajarLog (akumulasi durasi & halaman tertinggi untuk buku ini)
+  if (typeof sesiBelajarLog !== 'undefined' && Array.isArray(sesiBelajarLog)) {
+    const judulBukuLower = b ? (b.nama || '').toLowerCase() : '';
+    let logSeconds = 0;
+    sesiBelajarLog.forEach(log => {
+      const matchBook = (log.bukuId && String(log.bukuId) === String(bukuId)) || (judulBukuLower && (log.bukuJudul || '').toLowerCase() === judulBukuLower);
+      const matchUser = !studentNama || (log.namaSiswa || '').toLowerCase().trim() === studentNama;
+      if (matchBook && matchUser) {
+        logSeconds += (Number(log.durasiDetik) || 0);
+        if (log.halamanAngka && log.halamanAngka > lastPage) {
+          lastPage = log.halamanAngka;
+        }
+      }
+    });
+    const logMinutes = Math.ceil(logSeconds / 60);
+    if (logMinutes > studyMinutes) studyMinutes = logMinutes;
+  }
+
+  // Jika sedang dalam sesi belajar aktif untuk buku ini
+  if (typeof activeBelajarSession !== 'undefined' && activeBelajarSession && String(activeBelajarSession.bukuId) === String(bukuId)) {
+    if ((activeBelajarSession.halamanSekarang || 0) > lastPage) {
+      lastPage = activeBelajarSession.halamanSekarang || 0;
+    }
+    const activeMnt = Math.ceil((activeBelajarSession.durasiDetik || 0) / 60);
+    if (activeMnt > studyMinutes) studyMinutes = activeMnt;
   }
 
   result.halTerbaca = lastPage;
+  result.menitBelajar = studyMinutes;
   const persen = Math.min(100, Math.round((lastPage / result.totalHal) * 100));
   result.persen = persen;
 
-  if (persen < minProgress) {
+  const kurangHalaman = persen < minProgress;
+  const kurangWaktu = minMenit > 0 && studyMinutes < minMenit;
+
+  if (kurangHalaman || kurangWaktu) {
     result.layak = false;
-    result.pesan = `Anda baru membaca ${persen}% (Hal. ${lastPage} dari ${result.totalHal} hal). Modul ini mensyaratkan minimal ${minProgress}% materi dibaca sebelum dapat mengerjakan ujian.`;
+    const alasanList = [];
+    if (kurangHalaman) {
+      alasanList.push(`membaca <b>${persen}%</b> (Hal. ${lastPage} dari ${result.totalHal} hal, syarat min. <b>${minProgress}%</b>)`);
+    }
+    if (kurangWaktu) {
+      alasanList.push(`waktu belajar <b>${studyMinutes} menit</b> (syarat min. <b>${minMenit} menit</b>)`);
+    }
+    result.pesan = `Soal ujian belum terbuka karena Anda baru mencapai ${alasanList.join(' dan ')}. Silakan selesaikan membaca modul sesuai syarat terlebih dahulu.`;
   }
 
   return result;
@@ -409,19 +469,127 @@ function generateSoalPaketModul(buku) {
   ];
 }
 
+function onCbtPilihSiswaChange(siswaId) {
+  const s = (typeof siswaDataList !== 'undefined') ? siswaDataList.find(x => String(x.id) === String(siswaId)) : null;
+  if (s) {
+    const selJenjang = document.getElementById('cbt-filter-jenjang');
+    const prog = String(s.program || '');
+    let norm = 'Paket C';
+    if (prog.includes('Paket A')) norm = 'Paket A';
+    else if (prog.includes('Paket B')) norm = 'Paket B';
+    if (selJenjang) {
+      selJenjang.value = norm;
+      onCbtFilterJenjangChange(norm, s.kelas || '');
+    }
+  }
+}
+
+function onCbtFilterJenjangChange(jenjang, selectedKelas = '') {
+  const selKelas = document.getElementById('cbt-filter-kelas');
+  if (selKelas) {
+    let opts = [];
+    if (jenjang === 'Paket A') opts = ['Kelas IV', 'Kelas V', 'Kelas VI'];
+    else if (jenjang === 'Paket B') opts = ['Kelas VII', 'Kelas VIII', 'Kelas IX'];
+    else if (jenjang === 'Paket C') opts = ['Kelas X', 'Kelas XI', 'Kelas XII'];
+    else opts = ['Kelas IV', 'Kelas V', 'Kelas VI', 'Kelas VII', 'Kelas VIII', 'Kelas IX', 'Kelas X', 'Kelas XI', 'Kelas XII'];
+
+    selKelas.innerHTML = `<option value="">Semua Kelas ${jenjang || ''}</option>` +
+      opts.map(k => `<option value="${k}" ${k === selectedKelas ? 'selected' : ''}>${k}</option>`).join('');
+  }
+  populateCbtPaketOptions();
+}
+
+function populateCbtPaketOptions(presetChoiceVal = '') {
+  const selectBuku = document.getElementById('cbt-pilih-buku');
+  if (!selectBuku) return;
+
+  const filterJenjang = document.getElementById('cbt-filter-jenjang')?.value || '';
+  const filterKelas = document.getElementById('cbt-filter-kelas')?.value || '';
+
+  selectBuku.innerHTML = '<option value="">-- Pilih Paket Ujian / Modul CBT --</option>';
+
+  // 1. Paket Soal Kustom dari Bank Soal (difilter berdasarkan Jenjang & Kelas)
+  if (typeof cbtBankSoalList !== 'undefined' && cbtBankSoalList.length > 0) {
+    const optGroupCustom = document.createElement('optgroup');
+    optGroupCustom.label = '📝 Paket Ujian Resmi (UTS, UAS, USP & Evaluasi Modul)';
+    let countCustom = 0;
+
+    cbtBankSoalList.forEach(pkt => {
+      if (filterJenjang && pkt.jenjang && pkt.jenjang !== filterJenjang) return;
+      if (filterKelas && pkt.kelas && pkt.kelas !== 'Semua Kelas' && !pkt.kelas.includes(filterKelas)) return;
+
+      countCustom++;
+      const jenis = pkt.jenisUjian || 'Ujian';
+      const kelas = pkt.kelas && pkt.kelas !== 'Semua Kelas' ? ` · ${pkt.kelas}` : '';
+      const opt = document.createElement('option');
+      opt.value = 'PAKET:' + pkt.id;
+      if (presetChoiceVal && (presetChoiceVal === 'PAKET:' + pkt.id || String(pkt.bukuId) === String(presetChoiceVal))) {
+        opt.selected = true;
+      }
+      opt.textContent = `[${jenis}] ${pkt.judul} (${pkt.jenjang}${kelas} · KKM ${pkt.kkm || 70})`;
+      optGroupCustom.appendChild(opt);
+    });
+    if (countCustom > 0) selectBuku.appendChild(optGroupCustom);
+  }
+
+  // 2. Evaluasi Mandiri Berbasis Katalog Buku Modul (difilter berdasarkan Jenjang & Kelas)
+  if (typeof bukuList !== 'undefined' && bukuList.length > 0) {
+    const optGroupBuku = document.createElement('optgroup');
+    optGroupBuku.label = '📚 Ujian Mandiri Per Modul Bacaan (Soal Tersedia)';
+
+    let countModulSoal = 0;
+    bukuList.forEach(b => {
+      if (filterJenjang && b.jenjang && b.jenjang !== filterJenjang) return;
+      if (filterKelas && b.kelas && b.kelas !== 'Semua Kelas' && !b.kelas.includes(filterKelas)) return;
+
+      const linkedPaket = ambilPaketSoalTerkaitBuku(b.id);
+      if (!linkedPaket) return;
+
+      countModulSoal++;
+      const opt = document.createElement('option');
+      opt.value = 'BUKU:' + b.id;
+      if (presetChoiceVal && (presetChoiceVal === 'BUKU:' + b.id || String(b.id) === String(presetChoiceVal))) {
+        opt.selected = true;
+      }
+      opt.textContent = `${b.nama} [${b.jenjang} · ${b.kelas || 'Kesetaraan'}]`;
+      optGroupBuku.appendChild(opt);
+    });
+
+    if (countModulSoal > 0) {
+      selectBuku.appendChild(optGroupBuku);
+    }
+  }
+
+  if (typeof makeSearchableSelect === 'function') {
+    makeSearchableSelect(selectBuku, { searchPlaceholder: 'Cari paket ujian / modul CBT...' });
+  }
+
+  updateCbtInfoPaket(selectBuku.value || '');
+}
+
+window.onCbtPilihSiswaChange = onCbtPilihSiswaChange;
+window.onCbtFilterJenjangChange = onCbtFilterJenjangChange;
+window.populateCbtPaketOptions = populateCbtPaketOptions;
+
 function bukaModalPilihUjianCBT(presetBukuId, presetNamaSiswa) {
   const modal = document.getElementById('modal-pilih-cbt');
   if (!modal) return;
 
   const selectSiswa = document.getElementById('cbt-pilih-siswa');
-  const selectBuku = document.getElementById('cbt-pilih-buku');
+  let selectedSiswaObj = null;
 
   // Populate Siswa
   if (selectSiswa) {
     selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>';
+    const targetName = (presetNamaSiswa && !String(presetNamaSiswa).startsWith('PAKET:'))
+      ? presetNamaSiswa
+      : ((typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'Siswa') ? currentUser.nama : '');
+
     if (typeof siswaDataList !== 'undefined' && siswaDataList.length > 0) {
       siswaDataList.forEach(s => {
-        const sel = (presetNamaSiswa && s.nama === presetNamaSiswa) ? 'selected' : '';
+        const isMatch = targetName && s.nama && s.nama.toLowerCase() === targetName.toLowerCase();
+        if (isMatch) selectedSiswaObj = s;
+        const sel = isMatch ? 'selected' : '';
         const kelasLabel = s.kelas ? ` · ${s.kelas}` : '';
         selectSiswa.innerHTML += `<option value="${s.id}" ${sel}>${s.nama} (${s.program || 'Paket C'}${kelasLabel})</option>`;
       });
@@ -430,67 +598,44 @@ function bukaModalPilihUjianCBT(presetBukuId, presetNamaSiswa) {
     }
   }
 
-  // Populate Paket Ujian / Modul CBT
-  if (selectBuku) {
-    selectBuku.innerHTML = '<option value="">-- Pilih Paket Ujian / Modul CBT --</option>';
+  // Tentukan default filter Jenjang & Kelas dari buku/paket preset atau siswa yang login
+  let defaultJenjang = '';
+  let defaultKelas = '';
+  const presetChoice = (presetNamaSiswa && String(presetNamaSiswa).startsWith('PAKET:')) ? presetNamaSiswa : (presetBukuId || '');
 
-    // 1. Paket Soal Kustom dari Bank Soal (UTS, UAS, USP, Placement, Evaluasi Modul)
-    if (typeof cbtBankSoalList !== 'undefined' && cbtBankSoalList.length > 0) {
-      const optGroupCustom = document.createElement('optgroup');
-      optGroupCustom.label = '📝 Paket Ujian Resmi (UTS, UAS, USP & Bank Soal)';
-      cbtBankSoalList.forEach(pkt => {
-        const jenis = pkt.jenisUjian || 'Ujian';
-        const kelas = pkt.kelas && pkt.kelas !== 'Semua Kelas' ? ` · ${pkt.kelas}` : '';
-        const opt = document.createElement('option');
-        opt.value = 'PAKET:' + pkt.id;
-        opt.textContent = `[${jenis}] ${pkt.judul} (${pkt.jenjang}${kelas})`;
-        optGroupCustom.appendChild(opt);
-      });
-      selectBuku.appendChild(optGroupCustom);
+  if (presetChoice && String(presetChoice).startsWith('PAKET:')) {
+    const pktId = String(presetChoice).replace('PAKET:', '');
+    const pkt = (typeof cbtBankSoalList !== 'undefined') ? cbtBankSoalList.find(x => x.id === pktId) : null;
+    if (pkt) {
+      defaultJenjang = pkt.jenjang || '';
+      defaultKelas = (pkt.kelas && pkt.kelas !== 'Semua Kelas') ? pkt.kelas : '';
     }
-
-    // 2. Evaluasi Mandiri Berbasis Katalog Buku Modul (HANYA modul yang ada paket soalnya)
-    if (typeof bukuList !== 'undefined' && bukuList.length > 0) {
-      const optGroupBuku = document.createElement('optgroup');
-      optGroupBuku.label = '📚 Ujian Mandiri Per Modul Bacaan (Soal Tersedia)';
-      
-      let countModulSoal = 0;
-      bukuList.forEach(b => {
-        // Cek apakah modul memiliki soal yang dikaitkan
-        const linkedPaket = ambilPaketSoalTerkaitBuku(b.id);
-        if (!linkedPaket) {
-          // Buku bacaan belum ada soal yang dikaitkan -> Jangan tampilkan pilihan mengerjakan soal
-          return;
-        }
-
-        countModulSoal++;
-        const sel = (presetBukuId && String(b.id) === String(presetBukuId)) ? 'selected' : '';
-        const opt = document.createElement('option');
-        opt.value = 'BUKU:' + b.id;
-        if (sel) opt.selected = true;
-        opt.textContent = `${b.nama} [${b.jenjang} · ${b.kelas || 'Kesetaraan'}]`;
-        optGroupBuku.appendChild(opt);
-      });
-
-      if (countModulSoal > 0) {
-        selectBuku.appendChild(optGroupBuku);
-      }
+  } else if (presetBukuId) {
+    const b = (typeof bukuList !== 'undefined') ? bukuList.find(x => String(x.id) === String(presetBukuId)) : null;
+    if (b) {
+      defaultJenjang = b.jenjang || '';
+      defaultKelas = (b.kelas && b.kelas !== 'Semua Kelas') ? b.kelas : '';
     }
+  } else if (selectedSiswaObj) {
+    const prog = String(selectedSiswaObj.program || '');
+    if (prog.includes('Paket A')) defaultJenjang = 'Paket A';
+    else if (prog.includes('Paket B')) defaultJenjang = 'Paket B';
+    else if (prog.includes('Paket C')) defaultJenjang = 'Paket C';
+    defaultKelas = selectedSiswaObj.kelas || '';
   }
 
-  // Aktifkan Searchable Dropdown untuk Pemilihan Siswa & Modul Ujian
-  if (typeof makeSearchableSelect === 'function') {
-    if (selectSiswa) makeSearchableSelect(selectSiswa, { searchPlaceholder: 'Cari nama peserta ujian...' });
-    if (selectBuku) makeSearchableSelect(selectBuku, { searchPlaceholder: 'Cari paket ujian / modul CBT...' });
-  }
+  const selFilterJenjang = document.getElementById('cbt-filter-jenjang');
+  if (selFilterJenjang) selFilterJenjang.value = defaultJenjang;
+  onCbtFilterJenjangChange(defaultJenjang, defaultKelas);
+  populateCbtPaketOptions(presetChoice);
 
-  const initialVal = selectBuku ? selectBuku.value : '';
-  updateCbtInfoPaket(initialVal);
+  if (typeof makeSearchableSelect === 'function' && selectSiswa) {
+    makeSearchableSelect(selectSiswa, { searchPlaceholder: 'Cari nama peserta ujian...' });
+  }
 
   const inputToken = document.getElementById('cbt-input-token');
   if (inputToken) inputToken.value = '';
 
-  // Jika siswa, sembunyikan bocoran token dari info-card agar siswa memasukkan token resmi dari guru
   const tokenRow = document.getElementById('cbt-info-token-row');
   if (tokenRow) {
     if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'Siswa') {
@@ -510,13 +655,17 @@ function closeModalPilihCBT() {
 const closeModalPilihUjianCBT = closeModalPilihCBT;
 
 function updateCbtInfoPaket(pilihanId) {
-  const elDurasi = document.getElementById('cbt-info-durasi');
-  const elJumlah = document.getElementById('cbt-info-jumlah');
+  const elDurasi = document.getElementById('cbt-dialog-durasi') || document.getElementById('cbt-info-durasi');
+  const elJumlah = document.getElementById('cbt-dialog-jumlah-soal') || document.getElementById('cbt-info-jumlah');
+  const elKkm = document.getElementById('cbt-dialog-kkm');
+  const elSyarat = document.getElementById('cbt-dialog-syarat-baca');
   const elToken = document.getElementById('cbt-info-token');
 
   if (!pilihanId) {
     if (elDurasi) elDurasi.textContent = '15 - 90 Menit';
     if (elJumlah) elJumlah.textContent = 'Sesuai Paket Ujian';
+    if (elKkm) elKkm.textContent = '70 (Wajib Lulus)';
+    if (elSyarat) elSyarat.textContent = 'Min. 50% Hal. & 5 Menit Belajar';
     if (elToken) elToken.textContent = 'AURA1';
     return;
   }
@@ -525,17 +674,29 @@ function updateCbtInfoPaket(pilihanId) {
     const pktId = pilihanId.replace('PAKET:', '');
     const pkt = (typeof cbtBankSoalList !== 'undefined') ? cbtBankSoalList.find(x => x.id === pktId) : null;
     if (pkt) {
+      const b = pkt.bukuId && typeof bukuList !== 'undefined' ? bukuList.find(x => String(x.id) === String(pkt.bukuId)) : null;
+      const minProg = pkt.minProgress !== undefined ? pkt.minProgress : (b && b.minProgress !== undefined ? b.minProgress : 50);
+      const minWkt = pkt.minStudyMinutes !== undefined ? pkt.minStudyMinutes : (b && b.minStudyMinutes !== undefined ? b.minStudyMinutes : 5);
       if (elDurasi) elDurasi.textContent = `${pkt.durasiMenit || 30} Menit`;
       if (elJumlah) elJumlah.textContent = `${pkt.soalList ? pkt.soalList.length : 0} Butir Soal`;
+      if (elKkm) elKkm.textContent = `${pkt.kkm || 70} (Wajib Lulus / Passing Grade)`;
+      if (elSyarat) elSyarat.textContent = pkt.bukuId ? `Min. ${minProg}% Hal. & ${minWkt} Menit Belajar` : 'Ujian Terbuka Sesuai Jadwal';
       if (elToken) elToken.textContent = pkt.token || pkt.kode || 'AURA1';
       return;
     }
+  } else if (pilihanId.startsWith('BUKU:')) {
+    const rawBukuId = pilihanId.replace('BUKU:', '');
+    const b = (typeof bukuList !== 'undefined') ? bukuList.find(x => String(x.id) === String(rawBukuId)) : null;
+    const pkt = ambilPaketSoalTerkaitBuku(rawBukuId);
+    const minProg = (b && b.minProgress !== undefined) ? b.minProgress : 50;
+    const minWkt = (b && b.minStudyMinutes !== undefined) ? b.minStudyMinutes : 5;
+    if (elDurasi) elDurasi.textContent = `${(pkt && pkt.durasiMenit) || 15} Menit`;
+    if (elJumlah) elJumlah.textContent = `${(pkt && pkt.soalList) ? pkt.soalList.length : 5} Butir Pilihan Ganda`;
+    if (elKkm) elKkm.textContent = `${(pkt && pkt.kkm) || 70} (Wajib Lulus / Passing Grade)`;
+    if (elSyarat) elSyarat.textContent = `Min. ${minProg}% Hal. & ${minWkt} Menit Belajar`;
+    if (elToken) elToken.textContent = (pkt && pkt.token) || 'AURA1';
+    return;
   }
-
-  // Default untuk buku modul
-  if (elDurasi) elDurasi.textContent = '15 Menit';
-  if (elJumlah) elJumlah.textContent = '5 Butir Pilihan Ganda (PG)';
-  if (elToken) elToken.textContent = 'AURA' + (new Date().getFullYear());
 }
 
 function prosesMulaiCBT() {
@@ -575,23 +736,30 @@ function prosesMulaiCBT() {
       return;
     }
 
-    // Cek apakah paket soal ini dikaitkan dengan buku modul tertentu dan terapkan batasan ujian
+    // Cek syarat halaman & waktu belajar modul jika paket dikaitkan ke buku
     if (pkt.bukuId) {
-      const cekSyarat = cekKelayakanUjianModulSiswa(pkt.bukuId, s.id);
+      const cekSyarat = cekKelayakanUjianModulSiswa(pkt.bukuId, s.id, pkt);
       if (!cekSyarat.layak) {
         Swal.fire({
           icon: 'warning',
-          title: 'Belum Memenuhi Batas Belajar Modul',
+          title: 'Soal Ujian Belum Terbuka 🔒',
           html: `<div style="text-align: left; font-size: 13.5px;">
             <p>${cekSyarat.pesan}</p>
             <div style="background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin-top: 10px; border: 1px solid var(--border-color);">
-              <div>📖 Halaman Terbaca: <b>Hal. ${cekSyarat.halTerbaca} dari ${cekSyarat.totalHal} (${cekSyarat.persen}%)</b></div>
-              <div>🎯 Batas Minimal Ujian: <b>${cekSyarat.minPersen}% materi modul</b></div>
+              <div>📖 Halaman Terbaca: <b>Hal. ${cekSyarat.halTerbaca} dari ${cekSyarat.totalHal} (${cekSyarat.persen}%)</b> — Syarat: <b>Min. ${cekSyarat.minPersen}%</b></div>
+              <div style="margin-top: 4px;">⏱️ Waktu Belajar Modul: <b>${cekSyarat.menitBelajar} Menit</b> — Syarat: <b>Min. ${cekSyarat.minMenit} Menit</b></div>
             </div>
-            <p style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">Silakan lanjutkan membaca materi modul terlebih dahulu sebelum menempuh ujian evaluasi.</p>
+            <p style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">Silakan baca modul pembelajaran hingga memenuhi minimal halaman dan waktu belajar di atas agar soal terbuka.</p>
           </div>`,
-          confirmButtonText: 'Kembali Belajar Modul',
+          showCancelButton: true,
+          confirmButtonText: '📖 Buka & Baca Modul Sekarang',
+          cancelButtonText: 'Tutup',
           confirmButtonColor: 'var(--primary-color)'
+        }).then(res => {
+          if (res.isConfirmed && typeof mulaiBelajarBuku === 'function') {
+            closeModalPilihCBT();
+            mulaiBelajarBuku(pkt.bukuId);
+          }
         });
         return;
       }
@@ -607,7 +775,6 @@ function prosesMulaiCBT() {
       return;
     }
 
-    // 1. Cek apakah ada soal yang dikaitkan ke buku ini
     const linkedPaket = ambilPaketSoalTerkaitBuku(b.id);
     if (!linkedPaket) {
       Swal.fire({
@@ -618,22 +785,28 @@ function prosesMulaiCBT() {
       return;
     }
 
-    // 2. Cek batasan minimal membaca modul (default 50%)
-    const cekSyarat = cekKelayakanUjianModulSiswa(b.id, s.id);
+    const cekSyarat = cekKelayakanUjianModulSiswa(b.id, s.id, linkedPaket);
     if (!cekSyarat.layak) {
       Swal.fire({
         icon: 'warning',
-        title: 'Belum Memenuhi Batas Belajar Modul',
+        title: 'Soal Ujian Belum Terbuka 🔒',
         html: `<div style="text-align: left; font-size: 13.5px;">
           <p>${cekSyarat.pesan}</p>
           <div style="background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin-top: 10px; border: 1px solid var(--border-color);">
-            <div>📖 Halaman Terbaca: <b>Hal. ${cekSyarat.halTerbaca} dari ${cekSyarat.totalHal} (${cekSyarat.persen}%)</b></div>
-            <div>🎯 Batas Minimal Ujian: <b>${cekSyarat.minPersen}% materi modul</b></div>
+            <div>📖 Halaman Terbaca: <b>Hal. ${cekSyarat.halTerbaca} dari ${cekSyarat.totalHal} (${cekSyarat.persen}%)</b> — Syarat: <b>Min. ${cekSyarat.minPersen}%</b></div>
+            <div style="margin-top: 4px;">⏱️ Waktu Belajar Modul: <b>${cekSyarat.menitBelajar} Menit</b> — Syarat: <b>Min. ${cekSyarat.minMenit} Menit</b></div>
           </div>
-          <p style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">Silakan tuntaskan membaca modul terlebih dahulu untuk membuka akses ujian.</p>
+          <p style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">Silakan tuntaskan membaca modul terlebih dahulu untuk membuka akses soal ujian.</p>
         </div>`,
-        confirmButtonText: 'Buka Modul Belajar',
+        showCancelButton: true,
+        confirmButtonText: '📖 Buka & Baca Modul Sekarang',
+        cancelButtonText: 'Tutup',
         confirmButtonColor: 'var(--primary-color)'
+      }).then(res => {
+        if (res.isConfirmed && typeof mulaiBelajarBuku === 'function') {
+          closeModalPilihCBT();
+          mulaiBelajarBuku(b.id);
+        }
       });
       return;
     }
@@ -712,7 +885,8 @@ function launchCbtBeesmart(book, student) {
     raguSiswa: {},
     currentNo: 1,
     sisaDetik: durasiDetik,
-    totalDetik: durasiDetik
+    totalDetik: durasiDetik,
+    kkm: (customPaket && customPaket.kkm) ? customPaket.kkm : 70
   };
 
   // Setup Header CBT UI
@@ -1052,25 +1226,26 @@ function selesaikanDanHitungNilaiCBT(isTimeUp) {
     }
   } catch (e) {}
 
-  const isExternalGuest = session.siswaId && String(session.siswaId).startsWith('GUEST-');
+  const kkmNilai = Number(session.kkm) || 70;
+  const isLulusKKM = skorNilai >= kkmNilai;
 
   const hasilUjianBaru = {
     id: 'EX-' + Date.now(),
     tanggal: new Date().toLocaleDateString('id-ID'),
     siswaId: session.siswaId,
     namaSiswa: session.namaSiswa,
-    program: isExternalGuest ? 'Peserta Luar' : session.program,
+    program: session.program,
+    paketId: session.paketId || '',
+    bukuId: session.bukuId || '',
     bukuJudul: session.bukuJudul,
     nilai: skorNilai,
+    kkm: kkmNilai,
     predikat: predikat,
-    catatan: isExternalGuest
-      ? `Ujian Peserta Luar/Tamu (${benar} dari ${total} soal benar). ${isTimeUp ? '[Waktu Habis]' : '[Selesai]'}`
-      : `Ujian CBT Mandiri (${benar} dari ${total} soal benar). ${isTimeUp ? '[Waktu Selesai Otomatis]' : '[Selesai Tepat Waktu]'}`,
+    catatan: `Ujian CBT Mandiri (${benar} dari ${total} soal benar · KKM ${kkmNilai}: ${isLulusKKM ? 'LULUS' : 'WAJIB MENGULANG'}). ${isTimeUp ? '[Waktu Selesai Otomatis]' : '[Selesai Tepat Waktu]'}`,
     penguji: `${pengujiNama} (${pengujiJabatan})`,
     pengujiJabatan: pengujiJabatan,
     pengujiNip: pengujiNip,
-    pengujiTtd: pengujiTtd,
-    isExternal: isExternalGuest
+    pengujiTtd: pengujiTtd
   };
 
   if (typeof ujianHasilList !== 'undefined') {
@@ -1079,23 +1254,22 @@ function selesaikanDanHitungNilaiCBT(isTimeUp) {
   saveUjianListToStorage(hasilUjianBaru);
   renderUjianTable();
   if (typeof renderStudentLearningJourney === 'function') renderStudentLearningJourney();
+  if (typeof renderUjianKhususSiswa === 'function') renderUjianKhususSiswa();
 
   // 🔔 Kirim Web Push Notification ke Admin & Siswa terkait status hasil ujian
   if (typeof window.sendAppPushNotification === 'function') {
-    // 1. Notifikasi ke Admin: Siswa telah menyelesaikan ujian
     window.sendAppPushNotification({
-      title: isExternalGuest ? 'Ujian Peserta Luar Selesai 📝' : 'Ujian Diselesaikan 📝',
-      body: `${hasilUjianBaru.namaSiswa} telah menyelesaikan ujian ${hasilUjianBaru.bukuJudul} dengan skor ${skorNilai} (${predikat}).`,
+      title: 'Ujian Diselesaikan 📝',
+      body: `${hasilUjianBaru.namaSiswa} menyelesaikan ujian ${hasilUjianBaru.bukuJudul} dengan skor ${skorNilai} (${isLulusKKM ? 'Lulus KKM' : 'Remedial / Wajib Ulang'}).`,
       url: '/portal',
       targetRole: 'Admin',
       tag: 'exam-finished-admin'
     });
 
-    // 2. Notifikasi ke Siswa itu sendiri jika punya akun login: Hasil Ujian Tersedia
     if (session.siswaUsername) {
       window.sendAppPushNotification({
         title: 'Hasil Ujian CBT Anda 🎓',
-        body: `Ujian ${hasilUjianBaru.bukuJudul} selesai: Nilai Anda ${skorNilai} (${predikat}). Klik untuk melihat sertifikat.`,
+        body: `Ujian ${hasilUjianBaru.bukuJudul} selesai: Nilai Anda ${skorNilai} (${isLulusKKM ? 'Lulus KKM' : 'Wajib Mengulang'}).`,
         url: '/portal',
         targetUsername: session.siswaUsername,
         tag: 'exam-score-student'
@@ -1108,31 +1282,56 @@ function selesaikanDanHitungNilaiCBT(isTimeUp) {
   if (modalCbt) modalCbt.classList.add('hidden');
   if (cbtTimerInterval) clearInterval(cbtTimerInterval);
   cbtActiveSession = null;
-  saveCbtActiveSessionToStorage(); // Menghapus key ppdb_cbt_active_session dari localStorage
+  saveCbtActiveSessionToStorage();
 
-  // Dialog Skor Hasil CBT
+  // Dialog Skor Hasil CBT (Wajib Mengulang jika < KKM)
   Swal.fire({
-    title: isExternalGuest ? 'Ujian Selesai! 🎉' : 'Hasil Ujian CBT Mandiri 🎉',
+    title: isLulusKKM ? 'Selamat! Anda Lulus Ujian 🎉' : 'Nilai Belum Mencapai Batas Minimum ⚠️',
     html: `
       <div style="text-align: center; color: var(--text-color);">
-        <p>Terima kasih <b>${hasilUjianBaru.namaSiswa}</b>, ujian Anda telah berhasil terekam ke sistem panitia!</p>
-        <div style="margin: 16px auto; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 16px; max-width: 380px;">
-          <div style="font-size: 13px; color: #166534;">Mata Uji: <b>${hasilUjianBaru.bukuJudul}</b></div>
-          <div style="font-size: 36px; font-weight: 900; color: #15803d; margin: 8px 0;">${skorNilai}</div>
-          <div style="font-size: 14px; font-weight: 700; color: #166534;">${predikat} · ${benar}/${total} Soal Benar</div>
-          <div style="font-size: 12px; color: #15803d; margin-top: 4px;">${skorNilai >= 70 ? 'STATUS: LULUS KOMPETEN ✅' : 'STATUS: REMEDIAL ⚠️'}</div>
+        <p>Terima kasih <b>${hasilUjianBaru.namaSiswa}</b>, berikut adalah hasil evaluasi ujian modul Anda:</p>
+        <div style="margin: 16px auto; background: ${isLulusKKM ? '#f0fdf4' : '#fef2f2'}; border: 1.5px solid ${isLulusKKM ? '#86efac' : '#fca5a5'}; border-radius: 10px; padding: 16px; max-width: 390px;">
+          <div style="font-size: 13px; color: ${isLulusKKM ? '#166534' : '#991b1b'};">Mata Uji: <b>${hasilUjianBaru.bukuJudul}</b></div>
+          <div style="font-size: 38px; font-weight: 900; color: ${isLulusKKM ? '#15803d' : '#dc2626'}; margin: 8px 0;">${skorNilai}</div>
+          <div style="font-size: 13.5px; font-weight: 700; color: ${isLulusKKM ? '#166534' : '#991b1b'};">${predikat} · ${benar}/${total} Soal Benar · Batas Minimum (KKM): ${kkmNilai}</div>
+          <div style="font-size: 12.5px; font-weight: 800; color: ${isLulusKKM ? '#15803d' : '#b91c1c'}; margin-top: 6px; padding: 4px 10px; border-radius: 99px; background: ${isLulusKKM ? '#dcfce7' : '#fee2e2'}; display: inline-block;">
+            ${isLulusKKM ? 'STATUS: LULUS PASSING GRADE ✅' : 'STATUS: BELUM LULUS (WAJIB MENGULANG) 🔄'}
+          </div>
         </div>
-        <p style="font-size: 12px; color: var(--text-muted);">${isExternalGuest ? 'Hasil ujian telah tersimpan dan siap diproses oleh panitia penguji.' : 'Nilai telah otomatis tersimpan ke rapor dan siap dicetak sertifikat kelulusan modulnya.'}</p>
+        <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.45;">
+          ${isLulusKKM
+            ? 'Nilai Anda telah memenuhi standar kelulusan dan siap dicetak sertifikat kelulusan modulnya.'
+            : `Nilai Anda (<b>${skorNilai}</b>) masih di bawah nilai minimum kelulusan (<b>${kkmNilai}</b>). <b>Anda wajib mengulangi ujian ini</b> hingga mencapai nilai passing grade!`}
+        </p>
       </div>
     `,
-    icon: skorNilai >= 70 ? 'success' : 'info',
+    icon: isLulusKKM ? 'success' : 'warning',
     showCancelButton: true,
-    confirmButtonText: '📜 Transkrip / Sertifikat',
-    cancelButtonText: 'Keluar / Selesai',
-    confirmButtonColor: '#059669'
+    confirmButtonText: isLulusKKM ? '📜 Cetak Sertifikat Lulus' : '🔄 Ulangi Ujian Sekarang',
+    cancelButtonText: isLulusKKM ? 'Tutup / Selesai' : 'Pelajari Modul Dulu',
+    confirmButtonColor: isLulusKKM ? '#059669' : '#d97706'
   }).then(r => {
     if (r.isConfirmed) {
-      cetakSertifikatResmiMyAura(hasilUjianBaru.id);
+      if (isLulusKKM) {
+        cetakSertifikatResmiMyAura(hasilUjianBaru.id);
+      } else {
+        // Langsung mulai ulang sesi ujian agar siswa bisa memperbaiki nilai mencapai passing grade
+        const sObj = (typeof siswaDataList !== 'undefined' ? siswaDataList.find(x => String(x.id) === String(session.siswaId)) : null) || { id: session.siswaId, nama: session.namaSiswa, program: session.program };
+        if (session.paketId) {
+          const pkt = (typeof cbtBankSoalList !== 'undefined') ? cbtBankSoalList.find(x => x.id === session.paketId) : null;
+          if (pkt) {
+            launchCbtDariPaketSoal(pkt, sObj);
+            return;
+          }
+        }
+        if (session.bukuId) {
+          const b = (typeof bukuList !== 'undefined') ? bukuList.find(x => String(x.id) === String(session.bukuId)) : null;
+          if (b) {
+            launchCbtBeesmart(b, sObj);
+            return;
+          }
+        }
+      }
     }
   });
 }
@@ -1460,19 +1659,19 @@ function renderUjianKhususSiswa() {
     let alasanTerkunci = '';
 
     if (pkt.bukuId) {
-      const cek = cekKelayakanUjianModulSiswa(pkt.bukuId, studentId);
+      const cek = cekKelayakanUjianModulSiswa(pkt.bukuId, studentId, pkt);
       if (!cek.layak) {
         isTerkunciModul = true;
-        alasanTerkunci = `Materi baru dibaca ${cek.persen}% (Syarat min. ${cek.minPersen}%)`;
+        alasanTerkunci = `Baca: ${cek.persen}% (Min. ${cek.minPersen}%) · Waktu: ${cek.menitBelajar} mnt (Min. ${cek.minMenit} mnt)`;
         modulStatusHtml = `
           <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 6px; padding: 6px 10px; margin-bottom: 12px; font-size: 11.5px; color: #dc2626;">
-            ⚠️ <b>Belum Memenuhi Batas Baca Modul:</b><br>${alasanTerkunci}.
+            🔒 <b>Soal Belum Terbuka (Syarat Modul):</b><br>${alasanTerkunci}.
           </div>
         `;
       } else {
         modulStatusHtml = `
           <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 6px 10px; margin-bottom: 12px; font-size: 11.5px; color: #059669;">
-            ✓ <b>Syarat Modul Terpenuhi:</b> Telah membaca ${cek.persen}% materi.
+            ✓ <b>Syarat Modul Terpenuhi:</b> Baca ${cek.persen}% & Waktu ${cek.menitBelajar} mnt. Soal terbuka!
           </div>
         `;
       }
@@ -1726,22 +1925,32 @@ function filterBukuSelectForPaket(jenjang) {
       `;
     }
   }
+  onPaketKelasChange();
+}
 
+function onPaketKelasChange() {
+  const jenjang = document.getElementById('paket-jenjang')?.value || '';
+  const kelas = document.getElementById('paket-kelas')?.value || '';
   const selBuku = document.getElementById('paket-buku-id');
   if (!selBuku) return;
 
-  selBuku.innerHTML = '<option value="">-- Pilih Buku / Modul Pelajaran (Opsional untuk UTS/UAS) --</option>';
+  selBuku.innerHTML = '<option value="">-- Pilih Buku / Modul Pelajaran (Sesuai Jenjang & Kelas) --</option>';
   if (typeof bukuList !== 'undefined') {
-    const list = bukuList.filter(b => !jenjang || b.jenjang === jenjang || b.jenjang === 'Umum');
+    const list = bukuList.filter(b => {
+      const mJenjang = !jenjang || b.jenjang === jenjang || b.jenjang === 'Umum';
+      const mKelas = !kelas || kelas === 'Semua Kelas' || !b.kelas || b.kelas === 'Semua Kelas' || b.kelas.includes(kelas);
+      return mJenjang && mKelas;
+    });
     list.forEach(b => {
-      selBuku.innerHTML += '<option value="' + b.id + '">' + b.nama + ' [' + (b.mapel || b.kategori || 'Umum') + ' · ' + (b.kelas || 'Semua') + ']</option>';
+      selBuku.innerHTML += '<option value="' + b.id + '">' + b.nama + ' [' + (b.mapel || b.kategori || 'Umum') + ' · ' + (b.kelas || 'Semua Kelas') + ']</option>';
     });
   }
 
   if (typeof makeSearchableSelect === 'function') {
-    makeSearchableSelect(selBuku, { searchPlaceholder: 'Cari modul pelajaran...' });
+    makeSearchableSelect(selBuku, { searchPlaceholder: 'Cari modul pelajaran sesuai jenjang & kelas...' });
   }
 }
+window.onPaketKelasChange = onPaketKelasChange;
 
 function isiJudulOtomatisDariBuku(bukuId) {
   if (!bukuId) return;
@@ -1758,6 +1967,10 @@ function isiJudulOtomatisDariBuku(bukuId) {
         judulInput.value = 'Evaluasi Akhir Modul: ' + b.nama;
       }
     }
+    const elMinProg = document.getElementById('paket-min-progress');
+    if (elMinProg && b.minProgress !== undefined) elMinProg.value = b.minProgress;
+    const elMinWaktu = document.getElementById('paket-min-waktu');
+    if (elMinWaktu && b.minStudyMinutes !== undefined) elMinWaktu.value = b.minStudyMinutes;
   }
 }
 
@@ -1770,12 +1983,21 @@ function editPaketSoal(id) {
   document.getElementById('paket-kode-token').value = pkt.kode || '';
   document.getElementById('paket-jenis-ujian').value = pkt.jenisUjian || 'Evaluasi Modul';
   document.getElementById('paket-jenjang').value = pkt.jenjang || 'Paket C';
-  document.getElementById('paket-kelas').value = pkt.kelas || 'Semua Kelas';
   filterBukuSelectForPaket(pkt.jenjang);
+  document.getElementById('paket-kelas').value = pkt.kelas || 'Semua Kelas';
+  onPaketKelasChange();
   document.getElementById('paket-buku-id').value = pkt.bukuId || '';
+  if (typeof makeSearchableSelect === 'function') {
+    const selBuku = document.getElementById('paket-buku-id');
+    if (selBuku) makeSearchableSelect(selBuku, { searchPlaceholder: 'Cari modul pelajaran sesuai jenjang & kelas...' });
+  }
   document.getElementById('paket-judul').value = pkt.judul || '';
   document.getElementById('paket-durasi-menit').value = pkt.durasiMenit || 15;
   document.getElementById('paket-kkm').value = pkt.kkm || 70;
+  const elMinProg = document.getElementById('paket-min-progress');
+  if (elMinProg) elMinProg.value = pkt.minProgress !== undefined ? pkt.minProgress : 50;
+  const elMinWaktu = document.getElementById('paket-min-waktu');
+  if (elMinWaktu) elMinWaktu.value = pkt.minStudyMinutes !== undefined ? pkt.minStudyMinutes : 5;
   const elInstruksi = document.getElementById('paket-instruksi');
   if (elInstruksi) elInstruksi.value = pkt.instruksi || '';
   const elToken = document.getElementById('paket-token-input');
@@ -1801,6 +2023,8 @@ function simpanPaketSoalBaru() {
   const judul = document.getElementById('paket-judul').value.trim();
   const durasiMenit = parseInt(document.getElementById('paket-durasi-menit').value, 10) || 15;
   const kkm = parseInt(document.getElementById('paket-kkm').value, 10) || 70;
+  const minProgress = parseInt(document.getElementById('paket-min-progress')?.value, 10) || 50;
+  const minStudyMinutes = parseInt(document.getElementById('paket-min-waktu')?.value, 10) || 0;
   const instruksi = document.getElementById('paket-instruksi')?.value.trim() || '';
   const butuhKartu = document.getElementById('paket-butuh-kartu') ? document.getElementById('paket-butuh-kartu').checked : false;
 
@@ -1809,6 +2033,16 @@ function simpanPaketSoalBaru() {
   if (!judul) {
     Swal.fire('Peringatan', 'Judul paket soal ujian wajib diisi!', 'warning');
     return;
+  }
+
+  // Sinkronkan juga syarat ke modul buku jika dikaitkan
+  if (bukuId && typeof bukuList !== 'undefined') {
+    const bObj = bukuList.find(x => String(x.id) === String(bukuId));
+    if (bObj) {
+      bObj.minProgress = minProgress;
+      bObj.minStudyMinutes = minStudyMinutes;
+      if (typeof saveBukuListToStorage === 'function') saveBukuListToStorage();
+    }
   }
 
   if (id) {
@@ -1824,6 +2058,8 @@ function simpanPaketSoalBaru() {
       pkt.judul = judul;
       pkt.durasiMenit = durasiMenit;
       pkt.kkm = kkm;
+      pkt.minProgress = minProgress;
+      pkt.minStudyMinutes = minStudyMinutes;
       pkt.instruksi = instruksi;
       pkt.butuhKartu = butuhKartu;
     }
@@ -1840,6 +2076,8 @@ function simpanPaketSoalBaru() {
       judul: judul,
       durasiMenit: durasiMenit,
       kkm: kkm,
+      minProgress: minProgress,
+      minStudyMinutes: minStudyMinutes,
       instruksi: instruksi,
       butuhKartu: butuhKartu,
       pembuat: pembuat,

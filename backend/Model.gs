@@ -1234,6 +1234,7 @@ function getBukuListFromDB() {
       kategori: String(row[3] || ''),
       totalHal: Number(row[4]) || 30,
       minProgress: row[5] !== undefined && row[5] !== '' ? Number(row[5]) : 50,
+      minStudyMinutes: extra.minStudyMinutes !== undefined ? Number(extra.minStudyMinutes) : 5,
       dibaca: Number(row[8]) || 0,
       rating: extra.rating || 4.5,
       cover: extra.cover || `https://drive.google.com/thumbnail?id=${row[0]}&sz=w600`,
@@ -1258,6 +1259,7 @@ function saveBukuBatchToDB(bukuArr) {
       mapel: b.mapel || b.kategori || '',
       kelas: b.kelas || '',
       modul: b.modul || '1',
+      minStudyMinutes: b.minStudyMinutes !== undefined ? b.minStudyMinutes : 5,
       rating: b.rating || 4.5,
       cover: b.cover || '',
       download: b.download || ''
@@ -1382,7 +1384,9 @@ function getBankSoalFromDB() {
       butuhKartu: !!row[11],
       pembuat: String(row[12] || ''),
       tanggal: String(row[13] || ''),
-      soalList: soals
+      soalList: soals,
+      minProgress: row[16] !== undefined && row[16] !== '' ? Number(row[16]) : 50,
+      minStudyMinutes: row[17] !== undefined && row[17] !== '' ? Number(row[17]) : 5
     });
   }
   return list;
@@ -1392,7 +1396,7 @@ function saveBankSoalBatchToDB(paketArr) {
   if (!Array.isArray(paketArr)) throw new Error("Format paket soal harus array.");
   const sheet = getBankSoalSheet();
   sheet.clear();
-  sheet.appendRow(['ID', 'Kode', 'Token', 'Jenjang', 'Kelas', 'BukuID', 'Judul', 'DurasiMenit', 'KKM', 'JenisUjian', 'StatusUjian', 'ButuhKartu', 'Pembuat', 'Tanggal', 'SoalList_JSON', 'Updated_At']);
+  sheet.appendRow(['ID', 'Kode', 'Token', 'Jenjang', 'Kelas', 'BukuID', 'Judul', 'DurasiMenit', 'KKM', 'JenisUjian', 'StatusUjian', 'ButuhKartu', 'Pembuat', 'Tanggal', 'SoalList_JSON', 'Updated_At', 'MinProgress', 'MinStudyMinutes']);
   const now = new Date().toISOString();
 
   const rows = paketArr.map(p => [
@@ -1411,7 +1415,9 @@ function saveBankSoalBatchToDB(paketArr) {
     p.pembuat || '',
     p.tanggal || '',
     JSON.stringify(p.soalList || []),
-    now
+    now,
+    p.minProgress !== undefined ? p.minProgress : 50,
+    p.minStudyMinutes !== undefined ? p.minStudyMinutes : 5
   ]);
 
   if (rows.length > 0) {
