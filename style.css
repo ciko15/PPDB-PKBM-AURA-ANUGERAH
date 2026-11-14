@@ -3400,12 +3400,32 @@ input:checked + .slider.round:before {
 @media (max-width: 900px) {
   .history-reading-split-layout {
     grid-template-columns: 1fr !important;
+    gap: 14px !important;
   }
   .history-sidebar-panel {
     position: static !important;
     max-height: 480px !important;
     height: auto !important;
     margin-top: 8px;
+    padding: 14px !important;
+    overflow: hidden !important;
+  }
+  .history-sidebar-panel .wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  #grid-history-modul-kiri {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  #history-resume-summary-card {
+    padding: 14px !important;
+  }
+  #history-resume-summary-card .btn {
+    width: 100% !important;
+    justify-content: center !important;
+    margin-top: 6px;
   }
 }
 
@@ -3427,3 +3447,100 @@ input:checked + .slider.round:before {
 #container-riwayat-baca-kanan::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* ==================== PENYESUAIAN WARNA FORM & ELEMEN INPUT DI DARK MODE ==================== */
+.form-control,
+input.form-control,
+select.form-control,
+textarea.form-control,
+.form-group input,
+.form-group select,
+.form-group textarea,
+.login-modal input:not([type="checkbox"]):not([type="radio"]),
+.login-modal select,
+.login-modal textarea,
+.filter-search-box input,
+.filter-select {
+  background-color: var(--surface-2) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.85;
+}
+
+/* Fix dropdown options di semua browser saat Dark Mode */
+select,
+select option,
+.form-control option,
+.filter-select option {
+  background-color: var(--surface-color) !important;
+  color: var(--text-color) !important;
+}
+
+/* Form labels, legends & section titles dalam modal */
+.form-group label,
+.form label,
+.login-modal label,
+.login-modal .form-group label {
+  color: var(--text-color) !important;
+}
+
+/* Input readonly / disabled di dark mode agar tetap jelas terbaca */
+input:read-only,
+input:disabled,
+select:disabled,
+textarea:disabled,
+.form-control:read-only,
+.form-control:disabled {
+  background-color: var(--surface-hover) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--border-color) !important;
+  cursor: not-allowed;
+}
+
+/* SweetAlert2 Popup otomatis beradaptasi dengan Dark Mode */
+:root[data-theme="dark"] .swal2-popup {
+  background: var(--surface-color) !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="dark"] .swal2-title,
+:root[data-theme="dark"] .swal2-html-container {
+  color: var(--text-color) !important;
+}
+
+:root[data-theme="dark"] .swal2-input,
+:root[data-theme="dark"] .swal2-select,
+:root[data-theme="dark"] .swal2-textarea {
+  background-color: var(--surface-2) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Tabel di dalam form/modal (misal: tabel mapel nilai rapor) */
+:root[data-theme="dark"] table,
+:root[data-theme="dark"] tr,
+:root[data-theme="dark"] td,
+:root[data-theme="dark"] th {
+  border-color: var(--border-color);
+}
+
+:root[data-theme="dark"] thead th {
+  background-color: var(--surface-2) !important;
+  color: var(--text-color) !important;
+}
+
+/* Fix panel container di dalam modal/form */
+:root[data-theme="dark"] .modal-content,
+:root[data-theme="dark"] .card-panel {
+  background-color: var(--surface-color) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+}
+

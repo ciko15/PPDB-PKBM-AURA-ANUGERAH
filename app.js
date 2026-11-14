@@ -420,8 +420,16 @@ function loadMoreMenuSection() {
   }
 
   const btnUsers = document.getElementById('more-menu-admin-users');
+  const btnMitra = document.getElementById('more-menu-admin-mitra');
   const btnApi = document.getElementById('more-menu-admin-api');
   const btnKeamanan = document.getElementById('more-menu-admin-keamanan');
+  if (btnMitra) {
+    if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
+      btnMitra.classList.remove('hidden');
+    } else {
+      btnMitra.classList.add('hidden');
+    }
+  }
   if (btnUsers) {
     if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
       btnUsers.classList.remove('hidden');
