@@ -287,20 +287,23 @@ function updateThemeIcons(theme) {
   const navBtn = document.getElementById('btn-theme-nav');
   const landingBtn = document.getElementById('btn-theme-landing');
   const sidebarBtn = document.getElementById('who-toggle-theme');
+  const sidebarIcon = document.getElementById('icon-theme-sidebar');
+  const landingIcon = document.getElementById('icon-theme-landing');
   const themeText = document.getElementById('theme-text-sidebar');
 
   if (landingBtn) {
-    landingBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" style="width: 18px; height: 18px;"></i>`;
-    landingBtn.setAttribute('title', isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap');
+    landingBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" id="icon-theme-landing" style="width: 18px; height: 18px;"></i>`;
+    landingBtn.setAttribute('title', isDark ? 'Beralih ke Mode Terang (Light Mode)' : 'Beralih ke Mode Gelap (Dark Mode)');
   }
   if (navBtn) {
     navBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" style="width: 18px; height: 18px;"></i>`;
-    navBtn.setAttribute('title', isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap');
+    navBtn.setAttribute('title', isDark ? 'Beralih ke Mode Terang (Light Mode)' : 'Beralih ke Mode Gelap (Dark Mode)');
   }
   if (sidebarBtn) {
-    sidebarBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" style="width: 16px; height: 16px;"></i> <span id="theme-text-sidebar">${isDark ? 'Mode Terang' : 'Mode Gelap'}</span>`;
+    sidebarBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" id="icon-theme-sidebar" style="width: 16px; height: 16px;"></i>`;
+    sidebarBtn.setAttribute('title', isDark ? 'Beralih ke Mode Terang (Light Mode)' : 'Beralih ke Mode Gelap (Dark Mode)');
   }
-  if (themeText && !sidebarBtn) {
+  if (themeText) {
     themeText.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
   }
 

@@ -109,6 +109,14 @@ function doPost(e) {
       result = saveSekolahMitraToDB(params.sekolah);
     } else if (action === "deleteSekolahMitra") {
       result = deleteSekolahMitraFromDB(params.id);
+    } else if (action === "getTranskrip") {
+      result = getTranskripListFromDB();
+    } else if (action === "saveTranskrip") {
+      result = saveTranskripToDB(params.transkrip);
+    } else if (action === "saveTranskripBatch") {
+      result = saveTranskripBatchToDB(params.batch);
+    } else if (action === "deleteTranskrip") {
+      result = deleteTranskripFromDB(params.id);
     } else {
       result = { error: "Action not found" };
     }

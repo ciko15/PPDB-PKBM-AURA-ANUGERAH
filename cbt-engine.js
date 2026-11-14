@@ -593,7 +593,7 @@ function prosesMulaiCbtLuar() {
     return;
   }
 
-  const requiredToken = (pkt.token || pkt.kode || 'BEESMART').toUpperCase();
+  const requiredToken = (pkt.token || pkt.kode || 'AURA1').toUpperCase();
   if (inputToken !== requiredToken) {
     Swal.fire({
       icon: 'error',
@@ -624,7 +624,7 @@ function updateCbtInfoPaket(pilihanId) {
   if (!pilihanId) {
     if (elDurasi) elDurasi.textContent = '15 - 90 Menit';
     if (elJumlah) elJumlah.textContent = 'Sesuai Paket Ujian';
-    if (elToken) elToken.textContent = 'BEESMART';
+    if (elToken) elToken.textContent = 'AURA1';
     return;
   }
 
@@ -634,7 +634,7 @@ function updateCbtInfoPaket(pilihanId) {
     if (pkt) {
       if (elDurasi) elDurasi.textContent = `${pkt.durasiMenit || 30} Menit`;
       if (elJumlah) elJumlah.textContent = `${pkt.soalList ? pkt.soalList.length : 0} Butir Soal`;
-      if (elToken) elToken.textContent = pkt.token || pkt.kode || 'BEESMART';
+      if (elToken) elToken.textContent = pkt.token || pkt.kode || 'AURA1';
       return;
     }
   }
@@ -672,7 +672,7 @@ function prosesMulaiCBT() {
     }
 
     // Verifikasi Token Ujian
-    const requiredToken = (pkt.token || pkt.kode || 'BEESMART').toUpperCase();
+    const requiredToken = (pkt.token || pkt.kode || 'AURA1').toUpperCase();
     if (inputToken !== requiredToken) {
       Swal.fire({
         icon: 'error',
@@ -757,7 +757,7 @@ function launchCbtDariPaketSoal(pkt, student) {
 
   const durasiMenit = pkt.durasiMenit || 30;
   const durasiDetik = durasiMenit * 60;
-  const tokenPaket = pkt.token || pkt.kode || 'BEESMART';
+  const tokenPaket = pkt.token || pkt.kode || 'AURA1';
 
   cbtActiveSession = {
     sessionId: 'CBT-' + Date.now(),
@@ -804,7 +804,7 @@ function launchCbtBeesmart(book, student) {
 
   const durasiMenit = (customPaket && customPaket.durasiMenit) ? customPaket.durasiMenit : 15;
   const durasiDetik = durasiMenit * 60;
-  const tokenPaket = (customPaket && customPaket.token) ? customPaket.token : 'BEESMART';
+  const tokenPaket = (customPaket && customPaket.token) ? customPaket.token : 'AURA1';
 
   cbtActiveSession = {
     sessionId: 'CBT-' + Date.now(),
@@ -826,7 +826,7 @@ function launchCbtBeesmart(book, student) {
   const headerMapel = document.getElementById('cbt-header-mapel');
   const headerSiswa = document.getElementById('cbt-header-siswa');
   if (headerMapel) headerMapel.textContent = `${book.nama} (${cbtActiveSession.program})`;
-  if (headerSiswa) headerSiswa.textContent = `Peserta: ${student.nama} · Token: BEESMART`;
+  if (headerSiswa) headerSiswa.textContent = `Peserta: ${student.nama} · Token: AURA1`;
 
   // Render Grid Nomor Soal
   renderCbtGridNomor();
@@ -1321,7 +1321,7 @@ function initBankSoalData() {
       {
         id: 'PKT-002',
         kode: 'CBT-PKB-01',
-        token: 'BEESMART',
+        token: 'AURA1',
         jenjang: 'Paket B',
         bukuId: 'BK-002',
         judul: 'Evaluasi Pembelajaran Mandiri Modul IPA Terpadu',
@@ -1681,7 +1681,7 @@ function renderBankSoalTable() {
           '</div>',
           '<div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">',
             '<span style="font-size: 11px; color: var(--text-muted);">Token:</span>',
-            '<span style="font-family: monospace; font-weight: 800; background: #fef3c7; color: #b45309; padding: 1px 6px; border-radius: 4px; letter-spacing: 1.5px; font-size: 11.5px;">' + (pkt.token || 'BEESMART') + '</span>',
+            '<span style="font-family: monospace; font-weight: 800; background: #fef3c7; color: #b45309; padding: 1px 6px; border-radius: 4px; letter-spacing: 1.5px; font-size: 11.5px;">' + (pkt.token || 'AURA1') + '</span>',
             '<button type="button" class="btn btn-sm btn-icon" onclick="regenerateTokenPaketSoal(\'' + pkt.id + '\')" title="Refresh / Buat Token Baru" style="width: 22px; height: 22px; padding: 0;">',
               '<i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i>',
             '</button>',
@@ -1872,7 +1872,7 @@ function editPaketSoal(id) {
   const elInstruksi = document.getElementById('paket-instruksi');
   if (elInstruksi) elInstruksi.value = pkt.instruksi || '';
   const elToken = document.getElementById('paket-token-input');
-  if (elToken) elToken.value = pkt.token || 'BEESMART';
+  if (elToken) elToken.value = pkt.token || 'AURA1';
   const elStatus = document.getElementById('paket-status-ujian');
   if (elStatus) elStatus.value = pkt.statusUjian || 'AKTIF';
   const checkKartu = document.getElementById('paket-butuh-kartu');
@@ -1885,7 +1885,7 @@ function editPaketSoal(id) {
 function simpanPaketSoalBaru() {
   const id = document.getElementById('paket-soal-id').value;
   const kode = document.getElementById('paket-kode-token').value.trim().toUpperCase();
-  const token = (document.getElementById('paket-token-input')?.value.trim().toUpperCase()) || 'BEESMART';
+  const token = (document.getElementById('paket-token-input')?.value.trim().toUpperCase()) || 'AURA1';
   const statusUjian = document.getElementById('paket-status-ujian')?.value || 'AKTIF';
   const jenisUjian = document.getElementById('paket-jenis-ujian').value;
   const jenjang = document.getElementById('paket-jenjang').value;
@@ -1924,7 +1924,7 @@ function simpanPaketSoalBaru() {
     const newPaket = {
       id: 'PKT-' + Date.now(),
       kode: kode || ('CBT-' + Date.now().toString().slice(-4)),
-      token: token || 'BEESMART',
+      token: token || 'AURA1',
       statusUjian: statusUjian,
       jenisUjian: jenisUjian,
       jenjang: jenjang,
@@ -2802,7 +2802,7 @@ function restoreActiveCbtSessionIfAny() {
     const headerMapel = document.getElementById('cbt-header-mapel');
     const headerSiswa = document.getElementById('cbt-header-siswa');
     if (headerMapel) headerMapel.textContent = `${session.bukuJudul} (${session.program || 'Paket C'})`;
-    if (headerSiswa) headerSiswa.textContent = `Peserta: ${session.namaSiswa} · Token: BEESMART`;
+    if (headerSiswa) headerSiswa.textContent = `Peserta: ${session.namaSiswa} · Token: AURA1`;
 
     // Render Grid Nomor Soal dengan status jawaban yang tersimpan
     renderCbtGridNomor();
@@ -3276,7 +3276,7 @@ function gambarHalamanKartuUjian(doc, pkt, s) {
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(180, 83, 9);
-  doc.text((pkt ? pkt.token : 'BEESMART'), qrX + 10, fotoY + 26, { align: 'center' });
+  doc.text((pkt ? pkt.token : 'AURA1'), qrX + 10, fotoY + 26, { align: 'center' });
 
   // TANDA TANGAN & PENGESAHAN
   const ttdY = 86;

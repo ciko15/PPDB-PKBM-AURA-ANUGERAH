@@ -1626,6 +1626,151 @@ function deleteSekolahMitraFromDB(id) {
   return { success: false, message: "Sekolah mitra tidak ditemukan." };
 }
 
+// ==================== DATABASE TABEL TRANSKRIP LUAR / MANUAL / IMPORT ====================
+function getTranskripSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Transkrip_Nilai');
+  if (!sheet) {
+    sheet = ss.insertSheet('Transkrip_Nilai');
+    sheet.appendRow([
+      'ID', 'NamaSiswa', 'NISN', 'NIK', 'Program', 'AsalSekolah', 'SekolahID',
+      'TempatLahir', 'TglLahir', 'TahunLulus', 'NomorTranskrip', 'NilaiMapel_JSON', 'Updated_At'
+    ]);
+  }
+  return sheet;
+}
+
+function getTranskripListFromDB() {
+  const sheet = getTranskripSheet();
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    let nilaiMapel = [];
+    try { nilaiMapel = JSON.parse(row[11] || '[]'); } catch (e) {}
+
+    list.push({
+      id: String(row[0]),
+      isLuar: true,
+      nama: String(row[1] || ''),
+      nisn: String(row[2] || ''),
+      nik: String(row[3] || ''),
+      program: String(row[4] || ''),
+      namaSekolah: String(row[5] || 'Sekolah Mitra'),
+      sekolahId: String(row[6] || 'utama'),
+      tempatLahir: String(row[7] || ''),
+      tglLahir: String(row[8] || ''),
+      tahunLulus: String(row[9] || ''),
+      nomorTranskrip: String(row[10] || ''),
+      nilaiMapel: nilaiMapel,
+      updatedAt: String(row[12] || '')
+    });
+  }
+  return list;
+}
+
+function saveTranskripToDB(item) {
+  if (!item || !item.nama) throw new Error("Data transkrip tidak valid.");
+  const sheet = getTranskripSheet();
+  const data = sheet.getDataRange().getValues();
+  const id = item.id || ('TR-' + Date.now());
+  const now = new Date().toISOString();
+
+  let foundRow = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id) || (item.nisn && String(data[i][2]) === String(item.nisn))) {
+      foundRow = i + 1;
+      break;
+    }
+  }
+
+  const rowValues = [
+    id,
+    item.nama || '',
+    item.nisn || '',
+    item.nik || '',
+    item.program || 'Paket C',
+    item.namaSekolah || item.namaSekolahAsal || 'PKBM Aura Anugerah',
+    item.sekolahId || 'utama',
+    item.tempatLahir || '',
+    item.tglLahir || '',
+    item.tahunLulus || '',
+    item.nomorTranskrip || '',
+    JSON.stringify(item.nilaiMapel || []),
+    now
+  ];
+
+  if (foundRow > 0) {
+    sheet.getRange(foundRow, 1, 1, rowValues.length).setValues([rowValues]);
+  } else {
+    sheet.appendRow(rowValues);
+  }
+
+  return { success: true, message: "Transkrip nilai berhasil disimpan ke cloud database Google Sheets.", id: id };
+}
+
+function saveTranskripBatchToDB(batchList) {
+  if (!Array.isArray(batchList) || batchList.length === 0) return { count: 0 };
+  const sheet = getTranskripSheet();
+  const data = sheet.getDataRange().getValues();
+  const existingMap = {};
+  for (let i = 1; i < data.length; i++) {
+    existingMap[String(data[i][0])] = i + 1;
+    if (data[i][2]) existingMap['nisn_' + String(data[i][2])] = i + 1;
+  }
+
+  const now = new Date().toISOString();
+  const newRows = [];
+
+  batchList.forEach(item => {
+    const id = item.id || ('TR-' + Date.now() + '-' + Math.floor(Math.random()*1000));
+    const targetRow = existingMap[id] || (item.nisn ? existingMap['nisn_' + item.nisn] : null);
+
+    const rowValues = [
+      id,
+      item.nama || '',
+      item.nisn || '',
+      item.nik || '',
+      item.program || 'Paket C',
+      item.namaSekolah || item.namaSekolahAsal || 'PKBM Aura Anugerah',
+      item.sekolahId || 'utama',
+      item.tempatLahir || '',
+      item.tglLahir || '',
+      item.tahunLulus || '',
+      item.nomorTranskrip || '',
+      JSON.stringify(item.nilaiMapel || []),
+      now
+    ];
+
+    if (targetRow) {
+      sheet.getRange(targetRow, 1, 1, rowValues.length).setValues([rowValues]);
+    } else {
+      newRows.push(rowValues);
+    }
+  });
+
+  if (newRows.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, newRows[0].length).setValues(newRows);
+  }
+
+  return { success: true, message: `${batchList.length} data transkrip berhasil disinkronkan ke Google Sheets.` };
+}
+
+function deleteTranskripFromDB(id) {
+  const sheet = getTranskripSheet();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: "Transkrip berhasil dihapus dari cloud database Google Sheets." };
+    }
+  }
+  return { success: false, message: "Transkrip tidak ditemukan." };
+}
+
 
 
 

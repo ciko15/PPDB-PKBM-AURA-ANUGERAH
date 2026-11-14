@@ -1012,7 +1012,7 @@
             <span id="who-user-role" class="who-role-badge" style="font-size: 11px; margin-left: 4px;">Role</span>
           </button>
           <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <button onclick="toggleTheme()" class="btn btn-icon" aria-label="Ganti Tema" title="Ganti Tema">
+            <button id="who-toggle-theme" onclick="toggleTheme()" class="btn btn-icon" aria-label="Ganti Tema" title="Ganti Tema">
               <i data-lucide="moon" id="icon-theme-sidebar" style="width: 16px; height: 16px;"></i>
             </button>
             <button onclick="handleLogout()" class="btn"
@@ -2316,13 +2316,25 @@
               </p>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="bukaModalInputTranskripLuar()" id="btn-tambah-transkrip-luar"
+                style="display: inline-flex; align-items: center; gap: 6px; background: #059669; border: none; font-weight: 600;">
+                <i data-lucide="plus-circle" style="width: 15px; height: 15px;"></i> Tambah Transkrip Manual / Luar
+              </button>
+              <button class="btn btn-primary" onclick="bukaModalImportTranskripExcel()" id="btn-import-transkrip-excel"
+                style="display: inline-flex; align-items: center; gap: 6px; background: #10b981; border: none; font-weight: 600;">
+                <i data-lucide="file-spreadsheet" style="width: 15px; height: 15px;"></i> Import Nilai Excel
+              </button>
+              <button class="btn btn-outline" onclick="bukaModalSettingKKM()" id="btn-setting-kkm"
+                style="display: inline-flex; align-items: center; gap: 6px; border-color: #d97706; color: #d97706; font-weight: 600;">
+                <i data-lucide="award" style="width: 15px; height: 15px;"></i> Pengaturan KKM
+              </button>
               <button class="btn btn-outline" onclick="bukaModalAturFormulaTranskrip()" id="btn-setting-transkrip"
                 style="display: inline-flex; align-items: center; gap: 6px; border-color: #0284c7; color: #0284c7;">
-                <i data-lucide="sliders" style="width: 15px; height: 15px;"></i> Atur Rumus & Format Nomor
+                <i data-lucide="sliders" style="width: 15px; height: 15px;"></i> Rumus & Nomor
               </button>
               <button class="btn btn-primary" onclick="bukaModalExportGlobalTranskrip()" id="btn-unduh-semua-transkrip"
                 style="display: inline-flex; align-items: center; gap: 6px; background: #0284c7; border: none;">
-                <i data-lucide="eye" style="width: 15px; height: 15px;"></i> Pratinjau Semua Transkrip (Global)
+                <i data-lucide="eye" style="width: 15px; height: 15px;"></i> Pratinjau Semua (Global)
               </button>
             </div>
           </div>
@@ -2335,6 +2347,10 @@
                 <input type="text" id="search-transkrip" placeholder="Cari nama peserta didik atau NISN..." oninput="filterTranskripTable()">
               </div>
               <div class="filter-controls-group">
+                <select id="filter-transkrip-sekolah" class="filter-select" onchange="filterTranskripTable()" style="max-width: 240px;">
+                  <option value="">Semua Asal Sekolah</option>
+                  <option value="utama">PKBM Aura Anugerah (Utama)</option>
+                </select>
                 <select id="filter-transkrip-program" class="filter-select" onchange="filterTranskripTable()">
                   <option value="">Semua Program Kesetaraan</option>
                   <option value="Paket A">Paket A (Setara SD)</option>
@@ -2353,8 +2369,8 @@
                   <th style="width: 45px;">No</th>
                   <th>Peserta Didik</th>
                   <th>NISN / NIK</th>
+                  <th>Asal Lembaga / Sekolah</th>
                   <th>Program Kesetaraan</th>
-                  <th>Status Belajar</th>
                   <th style="text-align: center;">IPK / Rata Kumulatif</th>
                   <th style="text-align: right; width: 170px;">Cetak Transkrip</th>
                 </tr>
@@ -3862,7 +3878,7 @@
 
         <div class="form-group" style="margin-top: 14px;">
           <label>Token Ujian (Diberikan oleh Tutor) <span style="color:red">*</span></label>
-          <input type="text" id="cbt-input-token" required placeholder="Masukkan Token (Contoh: BEESMART)"
+          <input type="text" id="cbt-input-token" required placeholder="Masukkan Token (Contoh: AURA1)"
             style="text-transform: uppercase; font-family: monospace; font-size: 16px; font-weight: 800; letter-spacing: 2px;">
         </div>
 
@@ -4330,6 +4346,125 @@
     </div>
   </div>
 
+  <!-- ==================== MODAL PENGATURAN NILAI KKM MAPEL ==================== -->
+  <div id="modal-setting-kkm" class="login-modal hidden" style="z-index: 99998;">
+    <div class="login-modal-overlay" onclick="closeModalSettingKKM()"></div>
+    <div class="modal-content" style="max-width: 650px; width: 92%; padding: 22px; text-align: left; max-height: 90vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(217, 119, 6, 0.12); display: flex; align-items: center; justify-content: center; color: #d97706;">
+            <i data-lucide="award" style="width: 20px; height: 20px;"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">Standar Kriteria Ketuntasan Minimal (KKM)</h3>
+            <span style="font-size: 12px; color: var(--text-muted);">Tentukan batas KKM kelulusan per mata pelajaran dan per jenjang pendidikan</span>
+          </div>
+        </div>
+        <button class="btn-close-modal" onclick="closeModalSettingKKM()">&times;</button>
+      </div>
+
+      <!-- Tab Pilihan Jenjang -->
+      <div style="display: flex; gap: 6px; margin-bottom: 14px; background: var(--surface-2); padding: 4px; border-radius: 8px;">
+        <button type="button" class="btn btn-sm btn-kkm-tab active" id="tab-kkm-paket-c" onclick="switchKKMTab('Paket C')" style="flex: 1; font-weight: 600;">Paket C (SMA)</button>
+        <button type="button" class="btn btn-sm btn-kkm-tab" id="tab-kkm-paket-b" onclick="switchKKMTab('Paket B')" style="flex: 1; font-weight: 600;">Paket B (SMP)</button>
+        <button type="button" class="btn btn-sm btn-kkm-tab" id="tab-kkm-paket-a" onclick="switchKKMTab('Paket A')" style="flex: 1; font-weight: 600;">Paket A (SD)</button>
+      </div>
+
+      <div style="flex: 1; overflow-y: auto; padding-right: 4px; margin-bottom: 14px;">
+        <div style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.2); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;">
+          <small style="color: var(--text-color); font-size: 11.5px; line-height: 1.4; display: block;">
+            ℹ️ Nilai KKM ini akan otomatis diterapkan ke seluruh <b>Rapor Siswa</b>, <b>Transkrip Nilai Akademik</b>, dan <b>Kalkulasi Predikat</b> (A, B, C) untuk jenjang yang bersangkutan.
+          </small>
+        </div>
+
+        <table style="width: 100%; font-size: 12.5px; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); background: var(--surface-2);">
+              <th style="padding: 8px; text-align: center; width: 40px;">No</th>
+              <th style="padding: 8px;">Mata Pelajaran</th>
+              <th style="padding: 8px; text-align: center; width: 110px;">Kelompok</th>
+              <th style="padding: 8px; text-align: center; width: 90px;">Batas KKM</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-setting-kkm">
+            <!-- Dinamis via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 12px;">
+        <button type="button" class="btn btn-outline" onclick="resetKKMToDefault()" style="font-size: 12px; color: var(--text-muted);">
+          <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i> Reset Default
+        </button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModalSettingKKM()">Batal</button>
+          <button type="button" class="btn btn-primary" onclick="simpanPengaturanKKM()" style="background: #d97706; border: none; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="save" style="width: 15px; height: 15px;"></i> Simpan Nilai KKM
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL IMPORT TRANSKRIP DARI EXCEL ==================== -->
+  <div id="modal-import-transkrip-excel" class="login-modal hidden" style="z-index: 99998;">
+    <div class="login-modal-overlay" onclick="closeModalImportTranskripExcel()"></div>
+    <div class="modal-content" style="max-width: 620px; width: 92%; padding: 22px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; color: #10b981;">
+            <i data-lucide="file-spreadsheet" style="width: 20px; height: 20px;"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">Import Data Nilai Transkrip (Excel)</h3>
+            <span style="font-size: 12px; color: var(--text-muted);">Upload nilai transkrip siswa dalam jumlah banyak sekaligus</span>
+          </div>
+        </div>
+        <button class="btn-close-modal" onclick="closeModalImportTranskripExcel()">&times;</button>
+      </div>
+
+      <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+        <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: 700; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="info" style="width: 16px; height: 16px; color: #0284c7;"></i> Panduan Format File Excel
+        </h4>
+        <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 10px 0; line-height: 1.5;">
+          Gunakan template resmi agar nama kolom sesuai. Anda dapat memilih jenjang untuk mengunduh template spesifik yang memuat daftar mata pelajaran yang relevan.
+        </p>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <select id="import-template-jenjang" class="form-control" style="width: 180px; height: 36px; font-size: 12px;">
+            <option value="Paket C">Paket C (Setara SMA)</option>
+            <option value="Paket B">Paket B (Setara SMP)</option>
+            <option value="Paket A">Paket A (Setara SD)</option>
+          </select>
+          <button type="button" class="btn btn-outline" onclick="unduhTemplateTranskripExcel()" style="height: 36px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; border-color: #10b981; color: #10b981;">
+            <i data-lucide="download" style="width: 14px; height: 14px;"></i> Unduh Template Excel (.xlsx)
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label style="font-size: 12.5px; font-weight: 700;">Pilih Berkas Excel (.xlsx / .xls / .csv)</label>
+        <input type="file" id="input-file-excel-transkrip" class="form-control" accept=".xlsx, .xls, .csv" style="padding: 6px 10px;">
+        <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+          Kolom wajib: <code>Nama Siswa</code>, <code>NISN</code>, <code>NIK</code>, <code>Program Kesetaraan</code>, <code>Nama Sekolah</code>, disusul kolom nilai tiap mapel.
+        </small>
+      </div>
+
+      <div id="import-excel-preview-box" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+        <div style="font-weight: 700; font-size: 12.5px; color: #059669;" id="import-excel-preview-text">
+          Siap mengimport data...
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+        <button type="button" class="btn btn-outline" onclick="closeModalImportTranskripExcel()">Batal</button>
+        <button type="button" class="btn btn-primary" onclick="eksekusiImportTranskripExcel()" style="background: #10b981; border: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+          <i data-lucide="upload" style="width: 15px; height: 15px;"></i> Mulai Import Sekarang
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== MODAL FILTER CETAK GLOBAL TRANSKRIP ==================== -->
   <div id="modal-export-global-transkrip" class="login-modal hidden" style="z-index: 99998;">
     <div class="login-modal-overlay" onclick="closeModalExportGlobalTranskrip()"></div>
@@ -4387,6 +4522,118 @@
           <button type="button" class="btn btn-outline" onclick="closeModalExportGlobalTranskrip()">Batal</button>
           <button type="submit" class="btn btn-primary" style="background: #0284c7; border: none; display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="eye" style="width: 15px; height: 15px;"></i> Buka Pratinjau Transkrip
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL INPUT / EDIT TRANSKRIP NILAI SISWA SEKOLAH LAIN ==================== -->
+  <div id="modal-form-transkrip-luar" class="login-modal hidden" style="z-index: 99998;">
+    <div class="login-modal-overlay" onclick="closeModalInputTranskripLuar()"></div>
+    <div class="modal-content" style="max-width: 780px; width: 94%; max-height: 92vh; display: flex; flex-direction: column; padding: 22px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(5, 150, 105, 0.12); display: flex; align-items: center; justify-content: center; color: #059669;">
+            <i data-lucide="plus-circle" style="width: 22px; height: 22px;"></i>
+          </div>
+          <div>
+            <h3 id="modal-transkrip-luar-title" style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">Entri Transkrip Nilai Siswa Sekolah Lain</h3>
+            <span style="font-size: 12px; color: var(--text-muted);">Masukkan transkrip resmi siswa sekolah mitra atau titipan ujian</span>
+          </div>
+        </div>
+        <button class="btn-close-modal" onclick="closeModalInputTranskripLuar()">&times;</button>
+      </div>
+
+      <form id="form-transkrip-luar" onsubmit="event.preventDefault(); simpanDataTranskripLuar();" style="display: flex; flex-direction: column; flex: 1; overflow-y: auto; padding-right: 4px;">
+        <input type="hidden" id="transkrip-luar-id">
+
+        <!-- Baris 1: Asal Sekolah & Jenjang Program -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700;">Asal Sekolah / Lembaga Mitra <span style="color:red">*</span></label>
+            <select id="transkrip-luar-sekolah" class="form-control" required style="height: 38px;">
+              <!-- Diisi otomatis oleh updateDropdownPilihanSekolahMitra -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700;">Program / Jenjang Kesetaraan <span style="color:red">*</span></label>
+            <select id="transkrip-luar-program" class="form-control" required onchange="onJenjangTranskripLuarChange(this.value)" style="height: 38px;">
+              <option value="Paket C">Paket C (Setara SMA)</option>
+              <option value="Paket B">Paket B (Setara SMP)</option>
+              <option value="Paket A">Paket A (Setara SD)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Baris 2: Biodata Siswa -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700;">Nama Lengkap Siswa <span style="color:red">*</span></label>
+            <input type="text" id="transkrip-luar-nama" class="form-control" required placeholder="Contoh: YOHANES RUMBEWAS" style="height: 38px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700;">NISN <span style="color:red">*</span></label>
+            <input type="text" id="transkrip-luar-nisn" class="form-control" required placeholder="0061234567" style="height: 38px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700;">NIK (16 Digit)</label>
+            <input type="text" id="transkrip-luar-nik" class="form-control" placeholder="910301xxxxxxxx" maxlength="16" style="height: 38px;">
+          </div>
+        </div>
+
+        <!-- Baris 3: TTL, Tahun Lulus & Nomor Transkrip Kustom -->
+        <div style="display: grid; grid-template-columns: 1.2fr 1.2fr 1fr 1.4fr; gap: 12px; margin-bottom: 16px;">
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700;">Tempat Lahir</label>
+            <input type="text" id="transkrip-luar-tempat-lahir" class="form-control" placeholder="Sentani" style="height: 38px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700;">Tanggal Lahir</label>
+            <input type="text" id="transkrip-luar-tgl-lahir" class="form-control" placeholder="15 Mei 2005" style="height: 38px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700;">Tahun Lulus</label>
+            <input type="number" id="transkrip-luar-tahun" class="form-control" value="2026" style="height: 38px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700;">No. Transkrip (Opsional)</label>
+            <input type="text" id="transkrip-luar-nomor" class="form-control" placeholder="Otomatis jika kosong" style="height: 38px;">
+          </div>
+        </div>
+
+        <!-- Header Tabel Daftar Nilai Mata Pelajaran -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="font-size: 13px; font-weight: 700; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="book-marked" style="width: 16px; height: 16px; color: #0284c7;"></i> Rincian Nilai Mata Pelajaran
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="tambahBarisMapelTranskripLuar()" style="font-size: 11.5px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;">
+            <i data-lucide="plus" style="width: 13px; height: 13px;"></i> Tambah Mapel
+          </button>
+        </div>
+
+        <!-- Tabel Nilai Mapel -->
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 14px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <thead style="background: var(--surface-2); position: sticky; top: 0; z-index: 1;">
+              <tr>
+                <th style="padding: 8px; text-align: left;">Mata Pelajaran</th>
+                <th style="padding: 8px; width: 140px;">Kelompok</th>
+                <th style="padding: 8px; width: 70px; text-align: center;">KKM</th>
+                <th style="padding: 8px; width: 85px; text-align: center;">Nilai (0-100)</th>
+                <th style="padding: 8px; width: 45px; text-align: center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="transkrip-luar-mapel-tbody">
+              <!-- Diisi dinamis -->
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-color);">
+          <button type="button" class="btn btn-outline" onclick="closeModalInputTranskripLuar()">Batal</button>
+          <button type="submit" class="btn btn-primary" style="background: #059669; border: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+            <i data-lucide="save" style="width: 15px; height: 15px;"></i> Simpan Transkrip Sekolah Luar
           </button>
         </div>
       </form>
@@ -4516,7 +4763,7 @@
             <h2 id="cbt-header-mapel" style="margin: 0; font-size: 15px; font-weight: 800; color: var(--text-color);">
               Ujian Evaluasi Belajar</h2>
             <div id="cbt-header-siswa" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Peserta:
-              Siswa · Token: BEESMART</div>
+              Siswa · Token: AURA1</div>
           </div>
         </div>
 

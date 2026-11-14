@@ -38,6 +38,52 @@ let defaultMapelKurikulum = {
   ]
 };
 
+// Pengaturan KKM Dinamis yang tersimpan di LocalStorage & Cloud
+function loadKKMConfig() {
+  try {
+    const raw = localStorage.getItem('ppdb_kkm_config');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        ['Paket A', 'Paket B', 'Paket C'].forEach(jenjang => {
+          if (Array.isArray(parsed[jenjang]) && parsed[jenjang].length > 0) {
+            defaultMapelKurikulum[jenjang] = parsed[jenjang];
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("Gagal load ppdb_kkm_config:", e);
+  }
+
+  // Sinkronisasi otomatis dari cloud database (Spreadsheet Pengaturan)
+  if (typeof callAPI === 'function') {
+    callAPI({ action: "getAppSetting", key: "ppdb_kkm_config" }).then(cloud => {
+      let parsed = cloud;
+      if (typeof cloud === 'string') {
+        try { parsed = JSON.parse(cloud); } catch (e) {}
+      }
+      if (parsed && typeof parsed === 'object') {
+        let changed = false;
+        ['Paket A', 'Paket B', 'Paket C'].forEach(jenjang => {
+          if (Array.isArray(parsed[jenjang]) && parsed[jenjang].length > 0) {
+            defaultMapelKurikulum[jenjang] = parsed[jenjang];
+            changed = true;
+          }
+        });
+        if (changed) {
+          try { localStorage.setItem('ppdb_kkm_config', JSON.stringify(defaultMapelKurikulum)); } catch (e) {}
+        }
+      }
+    }).catch(err => {
+      console.warn("Sinkronisasi KKM cloud:", err.message);
+    });
+  }
+}
+
+// Inisialisasi awal KKM
+loadKKMConfig();
+
 // Cache data base64 logo sekolah untuk disematkan pada PDF
 let cachedLogoBase64 = null;
 
@@ -211,6 +257,25 @@ function updateDropdownPilihanSekolahMitra() {
     selectRaport.innerHTML = '<option value="utama">PKBM Aura Anugerah (Sekolah Penyelenggara)</option>' +
       (sekolahMitraList || []).map(m => `<option value="${m.id}">${m.namaSekolah} (NPSN: ${m.npsn})</option>`).join('');
     selectRaport.value = prevVal;
+  }
+
+  // Dropdown pada Modal Input Transkrip Siswa Sekolah Luar
+  const selectTranskripLuar = document.getElementById('transkrip-luar-sekolah');
+  if (selectTranskripLuar) {
+    const prevLuar = selectTranskripLuar.value || '';
+    selectTranskripLuar.innerHTML = (sekolahMitraList && sekolahMitraList.length > 0)
+      ? sekolahMitraList.map(m => `<option value="${m.id}">${m.namaSekolah} (NPSN: ${m.npsn})</option>`).join('')
+      : '<option value="utama">PKBM Aura Anugerah (Utama)</option>';
+    if (prevLuar) selectTranskripLuar.value = prevLuar;
+  }
+
+  // Filter toolbar di Transkrip Nilai
+  const filterTranskripSkh = document.getElementById('filter-transkrip-sekolah');
+  if (filterTranskripSkh) {
+    const prevFilter = filterTranskripSkh.value || '';
+    filterTranskripSkh.innerHTML = '<option value="">Semua Asal Sekolah</option><option value="utama">PKBM Aura Anugerah (Utama)</option>' +
+      (sekolahMitraList || []).map(m => `<option value="${m.id}">${m.namaSekolah}</option>`).join('');
+    if (prevFilter) filterTranskripSkh.value = prevFilter;
   }
 }
 
@@ -1343,49 +1408,184 @@ function simpanPengaturanFormulaTranskrip() {
   });
 }
 
+// Master List Transkrip Khusus / Sekolah Luar / Import
+let transkripLuarList = [];
+
+function loadTranskripLuarData() {
+  try {
+    const raw = localStorage.getItem('ppdb_transkrip_luar_list');
+    if (raw) transkripLuarList = JSON.parse(raw);
+  } catch (e) {
+    console.warn("Gagal load ppdb_transkrip_luar_list", e);
+  }
+
+  // Tarik langsung dari Cloud Database Google Sheets (Action getTranskrip / getAppSetting)
+  if (typeof callAPI === 'function') {
+    callAPI({ action: "getTranskrip" }).then(cloud => {
+      if (Array.isArray(cloud) && cloud.length > 0) {
+        transkripLuarList = cloud;
+        try { localStorage.setItem('ppdb_transkrip_luar_list', JSON.stringify(transkripLuarList)); } catch (e) {}
+        renderTranskripTable();
+      } else {
+        // Fallback getAppSetting
+        callAPI({ action: "getAppSetting", key: "ppdb_transkrip_luar_list" }).then(cloudFallback => {
+          if (Array.isArray(cloudFallback) && cloudFallback.length > 0) {
+            transkripLuarList = cloudFallback;
+            try { localStorage.setItem('ppdb_transkrip_luar_list', JSON.stringify(transkripLuarList)); } catch (e) {}
+            renderTranskripTable();
+          }
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+  }
+}
+
+function saveTranskripLuarData(item = null, isBatch = false) {
+  try {
+    localStorage.setItem('ppdb_transkrip_luar_list', JSON.stringify(transkripLuarList));
+  } catch (e) {
+    console.warn("Gagal simpan ppdb_transkrip_luar_list", e);
+  }
+
+  // Simpan ke Google Sheets Database
+  if (typeof callAPI === 'function') {
+    // 1. Simpan ke sheet Transkrip_Nilai
+    if (isBatch && Array.isArray(item)) {
+      callAPI({ action: "saveTranskripBatch", batch: item }).catch(err => console.warn("Cloud save batch:", err));
+    } else if (item && typeof item === 'object') {
+      callAPI({ action: "saveTranskrip", transkrip: item }).catch(err => console.warn("Cloud save transkrip:", err));
+    }
+    // 2. Simpan backup ke sheet Pengaturan
+    callAPI({ action: "saveAppSetting", key: "ppdb_transkrip_luar_list", val: transkripLuarList }).catch(() => {});
+  }
+}
+
 // ==================== SECTION TRANSKRIP NILAI RESMI ====================
 function loadTranskripData() {
+  loadTranskripLuarData();
+  updateDropdownPilihanSekolahMitra();
   renderTranskripTable();
+}
+
+// Helper untuk normalisasi kunci jenjang
+function normalisasiJenjang(jenjangStr) {
+  const str = String(jenjangStr || '').toLowerCase();
+  if (str.includes('paket a') || str.includes('setara sd')) return 'Paket A';
+  if (str.includes('paket b') || str.includes('setara smp')) return 'Paket B';
+  return 'Paket C';
 }
 
 function renderTranskripTable(data = null) {
   const tbody = document.getElementById('table-transkrip-body');
   if (!tbody) return;
 
-  let list = data || siswaDataList;
+  // Gabungkan siswa PKBM Aura Anugerah dan Transkrip Siswa Sekolah Luar
+  let combinedList = [];
+  if (data) {
+    combinedList = data;
+  } else {
+    // 1. Siswa Internal PKBM (Bisa multi-transkrip jika menempuh beberapa jenjang)
+    (siswaDataList || []).forEach(s => {
+      // Kumpulkan semua jenjang yang pernah ditempuh siswa:
+      // a. Program default siswa
+      const listJenjangSiswa = new Set();
+      if (s.program) listJenjangSiswa.add(normalisasiJenjang(s.program));
+
+      // b. Jenjang dari riwayat rapor siswa
+      (raportDataList || []).forEach(r => {
+        if (String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase())) {
+          if (r.program) listJenjangSiswa.add(normalisasiJenjang(r.program));
+        }
+      });
+
+      // c. Jika ada riwayatJenjang eksplisit
+      if (Array.isArray(s.riwayatJenjang)) {
+        s.riwayatJenjang.forEach(rj => listJenjangSiswa.add(normalisasiJenjang(rj)));
+      }
+
+      // Pastikan minimal ada 1 jenjang
+      if (listJenjangSiswa.size === 0) listJenjangSiswa.add('Paket C');
+
+      // Masukkan baris terpisah untuk setiap jenjang yang diikuti siswa
+      listJenjangSiswa.forEach(jnj => {
+        combinedList.push({
+          ...s,
+          transkripProgram: jnj,
+          program: jnj,
+          isLuar: false,
+          sekolahId: s.sekolahId || 'utama',
+          namaSekolahAsal: 'PKBM Aura Anugerah'
+        });
+      });
+    });
+
+    // 2. Siswa Transkrip Sekolah Luar / Manual
+    (transkripLuarList || []).forEach(tl => {
+      const sm = (sekolahMitraList || []).find(m => String(m.id) === String(tl.sekolahId));
+      const jnj = normalisasiJenjang(tl.program);
+      combinedList.push({
+        ...tl,
+        transkripProgram: jnj,
+        program: jnj,
+        isLuar: true,
+        namaSekolahAsal: sm ? sm.namaSekolah : (tl.namaSekolah || 'Sekolah Mitra')
+      });
+    });
+  }
 
   // Jika Siswa login, hanya tampilkan miliknya
   if (currentUser && currentUser.role === 'Siswa') {
-    list = list.filter(s => 
+    combinedList = combinedList.filter(s => 
       (currentUser.dataSiswa && String(s.id) === String(currentUser.dataSiswa.id)) ||
       (currentUser.nama && s.nama && currentUser.nama.toLowerCase() === s.nama.toLowerCase())
     );
   }
 
-  if (!list || list.length === 0) {
+  if (!combinedList || combinedList.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">Belum ada data peserta didik untuk transkrip nilai.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = list.map((s, idx) => {
-    // Ambil semua rapor yang dimiliki siswa ini untuk hitung IPK / Rata Kumulatif
-    const rapList = (raportDataList || []).filter(r => 
-      String(r.siswaId) === String(s.id) || 
-      (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase())
-    );
+  tbody.innerHTML = combinedList.map((s, idx) => {
+    let ipkKumulatif = '-';
+    let hasNilai = false;
+    const targetProgram = s.transkripProgram || normalisasiJenjang(s.program);
 
-    let totalRata = 0;
-    let countRata = 0;
-    rapList.forEach(r => {
-      if (Array.isArray(r.nilaiMapel) && r.nilaiMapel.length > 0) {
-        const sum = r.nilaiMapel.reduce((a, b) => a + (Number(b.nilai) || 0), 0);
-        totalRata += (sum / r.nilaiMapel.length);
-        countRata++;
+    if (s.isLuar && Array.isArray(s.nilaiMapel) && s.nilaiMapel.length > 0) {
+      const sum = s.nilaiMapel.reduce((a, b) => a + (Number(b.nilai) || 0), 0);
+      ipkKumulatif = (sum / s.nilaiMapel.length).toFixed(1);
+      hasNilai = true;
+    } else {
+      // Ambil dari rapor siswa internal spesifik jenjang ini
+      const rapList = (raportDataList || []).filter(r => {
+        const matchSiswa = String(r.siswaId) === String(s.id) || 
+          (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase());
+        const matchProgram = normalisasiJenjang(r.program) === targetProgram;
+        return matchSiswa && matchProgram;
+      });
+
+      let totalRata = 0;
+      let countRata = 0;
+      rapList.forEach(r => {
+        if (Array.isArray(r.nilaiMapel) && r.nilaiMapel.length > 0) {
+          const sum = r.nilaiMapel.reduce((a, b) => a + (Number(b.nilai) || 0), 0);
+          totalRata += (sum / r.nilaiMapel.length);
+          countRata++;
+        }
+      });
+      if (countRata > 0) {
+        ipkKumulatif = (totalRata / countRata).toFixed(1);
+        hasNilai = true;
       }
-    });
+    }
 
-    const ipkKumulatif = countRata > 0 ? (totalRata / countRata).toFixed(1) : '82.5';
-    const statusBelajar = s.statusValidasi === 'diterima' || s.statusValidasi === 'sesuai' ? 'Aktif Belajar' : 'Calon Terdaftar';
+    const badgeSekolah = s.isLuar 
+      ? `<span class="tag" style="background: rgba(14, 165, 233, 0.12); color: #0284c7; font-weight: 700;">🏫 ${s.namaSekolahAsal || 'Sekolah Mitra'}</span>`
+      : `<span class="tag" style="background: rgba(5, 150, 105, 0.12); color: #059669; font-weight: 600;">Induk PKBM</span>`;
+
+    const statusNilaiHtml = hasNilai
+      ? `<span style="font-weight: 800; font-size: 14px; color: #0284c7; background: rgba(2, 132, 199, 0.1); padding: 3px 10px; border-radius: 6px;">${ipkKumulatif}</span>`
+      : `<span style="font-size: 11.5px; color: var(--text-muted); font-style: italic; background: rgba(100, 116, 139, 0.1); padding: 3px 8px; border-radius: 6px;">Belum Dinilai</span>`;
 
     return `
       <tr>
@@ -1399,27 +1599,36 @@ function renderTranskripTable(data = null) {
           <br><small style="color: var(--text-muted);">NIK: ${s.nik || '-'}</small>
         </td>
         <td>
-          <span class="tag def">${s.program || 'Paket C'}</span>
+          ${badgeSekolah}
         </td>
         <td>
-          <span class="tag" style="background: rgba(5, 150, 105, 0.12); color: #059669; font-weight: 600;">
-            ${statusBelajar}
-          </span>
+          <span class="tag def" style="font-weight: 700;">${targetProgram}</span>
         </td>
         <td style="text-align: center;">
-          <span style="font-weight: 800; font-size: 14.5px; color: #0284c7; background: rgba(2, 132, 199, 0.1); padding: 3px 12px; border-radius: 6px;">
-            ${ipkKumulatif}
-          </span>
+          ${statusNilaiHtml}
         </td>
         <td style="text-align: right; white-space: nowrap;">
-          <button class="btn btn-sm btn-outline" onclick="lihatDetailTranskrip('${s.id}')" 
-            style="padding: 4px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
-            title="Lihat Rincian Nilai Transkrip">
-            <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Detail
-          </button>
-          <button class="btn btn-sm" onclick="cetakTranskripNilaiResmi('${s.id}')" 
+          ${s.isLuar ? `
+            <button class="btn btn-sm btn-outline" onclick="editDataTranskripLuar('${s.id}')" 
+              style="padding: 4px 8px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 3px;"
+              title="Edit Data Transkrip">
+              <i data-lucide="edit-3" style="width: 12px; height: 12px;"></i>
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="hapusDataTranskripLuar('${s.id}')" 
+              style="padding: 4px 8px; font-size: 11.5px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); display: inline-flex; align-items: center; gap: 3px;"
+              title="Hapus Transkrip">
+              <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+            </button>
+          ` : `
+            <button class="btn btn-sm btn-outline" onclick="lihatDetailTranskrip('${s.id}', '${targetProgram}')" 
+              style="padding: 4px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
+              title="Lihat Rincian Nilai Transkrip Jenjang ${targetProgram}">
+              <i data-lucide="eye" style="width: 13px; height: 13px;"></i> Detail
+            </button>
+          `}
+          <button class="btn btn-sm" onclick="cetakTranskripNilaiResmi('${s.id}', { targetProgram: '${targetProgram}' })" 
             style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: none; padding: 4px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"
-            title="Cetak Transkrip Nilai Kumulatif Resmi PDF">
+            title="Cetak Transkrip Nilai Kumulatif Resmi PDF Jenjang ${targetProgram}">
             <i data-lucide="printer" style="width: 13px; height: 13px;"></i> Cetak PDF
           </button>
         </td>
@@ -1435,32 +1644,296 @@ function renderTranskripTable(data = null) {
 function filterTranskripTable() {
   const query = (document.getElementById('search-transkrip')?.value || '').toLowerCase().trim();
   const program = document.getElementById('filter-transkrip-program')?.value || '';
+  const sekolah = document.getElementById('filter-transkrip-sekolah')?.value || '';
 
-  const filtered = (siswaDataList || []).filter(s => {
+  // Buat combined list dulu dengan multi-jenjang
+  let combined = [];
+  (siswaDataList || []).forEach(s => {
+    const listJenjangSiswa = new Set();
+    if (s.program) listJenjangSiswa.add(normalisasiJenjang(s.program));
+    (raportDataList || []).forEach(r => {
+      if (String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase())) {
+        if (r.program) listJenjangSiswa.add(normalisasiJenjang(r.program));
+      }
+    });
+    if (Array.isArray(s.riwayatJenjang)) {
+      s.riwayatJenjang.forEach(rj => listJenjangSiswa.add(normalisasiJenjang(rj)));
+    }
+    if (listJenjangSiswa.size === 0) listJenjangSiswa.add('Paket C');
+
+    listJenjangSiswa.forEach(jnj => {
+      combined.push({
+        ...s,
+        transkripProgram: jnj,
+        program: jnj,
+        isLuar: false,
+        sekolahId: s.sekolahId || 'utama',
+        namaSekolahAsal: 'PKBM Aura Anugerah'
+      });
+    });
+  });
+
+  (transkripLuarList || []).forEach(tl => {
+    const sm = (sekolahMitraList || []).find(m => String(m.id) === String(tl.sekolahId));
+    const jnj = normalisasiJenjang(tl.program);
+    combined.push({
+      ...tl,
+      transkripProgram: jnj,
+      program: jnj,
+      isLuar: true,
+      namaSekolahAsal: sm ? sm.namaSekolah : (tl.namaSekolah || 'Sekolah Mitra')
+    });
+  });
+
+  const filtered = combined.filter(s => {
+    const progStr = s.transkripProgram || s.program || '';
     const matchQuery = !query || 
       (s.nama || '').toLowerCase().includes(query) || 
       (s.nisn || '').includes(query) || 
-      (s.nik || '').includes(query);
-    const matchProgram = !program || s.program === program;
-    return matchQuery && matchProgram;
+      (s.nik || '').includes(query) ||
+      (s.namaSekolahAsal || '').toLowerCase().includes(query);
+    const matchProgram = !program || (progStr && progStr.includes(program));
+    const matchSekolah = !sekolah || (sekolah === 'utama' ? (!s.isLuar || s.sekolahId === 'utama') : String(s.sekolahId) === String(sekolah));
+    return matchQuery && matchProgram && matchSekolah;
   });
 
   renderTranskripTable(filtered);
 }
 
+// ==================== MODAL FORM ENTRI TRANSKRIP SEKOLAH LUAR ====================
+function bukaModalInputTranskripLuar() {
+  const modal = document.getElementById('modal-form-transkrip-luar');
+  if (!modal) return;
+
+  updateDropdownPilihanSekolahMitra();
+
+  document.getElementById('modal-transkrip-luar-title').textContent = 'Entri Transkrip Nilai Siswa Sekolah Lain';
+  document.getElementById('transkrip-luar-id').value = '';
+  document.getElementById('transkrip-luar-nama').value = '';
+  document.getElementById('transkrip-luar-nisn').value = '';
+  document.getElementById('transkrip-luar-nik').value = '';
+  document.getElementById('transkrip-luar-tempat-lahir').value = 'Sentani';
+  document.getElementById('transkrip-luar-tgl-lahir').value = '';
+  document.getElementById('transkrip-luar-tahun').value = new Date().getFullYear();
+  document.getElementById('transkrip-luar-nomor').value = '';
+  document.getElementById('transkrip-luar-program').value = 'Paket C';
+
+  muatMapelDefaultKeTranskripLuar('Paket C');
+
+  modal.classList.remove('hidden');
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
+function closeModalInputTranskripLuar() {
+  const modal = document.getElementById('modal-form-transkrip-luar');
+  if (modal) modal.classList.add('hidden');
+}
+
+function onJenjangTranskripLuarChange(jenjang) {
+  muatMapelDefaultKeTranskripLuar(jenjang);
+}
+
+function muatMapelDefaultKeTranskripLuar(jenjang = 'Paket C', existingMapel = null) {
+  const tbody = document.getElementById('transkrip-luar-mapel-tbody');
+  if (!tbody) return;
+
+  const list = existingMapel || (defaultMapelKurikulum[jenjang] || defaultMapelKurikulum['Paket C']);
+
+  tbody.innerHTML = list.map((m, idx) => `
+    <tr class="row-mapel-luar-item" style="border-bottom: 1px solid var(--border-color);">
+      <td style="padding: 6px;">
+        <input type="text" class="form-control mapel-luar-nama" value="${m.nama || m.mapel || ''}" style="font-size: 12px; height: 32px;" required>
+      </td>
+      <td style="padding: 6px;">
+        <select class="form-control mapel-luar-kelompok" style="font-size: 11.5px; height: 32px;">
+          <option value="Umum" ${(m.kelompok === 'Umum' || !m.kelompok) ? 'selected' : ''}>Umum</option>
+          <option value="Pilihan MIPA" ${m.kelompok === 'Pilihan MIPA' ? 'selected' : ''}>Pilihan MIPA</option>
+          <option value="Pilihan IPS" ${m.kelompok === 'Pilihan IPS' ? 'selected' : ''}>Pilihan IPS</option>
+          <option value="Khusus" ${m.kelompok === 'Khusus' ? 'selected' : ''}>Keterampilan</option>
+        </select>
+      </td>
+      <td style="padding: 6px;">
+        <input type="number" class="form-control mapel-luar-kkm" min="0" max="100" value="${m.kkm || 70}" style="font-size: 12px; height: 32px; text-align: center;">
+      </td>
+      <td style="padding: 6px;">
+        <input type="number" class="form-control mapel-luar-nilai" min="0" max="100" value="${m.nilai !== undefined ? m.nilai : 82}" style="font-size: 12.5px; height: 32px; text-align: center; font-weight: 700;" required>
+      </td>
+      <td style="padding: 6px; text-align: center;">
+        <button type="button" class="btn btn-icon btn-danger-text" onclick="this.closest('tr').remove()" style="padding: 4px; color: #ef4444; border: none; background: none; font-size: 16px; cursor: pointer;">&times;</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function tambahBarisMapelTranskripLuar() {
+  const tbody = document.getElementById('transkrip-luar-mapel-tbody');
+  if (!tbody) return;
+
+  const tr = document.createElement('tr');
+  tr.className = 'row-mapel-luar-item';
+  tr.style.borderBottom = '1px solid var(--border-color)';
+  tr.innerHTML = `
+    <td style="padding: 6px;">
+      <input type="text" class="form-control mapel-luar-nama" placeholder="Nama mata pelajaran" style="font-size: 12px; height: 32px;" required>
+    </td>
+    <td style="padding: 6px;">
+      <select class="form-control mapel-luar-kelompok" style="font-size: 11.5px; height: 32px;">
+        <option value="Umum" selected>Umum</option>
+        <option value="Pilihan MIPA">Pilihan MIPA</option>
+        <option value="Pilihan IPS">Pilihan IPS</option>
+        <option value="Khusus">Keterampilan</option>
+      </select>
+    </td>
+    <td style="padding: 6px;">
+      <input type="number" class="form-control mapel-luar-kkm" min="0" max="100" value="70" style="font-size: 12px; height: 32px; text-align: center;">
+    </td>
+    <td style="padding: 6px;">
+      <input type="number" class="form-control mapel-luar-nilai" min="0" max="100" value="80" style="font-size: 12.5px; height: 32px; text-align: center; font-weight: 700;" required>
+    </td>
+    <td style="padding: 6px; text-align: center;">
+      <button type="button" class="btn btn-icon btn-danger-text" onclick="this.closest('tr').remove()" style="padding: 4px; color: #ef4444; border: none; background: none; font-size: 16px; cursor: pointer;">&times;</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function simpanDataTranskripLuar() {
+  const id = document.getElementById('transkrip-luar-id').value;
+  const skhId = document.getElementById('transkrip-luar-sekolah').value;
+  const program = document.getElementById('transkrip-luar-program').value;
+  const nama = document.getElementById('transkrip-luar-nama').value.trim();
+  const nisn = document.getElementById('transkrip-luar-nisn').value.trim();
+  const nik = document.getElementById('transkrip-luar-nik').value.trim();
+  const tempatLahir = document.getElementById('transkrip-luar-tempat-lahir').value.trim();
+  const tglLahir = document.getElementById('transkrip-luar-tgl-lahir').value.trim();
+  const tahunLulus = document.getElementById('transkrip-luar-tahun').value.trim() || String(new Date().getFullYear());
+  const nomorTranskrip = document.getElementById('transkrip-luar-nomor').value.trim();
+
+  if (!nama || !nisn || !skhId) {
+    Swal.fire('Peringatan', 'Asal sekolah mitra, nama siswa, dan NISN wajib diisi!', 'warning');
+    return;
+  }
+
+  // Kumpulkan baris nilai mapel
+  const rows = document.querySelectorAll('.row-mapel-luar-item');
+  const nilaiMapel = [];
+  rows.forEach(r => {
+    const mapel = r.querySelector('.mapel-luar-nama')?.value.trim();
+    const kelompok = r.querySelector('.mapel-luar-kelompok')?.value || 'Umum';
+    const kkm = Number(r.querySelector('.mapel-luar-kkm')?.value) || 70;
+    const nilai = Number(r.querySelector('.mapel-luar-nilai')?.value) || 0;
+    if (mapel) {
+      nilaiMapel.push({ mapel, nama: mapel, kelompok, kkm, nilai });
+    }
+  });
+
+  if (nilaiMapel.length === 0) {
+    Swal.fire('Peringatan', 'Minimal harus ada 1 mata pelajaran beserta nilainya!', 'warning');
+    return;
+  }
+
+  const sm = (sekolahMitraList || []).find(m => String(m.id) === String(skhId));
+
+  const transkripItem = {
+    id: id || ('TRL-' + Date.now()),
+    isLuar: true,
+    sekolahId: skhId,
+    namaSekolah: sm ? sm.namaSekolah : 'Sekolah Mitra',
+    nama,
+    nisn,
+    nik,
+    tempatLahir,
+    tglLahir,
+    tahunLulus,
+    nomorTranskrip,
+    program,
+    nilaiMapel,
+    updatedAt: new Date().toISOString()
+  };
+
+  const existingIdx = transkripLuarList.findIndex(t => String(t.id) === String(transkripItem.id));
+  if (existingIdx >= 0) {
+    transkripLuarList[existingIdx] = transkripItem;
+  } else {
+    transkripLuarList.unshift(transkripItem);
+  }
+
+  saveTranskripLuarData(transkripItem);
+  closeModalInputTranskripLuar();
+  renderTranskripTable();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Transkrip Disimpan',
+    text: `Transkrip nilai untuk ${nama} (${transkripItem.namaSekolah}) berhasil disimpan.`,
+    confirmButtonColor: '#059669'
+  });
+}
+
+function editDataTranskripLuar(id) {
+  const item = (transkripLuarList || []).find(t => String(t.id) === String(id));
+  if (!item) return;
+
+  bukaModalInputTranskripLuar();
+  document.getElementById('modal-transkrip-luar-title').textContent = 'Edit Transkrip Nilai Siswa Sekolah Lain';
+  document.getElementById('transkrip-luar-id').value = item.id;
+  document.getElementById('transkrip-luar-sekolah').value = item.sekolahId || '';
+  document.getElementById('transkrip-luar-program').value = item.program || 'Paket C';
+  document.getElementById('transkrip-luar-nama').value = item.nama || '';
+  document.getElementById('transkrip-luar-nisn').value = item.nisn || '';
+  document.getElementById('transkrip-luar-nik').value = item.nik || '';
+  document.getElementById('transkrip-luar-tempatLahir')?.setAttribute('value', item.tempatLahir || '');
+  document.getElementById('transkrip-luar-tempat-lahir').value = item.tempatLahir || '';
+  document.getElementById('transkrip-luar-tgl-lahir').value = item.tglLahir || '';
+  document.getElementById('transkrip-luar-tahun').value = item.tahunLulus || new Date().getFullYear();
+  document.getElementById('transkrip-luar-nomor').value = item.nomorTranskrip || '';
+
+  muatMapelDefaultKeTranskripLuar(item.program || 'Paket C', item.nilaiMapel);
+}
+
+function hapusDataTranskripLuar(id) {
+  const item = (transkripLuarList || []).find(t => String(t.id) === String(id));
+  if (!item) return;
+
+  Swal.fire({
+    title: 'Hapus Transkrip?',
+    text: `Yakin ingin menghapus transkrip nilai ${item.nama}?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    confirmButtonText: 'Ya, Hapus'
+  }).then(res => {
+    if (res.isConfirmed) {
+      transkripLuarList = transkripLuarList.filter(t => String(t.id) !== String(id));
+      saveTranskripLuarData();
+      if (typeof callAPI === 'function') {
+        callAPI({ action: "deleteTranskrip", id: id }).catch(() => {});
+      }
+      renderTranskripTable();
+      Swal.fire('Terhapus', 'Transkrip berhasil dihapus.', 'success');
+    }
+  });
+}
+
 // ==================== GENERATOR TRANSKRIP NILAI RESMI PDF ====================
 // Berstandar Blanko Ijazah & Transkrip Kumulatif Kemendikbudristek
 function cetakTranskripNilaiResmi(siswaId, options = {}) {
-  const { docInstance = null, isBatch = false, previewOnly = true, forcedSekolahId = null } = options;
-  const s = (siswaDataList || []).find(x => String(x.id) === String(siswaId)) || 
-            (raportDataList || []).find(r => String(r.siswaId) === String(siswaId)) || {
-              nama: 'Siswa PKBM',
-              nisn: '0061234567',
-              nik: '9103012345670001',
-              program: 'Paket C (Setara SMA)',
-              tempatLahir: 'Sentani',
-              tglLahir: '15 Mei 2005'
-            };
+  const { docInstance = null, isBatch = false, previewOnly = true, forcedSekolahId = null, targetProgram = null } = options;
+  let s = (transkripLuarList || []).find(t => String(t.id) === String(siswaId)) ||
+          (siswaDataList || []).find(x => String(x.id) === String(siswaId)) || 
+          (raportDataList || []).find(r => String(r.siswaId) === String(siswaId)) || {
+            nama: 'Siswa PKBM',
+            nisn: '0061234567',
+            nik: '9103012345670001',
+            program: 'Paket C (Setara SMA)',
+            tempatLahir: 'Sentani',
+            tglLahir: '15 Mei 2005'
+          };
+
+  // Jika targetProgram ditentukan, kloning s dan gunakan program tersebut
+  if (targetProgram) {
+    s = { ...s, program: targetProgram };
+  }
 
   if (!window.jspdf || !window.jspdf.jsPDF) {
     if (!isBatch) Swal.fire('Error', 'Library PDF belum termuat.', 'error');
@@ -1617,54 +2090,96 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   });
 
   // TABEL NILAI TRANSKRIP KUMULATIF
-  const progStr = String(s.program || '');
-  const progKey = progStr.includes('Paket A') ? 'Paket A' : (progStr.includes('Paket B') ? 'Paket B' : 'Paket C');
-  const baseMapel = defaultMapelKurikulum[progKey] || defaultMapelKurikulum['Paket C'];
+  let transkripRows = [];
 
-  // Cek apakah ada raport & CBT tersimpan untuk siswa ini
-  const rap = (raportDataList || []).find(r => String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
-  const cbtList = (ujianHasilList || []).filter(u => String(u.siswaId) === String(s.id) || (u.namaSiswa && s.nama && u.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
+  if (s.isLuar && Array.isArray(s.nilaiMapel) && s.nilaiMapel.length > 0) {
+    transkripRows = s.nilaiMapel.map((m, idx) => {
+      const nilaiFinal = Number(m.nilai) || 80;
+      const huruf = nilaiFinal >= 85 ? 'A' : (nilaiFinal >= 75 ? 'B' : 'C');
+      const predikat = nilaiFinal >= 85 ? 'Sangat Baik (A)' : (nilaiFinal >= 75 ? 'Baik (B)' : 'Cukup (C)');
+      return [
+        idx + 1,
+        m.nama || m.mapel,
+        m.kelompok || 'Umum',
+        m.kkm || 70,
+        nilaiFinal,
+        huruf,
+        predikat
+      ];
+    });
+  } else {
+    const progStr = String(s.program || '');
+    const progKey = progStr.includes('Paket A') ? 'Paket A' : (progStr.includes('Paket B') ? 'Paket B' : 'Paket C');
+    const baseMapel = defaultMapelKurikulum[progKey] || defaultMapelKurikulum['Paket C'];
 
-  const transkripRows = baseMapel.map((m, idx) => {
-    let nilaiRapor = 80;
-    if (rap && Array.isArray(rap.nilaiMapel)) {
-      const match = rap.nilaiMapel.find(nm => nm.mapel.toLowerCase().includes(m.nama.toLowerCase()));
-      if (match) nilaiRapor = Number(match.nilai) || 80;
-    }
+    // Cek apakah ada raport & CBT tersimpan untuk siswa ini (filter juga berdasarkan program yang dicetak jika ada)
+    const progNorm = normalisasiJenjang(progKey);
+    const rap = (raportDataList || []).find(r => {
+      const matchSiswa = String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase());
+      const matchProg = !r.program || normalisasiJenjang(r.program) === progNorm;
+      return matchSiswa && matchProg;
+    }) || (raportDataList || []).find(r => String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
+    const cbtList = (ujianHasilList || []).filter(u => String(u.siswaId) === String(s.id) || (u.namaSiswa && s.nama && u.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
 
-    let nilaiCBT = 82;
-    const matchCbt = cbtList.find(c => (c.bukuJudul || '').toLowerCase().includes(m.nama.toLowerCase()) || m.nama.toLowerCase().includes((c.bukuJudul || '').toLowerCase()));
-    if (matchCbt) {
-      nilaiCBT = Number(matchCbt.nilai) || 82;
-    } else {
-      nilaiCBT = nilaiRapor;
-    }
+    transkripRows = baseMapel.map((m, idx) => {
+      let nilaiRapor = null;
+      if (rap && Array.isArray(rap.nilaiMapel)) {
+        const match = rap.nilaiMapel.find(nm => nm.mapel.toLowerCase().includes(m.nama.toLowerCase()));
+        if (match && match.nilai !== undefined && match.nilai !== null && match.nilai !== '') {
+          nilaiRapor = Number(match.nilai);
+        }
+      }
 
-    // Hitung berdasarkan metode formula dinamis
-    let nilaiFinal = nilaiRapor;
-    if (configTranskrip.metodeRumus === 'murni_cbt') {
-      nilaiFinal = nilaiCBT;
-    } else if (configTranskrip.metodeRumus === 'murni_rapor') {
-      nilaiFinal = nilaiRapor;
-    } else {
-      // Kombinasi berbobot
-      const bobotR = configTranskrip.bobotRapor || 60;
-      const bobotC = configTranskrip.bobotCBT || 40;
-      nilaiFinal = Math.round(((nilaiRapor * bobotR) + (nilaiCBT * bobotC)) / 100);
-    }
+      let nilaiCBT = null;
+      const matchCbt = cbtList.find(c => (c.bukuJudul || '').toLowerCase().includes(m.nama.toLowerCase()) || m.nama.toLowerCase().includes((c.bukuJudul || '').toLowerCase()));
+      if (matchCbt && matchCbt.nilai !== undefined && matchCbt.nilai !== null && matchCbt.nilai !== '') {
+        nilaiCBT = Number(matchCbt.nilai);
+      }
 
-    const predikat = nilaiFinal >= 85 ? 'Sangat Baik (A)' : (nilaiFinal >= 75 ? 'Baik (B)' : 'Cukup (C)');
-    const huruf = nilaiFinal >= 85 ? 'A' : (nilaiFinal >= 75 ? 'B' : 'C');
-    return [
-      idx + 1,
-      m.nama,
-      m.kelompok,
-      m.kkm || 70,
-      nilaiFinal,
-      huruf,
-      predikat
-    ];
-  });
+      // Hitung berdasarkan metode formula dinamis
+      let nilaiFinal = null;
+      if (configTranskrip.metodeRumus === 'murni_cbt') {
+        nilaiFinal = nilaiCBT;
+      } else if (configTranskrip.metodeRumus === 'murni_rapor') {
+        nilaiFinal = nilaiRapor;
+      } else {
+        // Kombinasi berbobot
+        if (nilaiRapor !== null && nilaiCBT !== null) {
+          const bobotR = configTranskrip.bobotRapor || 60;
+          const bobotC = configTranskrip.bobotCBT || 40;
+          nilaiFinal = Math.round(((nilaiRapor * bobotR) + (nilaiCBT * bobotC)) / 100);
+        } else if (nilaiRapor !== null) {
+          nilaiFinal = nilaiRapor;
+        } else if (nilaiCBT !== null) {
+          nilaiFinal = nilaiCBT;
+        }
+      }
+
+      if (nilaiFinal !== null) {
+        const predikat = nilaiFinal >= 85 ? 'Sangat Baik (A)' : (nilaiFinal >= 75 ? 'Baik (B)' : 'Cukup (C)');
+        const huruf = nilaiFinal >= 85 ? 'A' : (nilaiFinal >= 75 ? 'B' : 'C');
+        return [
+          idx + 1,
+          m.nama,
+          m.kelompok,
+          m.kkm || 70,
+          nilaiFinal,
+          huruf,
+          predikat
+        ];
+      } else {
+        return [
+          idx + 1,
+          m.nama,
+          m.kelompok,
+          m.kkm || 70,
+          '-',
+          '-',
+          'Belum Dinilai'
+        ];
+      }
+    });
+  }
 
   doc.autoTable({
     startY: bioY + 34,
@@ -1692,8 +2207,9 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   });
 
   // Hitung Rata-Rata Kumulatif
-  const sumNilai = transkripRows.reduce((acc, r) => acc + Number(r[4]), 0);
-  const rataKumulatif = (sumNilai / transkripRows.length).toFixed(1);
+  const nilaiValid = transkripRows.filter(r => r[4] !== '-').map(r => Number(r[4]));
+  const sumNilai = nilaiValid.reduce((acc, v) => acc + v, 0);
+  const rataKumulatif = nilaiValid.length > 0 ? (sumNilai / nilaiValid.length).toFixed(1) : '-';
 
   let currentY = doc.lastAutoTable.finalY + 6;
 
@@ -1705,11 +2221,19 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(2, 132, 199);
-  doc.text(`NILAI RATA-RATA KUMULATIF : ${rataKumulatif} (DELAPAN PULUH DUA KOMA LIMA)`, marginX + 6, currentY + 5.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text(`Kualifikasi Kelulusan: Dinyatakan Lulus Program Kesetaraan ${s.program || 'Paket C'} dengan Predikat Memuaskan.`, marginX + 6, currentY + 9.5);
+  if (rataKumulatif !== '-') {
+    doc.text(`NILAI RATA-RATA KUMULATIF : ${rataKumulatif}`, marginX + 6, currentY + 5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Kualifikasi Kelulusan: Dinyatakan Lulus Program Kesetaraan ${s.program || 'Paket C'} dengan Predikat Memuaskan.`, marginX + 6, currentY + 9.5);
+  } else {
+    doc.text(`NILAI RATA-RATA KUMULATIF : - (BELUM DINILAI / BELUM ADA RAPOR)`, marginX + 6, currentY + 5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Kualifikasi Kelulusan: Peserta Didik masih dalam proses pembelajaran / belum memiliki entri nilai raport.`, marginX + 6, currentY + 9.5);
+  }
 
   currentY += 20;
 
@@ -2002,61 +2526,88 @@ function unduhSemuaTranskripPDF() {
 }
 
 // ==================== MODAL PREVIEW DETAIL TRANSKRIP SISWA ====================
-function lihatDetailTranskrip(siswaId) {
+function lihatDetailTranskrip(siswaId, targetProgram = null) {
   const modal = document.getElementById('modal-detail-transkrip');
   const container = document.getElementById('modal-transkrip-body');
   if (!modal || !container) return;
 
-  const s = (siswaDataList || []).find(x => String(x.id) === String(siswaId)) || 
-            (raportDataList || []).find(r => String(r.siswaId) === String(siswaId)) || {
-              nama: 'Siswa PKBM',
-              nisn: '0061234567',
-              nik: '9103012345670001',
-              program: 'Paket C (Setara SMA)',
-              tempatLahir: 'Sentani',
-              tglLahir: '15 Mei 2005'
-            };
+  let s = (siswaDataList || []).find(x => String(x.id) === String(siswaId)) || 
+          (raportDataList || []).find(r => String(r.siswaId) === String(siswaId)) || {
+            nama: 'Siswa PKBM',
+            nisn: '0061234567',
+            nik: '9103012345670001',
+            program: 'Paket C (Setara SMA)',
+            tempatLahir: 'Sentani',
+            tglLahir: '15 Mei 2005'
+          };
+
+  if (targetProgram) {
+    s = { ...s, program: targetProgram };
+  }
 
   const progStr = String(s.program || '');
   const progKey = progStr.includes('Paket A') ? 'Paket A' : (progStr.includes('Paket B') ? 'Paket B' : 'Paket C');
   const baseMapel = defaultMapelKurikulum[progKey] || defaultMapelKurikulum['Paket C'];
-  const rap = (raportDataList || []).find(r => String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
+  const progNorm = normalisasiJenjang(progKey);
+  const rap = (raportDataList || []).find(r => {
+    const matchSiswa = String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase());
+    const matchProg = !r.program || normalisasiJenjang(r.program) === progNorm;
+    return matchSiswa && matchProg;
+  }) || (raportDataList || []).find(r => String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
+
+  let totalNilai = 0;
+  let countMapelBernilai = 0;
 
   const rows = baseMapel.map((m, idx) => {
-    let nilai = 82;
+    let nilai = null;
     if (rap && Array.isArray(rap.nilaiMapel)) {
       const match = rap.nilaiMapel.find(nm => nm.mapel.toLowerCase().includes(m.nama.toLowerCase()));
-      if (match) nilai = match.nilai;
+      if (match && match.nilai !== undefined && match.nilai !== null && match.nilai !== '') {
+        nilai = Number(match.nilai);
+        totalNilai += nilai;
+        countMapelBernilai++;
+      }
     }
-    const huruf = nilai >= 85 ? 'A' : (nilai >= 75 ? 'B' : 'C');
-    const predikat = nilai >= 85 ? 'Sangat Baik' : (nilai >= 75 ? 'Baik' : 'Cukup');
-    const badgeColor = nilai >= 85 ? '#059669' : (nilai >= 75 ? '#0284c7' : '#d97706');
-    const badgeBg = nilai >= 85 ? 'rgba(5, 150, 105, 0.1)' : (nilai >= 75 ? 'rgba(2, 132, 199, 0.1)' : 'rgba(217, 119, 6, 0.1)');
 
-    return `
-      <tr style="border-bottom: 1px solid var(--border-color);">
-        <td style="text-align: center; padding: 8px;">${idx + 1}</td>
-        <td style="padding: 8px;"><b>${m.nama}</b></td>
-        <td style="text-align: center; padding: 8px;"><span class="tag def">${m.kelompok}</span></td>
-        <td style="text-align: center; padding: 8px;">${m.kkm || 70}</td>
-        <td style="text-align: center; padding: 8px;">
-          <span style="font-weight: 800; color: ${badgeColor}; background: ${badgeBg}; padding: 2px 8px; border-radius: 4px;">${nilai}</span>
-        </td>
-        <td style="text-align: center; padding: 8px; font-weight: 700;">${huruf}</td>
-        <td style="padding: 8px;"><span style="color: ${badgeColor}; font-weight: 600;">${predikat}</span></td>
-      </tr>
-    `;
+    if (nilai !== null) {
+      const huruf = nilai >= 85 ? 'A' : (nilai >= 75 ? 'B' : 'C');
+      const predikat = nilai >= 85 ? 'Sangat Baik' : (nilai >= 75 ? 'Baik' : 'Cukup');
+      const badgeColor = nilai >= 85 ? '#059669' : (nilai >= 75 ? '#0284c7' : '#d97706');
+      const badgeBg = nilai >= 85 ? 'rgba(5, 150, 105, 0.1)' : (nilai >= 75 ? 'rgba(2, 132, 199, 0.1)' : 'rgba(217, 119, 6, 0.1)');
+
+      return `
+        <tr style="border-bottom: 1px solid var(--border-color);">
+          <td style="text-align: center; padding: 8px;">${idx + 1}</td>
+          <td style="padding: 8px;"><b>${m.nama}</b></td>
+          <td style="text-align: center; padding: 8px;"><span class="tag def">${m.kelompok}</span></td>
+          <td style="text-align: center; padding: 8px;">${m.kkm || 70}</td>
+          <td style="text-align: center; padding: 8px;">
+            <span style="font-weight: 800; color: ${badgeColor}; background: ${badgeBg}; padding: 2px 8px; border-radius: 4px;">${nilai}</span>
+          </td>
+          <td style="text-align: center; padding: 8px; font-weight: 700;">${huruf}</td>
+          <td style="padding: 8px;"><span style="color: ${badgeColor}; font-weight: 600;">${predikat}</span></td>
+        </tr>
+      `;
+    } else {
+      return `
+        <tr style="border-bottom: 1px solid var(--border-color);">
+          <td style="text-align: center; padding: 8px;">${idx + 1}</td>
+          <td style="padding: 8px;"><b>${m.nama}</b></td>
+          <td style="text-align: center; padding: 8px;"><span class="tag def">${m.kelompok}</span></td>
+          <td style="text-align: center; padding: 8px;">${m.kkm || 70}</td>
+          <td style="text-align: center; padding: 8px;">
+            <span style="font-size: 11px; color: var(--text-muted); font-style: italic;">-</span>
+          </td>
+          <td style="text-align: center; padding: 8px; color: var(--text-muted);">-</td>
+          <td style="padding: 8px;"><span style="color: var(--text-muted); font-size: 11px; font-style: italic;">Belum Ada Nilai Rapor</span></td>
+        </tr>
+      `;
+    }
   }).join('');
 
-  const sumNilai = baseMapel.reduce((acc, m) => {
-    let nilai = 82;
-    if (rap && Array.isArray(rap.nilaiMapel)) {
-      const match = rap.nilaiMapel.find(nm => nm.mapel.toLowerCase().includes(m.nama.toLowerCase()));
-      if (match) nilai = match.nilai;
-    }
-    return acc + Number(nilai);
-  }, 0);
-  const rataRata = (sumNilai / baseMapel.length).toFixed(1);
+  const statusKumulatifHtml = countMapelBernilai > 0
+    ? `<b style="color: #059669; font-size: 15px;">${(totalNilai / countMapelBernilai).toFixed(1)}</b> (Lulus / Memuaskan)`
+    : `<b style="color: var(--text-muted); font-size: 13px; font-style: italic;">Belum Ada Nilai</b>`;
 
   container.innerHTML = `
     <!-- Header Ringkasan Siswa -->
@@ -2064,7 +2615,7 @@ function lihatDetailTranskrip(siswaId) {
       <div><span style="color: var(--text-muted);">Nama Peserta Didik:</span><br><b>${s.nama || '-'}</b></div>
       <div><span style="color: var(--text-muted);">NISN / NIK:</span><br><b>${s.nisn || '-'}</b> / ${s.nik || '-'}</div>
       <div><span style="color: var(--text-muted);">Program Kesetaraan:</span><br><b style="color: #0284c7;">${s.program || 'Paket C'}</b></div>
-      <div><span style="color: var(--text-muted);">Indeks Nilai Kumulatif:</span><br><b style="color: #059669; font-size: 15px;">${rataRata}</b> (Predikat Memuaskan)</div>
+      <div><span style="color: var(--text-muted);">Indeks Nilai Kumulatif:</span><br>${statusKumulatifHtml}</div>
     </div>
 
     <!-- Tabel Nilai Rinci -->
@@ -2092,7 +2643,7 @@ function lihatDetailTranskrip(siswaId) {
   if (btnCetak) {
     btnCetak.onclick = () => {
       closeModalDetailTranskrip();
-      cetakTranskripNilaiResmi(s.id);
+      cetakTranskripNilaiResmi(s.id, { targetProgram: s.program });
     };
   }
 
@@ -2139,6 +2690,386 @@ window.bukaModalAturFormulaTranskrip = bukaModalAturFormulaTranskrip;
 window.closeModalAturFormulaTranskrip = closeModalAturFormulaTranskrip;
 window.toggleBobotFormula = toggleBobotFormula;
 window.simpanPengaturanFormulaTranskrip = simpanPengaturanFormulaTranskrip;
+
+// Window exports untuk fitur Transkrip Sekolah Luar
+window.bukaModalInputTranskripLuar = bukaModalInputTranskripLuar;
+window.closeModalInputTranskripLuar = closeModalInputTranskripLuar;
+window.onJenjangTranskripLuarChange = onJenjangTranskripLuarChange;
+window.tambahBarisMapelTranskripLuar = tambahBarisMapelTranskripLuar;
+window.simpanDataTranskripLuar = simpanDataTranskripLuar;
+window.editDataTranskripLuar = editDataTranskripLuar;
+window.hapusDataTranskripLuar = hapusDataTranskripLuar;
+
+// ==================== FITUR PENGATURAN KKM MATA PELAJARAN ====================
+let currentSelectedKKMJenjang = 'Paket C';
+
+const defaultKKMPreset = {
+  'Paket A': [
+    { nama: 'Pendidikan Agama dan Budi Pekerti', kelompok: 'Umum', kkm: 70 },
+    { nama: 'Pendidikan Pancasila', kelompok: 'Umum', kkm: 70 },
+    { nama: 'Bahasa Indonesia', kelompok: 'Umum', kkm: 70 },
+    { nama: 'Matematika', kelompok: 'Umum', kkm: 65 },
+    { nama: 'Ilmu Pengetahuan Alam dan Sosial (IPAS)', kelompok: 'Umum', kkm: 70 },
+    { nama: 'Pemberdayaan & Keterampilan Wirausaha', kelompok: 'Khusus', kkm: 75 }
+  ],
+  'Paket B': [
+    { nama: 'Pendidikan Agama dan Budi Pekerti', kelompok: 'Umum', kkm: 70 },
+    { nama: 'Pendidikan Pancasila', kelompok: 'Umum', kkm: 70 },
+    { nama: 'Bahasa Indonesia', kelompok: 'Umum', kkm: 70 },
+    { nama: 'Matematika', kelompok: 'Umum', kkm: 65 },
+    { nama: 'Ilmu Pengetahuan Alam (IPA)', kelompok: 'Umum', kkm: 68 },
+    { nama: 'Ilmu Pengetahuan Sosial (IPS)', kelompok: 'Umum', kkm: 70 },
+    { nama: 'Bahasa Inggris', kelompok: 'Umum', kkm: 65 },
+    { nama: 'Pemberdayaan & Keterampilan Fungsional', kelompok: 'Khusus', kkm: 75 }
+  ],
+  'Paket C': [
+    { nama: 'Pendidikan Agama dan Budi Pekerti', kelompok: 'Umum', kkm: 70 },
+    { nama: 'Pendidikan Pancasila', kelompok: 'Umum', kkm: 70 },
+    { nama: 'Bahasa Indonesia', kelompok: 'Umum', kkm: 72 },
+    { nama: 'Matematika', kelompok: 'Umum', kkm: 68 },
+    { nama: 'Bahasa Inggris', kelompok: 'Umum', kkm: 68 },
+    { nama: 'Sosiologi', kelompok: 'Pilihan IPS', kkm: 70 },
+    { nama: 'Geografi', kelompok: 'Pilihan IPS', kkm: 70 },
+    { nama: 'Ekonomi', kelompok: 'Pilihan IPS', kkm: 70 },
+    { nama: 'Keterampilan Vokasional / Komputer', kelompok: 'Khusus', kkm: 75 },
+    { nama: 'Pemberdayaan Berbasis Komunitas Lokal', kelompok: 'Khusus', kkm: 75 }
+  ]
+};
+
+function bukaModalSettingKKM() {
+  const modal = document.getElementById('modal-setting-kkm');
+  if (!modal) return;
+  switchKKMTab('Paket C');
+  modal.classList.remove('hidden');
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
+function closeModalSettingKKM() {
+  const modal = document.getElementById('modal-setting-kkm');
+  if (modal) modal.classList.add('hidden');
+}
+
+function switchKKMTab(jenjang) {
+  currentSelectedKKMJenjang = jenjang;
+  ['Paket A', 'Paket B', 'Paket C'].forEach(j => {
+    const btn = document.getElementById('tab-kkm-' + j.toLowerCase().replace(' ', '-'));
+    if (btn) {
+      if (j === jenjang) {
+        btn.classList.add('active');
+        btn.style.background = '#d97706';
+        btn.style.color = '#fff';
+      } else {
+        btn.classList.remove('active');
+        btn.style.background = 'transparent';
+        btn.style.color = 'var(--text-color)';
+      }
+    }
+  });
+
+  const tbody = document.getElementById('tbody-setting-kkm');
+  if (!tbody) return;
+
+  const mapels = defaultMapelKurikulum[jenjang] || defaultKKMPreset[jenjang];
+  tbody.innerHTML = mapels.map((m, idx) => `
+    <tr class="row-kkm-item" style="border-bottom: 1px solid var(--border-color);">
+      <td style="padding: 8px; text-align: center;">${idx + 1}</td>
+      <td style="padding: 8px;">
+        <input type="text" class="form-control kkm-mapel-nama" value="${m.nama}" style="font-size: 12px; height: 32px;" required>
+      </td>
+      <td style="padding: 8px; text-align: center;">
+        <select class="form-control kkm-mapel-kelompok" style="font-size: 11.5px; height: 32px;">
+          <option value="Umum" ${m.kelompok === 'Umum' ? 'selected' : ''}>Umum</option>
+          <option value="Pilihan MIPA" ${m.kelompok === 'Pilihan MIPA' ? 'selected' : ''}>Pilihan MIPA</option>
+          <option value="Pilihan IPS" ${m.kelompok === 'Pilihan IPS' ? 'selected' : ''}>Pilihan IPS</option>
+          <option value="Khusus" ${m.kelompok === 'Khusus' ? 'selected' : ''}>Khusus/Keterampilan</option>
+        </select>
+      </td>
+      <td style="padding: 8px; text-align: center;">
+        <input type="number" class="form-control kkm-mapel-nilai" min="0" max="100" value="${m.kkm || 70}" style="font-size: 13px; font-weight: 700; height: 32px; text-align: center; color: #d97706;">
+      </td>
+    </tr>
+  `).join('');
+}
+
+function simpanPengaturanKKM() {
+  const jenjang = currentSelectedKKMJenjang;
+  const rows = document.querySelectorAll('.row-kkm-item');
+  const updatedMapel = [];
+
+  rows.forEach(r => {
+    const nama = r.querySelector('.kkm-mapel-nama')?.value.trim();
+    const kelompok = r.querySelector('.kkm-mapel-kelompok')?.value || 'Umum';
+    const kkm = Number(r.querySelector('.kkm-mapel-nilai')?.value) || 70;
+    if (nama) {
+      updatedMapel.push({ nama, kelompok, kkm });
+    }
+  });
+
+  if (updatedMapel.length === 0) {
+    Swal.fire('Peringatan', 'Minimal harus ada 1 mata pelajaran!', 'warning');
+    return;
+  }
+
+  defaultMapelKurikulum[jenjang] = updatedMapel;
+
+  try {
+    localStorage.setItem('ppdb_kkm_config', JSON.stringify(defaultMapelKurikulum));
+  } catch (e) {
+    console.warn("Gagal simpan ppdb_kkm_config:", e);
+  }
+
+  if (typeof callAPI === 'function') {
+    callAPI({ action: "saveAppSetting", key: "ppdb_kkm_config", val: defaultMapelKurikulum }).catch(() => {});
+  }
+
+  closeModalSettingKKM();
+  renderTranskripTable();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Standar KKM Berhasil Disimpan',
+    text: `KKM untuk ${jenjang} telah diperbarui dan langsung diterapkan ke seluruh dokumen nilai.`,
+    confirmButtonColor: '#d97706'
+  });
+}
+
+function resetKKMToDefault() {
+  Swal.fire({
+    title: 'Reset KKM ke Standar?',
+    text: `Nilai KKM untuk ${currentSelectedKKMJenjang} akan dikembalikan ke standar kurikulum kementerian.`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#d97706',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Ya, Reset',
+    cancelButtonText: 'Batal'
+  }).then(res => {
+    if (res.isConfirmed) {
+      defaultMapelKurikulum[currentSelectedKKMJenjang] = JSON.parse(JSON.stringify(defaultKKMPreset[currentSelectedKKMJenjang]));
+      try {
+        localStorage.setItem('ppdb_kkm_config', JSON.stringify(defaultMapelKurikulum));
+      } catch (e) {}
+      switchKKMTab(currentSelectedKKMJenjang);
+      Swal.fire('Berhasil', 'KKM telah direset ke nilai acuan default.', 'success');
+    }
+  });
+}
+
+// ==================== FITUR IMPORT DATA TRANSKRIP DARI EXCEL ====================
+function bukaModalImportTranskripExcel() {
+  const modal = document.getElementById('modal-import-transkrip-excel');
+  if (!modal) return;
+  const fileInput = document.getElementById('input-file-excel-transkrip');
+  if (fileInput) fileInput.value = '';
+  const previewBox = document.getElementById('import-excel-preview-box');
+  if (previewBox) previewBox.style.display = 'none';
+
+  modal.classList.remove('hidden');
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
+function closeModalImportTranskripExcel() {
+  const modal = document.getElementById('modal-import-transkrip-excel');
+  if (modal) modal.classList.add('hidden');
+}
+
+function unduhTemplateTranskripExcel() {
+  if (typeof XLSX === 'undefined') {
+    Swal.fire('Error', 'Library SheetJS Excel belum siap.', 'error');
+    return;
+  }
+
+  const jenjang = document.getElementById('import-template-jenjang')?.value || 'Paket C';
+  const mapels = defaultMapelKurikulum[jenjang] || defaultKKMPreset[jenjang];
+
+  // Susun Header Kolom Excel
+  const headers = [
+    'Nama Siswa',
+    'NISN',
+    'NIK',
+    'Tempat Lahir',
+    'Tanggal Lahir',
+    'Program Kesetaraan',
+    'Asal Sekolah / Lembaga',
+    'Tahun Kelulusan',
+    'Nomor Transkrip'
+  ];
+
+  mapels.forEach(m => {
+    headers.push(m.nama);
+  });
+
+  // Contoh baris dummy panduan
+  const sampleRow1 = [
+    'Contoh Siswa 1',
+    '0061234567',
+    '9103010101010001',
+    'Sentani',
+    '15 Mei 2005',
+    jenjang,
+    'PKBM Aura Anugerah',
+    '2026',
+    'PKBM-AA/TR/2026/001'
+  ];
+  mapels.forEach(m => sampleRow1.push(m.kkm || 75));
+
+  const sampleRow2 = [
+    'Contoh Siswa Mitra 2',
+    '0067654321',
+    '9103010202020002',
+    'Jayapura',
+    '20 Agustus 2004',
+    jenjang,
+    'PKBM Mitra Belajar',
+    '2026',
+    'PKBM-MB/TR/2026/002'
+  ];
+  mapels.forEach(m => sampleRow2.push(80));
+
+  const wsData = [headers, sampleRow1, sampleRow2];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Format Transkrip");
+
+  const fileName = `Template_Transkrip_Nilai_${jenjang.replace(' ', '_')}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
+
+function eksekusiImportTranskripExcel() {
+  const fileInput = document.getElementById('input-file-excel-transkrip');
+  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+    Swal.fire('Peringatan', 'Silakan pilih berkas Excel (.xlsx / .csv) terlebih dahulu!', 'warning');
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+      if (!jsonData || jsonData.length === 0) {
+        Swal.fire('Data Kosong', 'Berkas Excel tidak memiliki baris data untuk diimport.', 'warning');
+        return;
+      }
+
+      let countImported = 0;
+      let countUpdated = 0;
+
+      jsonData.forEach((row, idx) => {
+        // Normalisasi key object (case-insensitive & trim)
+        const rowNorm = {};
+        Object.keys(row).forEach(k => {
+          rowNorm[k.trim().toLowerCase()] = row[k];
+        });
+
+        const nama = rowNorm['nama siswa'] || rowNorm['nama'] || rowNorm['nama lengkap'] || '';
+        if (!nama) return;
+
+        const nisn = String(rowNorm['nisn'] || '').trim();
+        const nik = String(rowNorm['nik'] || '').trim();
+        const tempatLahir = rowNorm['tempat lahir'] || 'Sentani';
+        const tglLahir = rowNorm['tanggal lahir'] || rowNorm['tgl lahir'] || '-';
+        const programRaw = rowNorm['program kesetaraan'] || rowNorm['program'] || 'Paket C';
+        const program = normalisasiJenjang(programRaw);
+        const asalSekolah = rowNorm['asal sekolah / lembaga'] || rowNorm['asal sekolah'] || rowNorm['nama sekolah'] || 'PKBM Aura Anugerah';
+        const tahunLulus = String(rowNorm['tahun kelulusan'] || rowNorm['tahun'] || new Date().getFullYear()).trim();
+        const nomorTranskrip = rowNorm['nomor transkrip'] || rowNorm['no transkrip'] || '';
+
+        // Ambil mata pelajaran kurikulum untuk jenjang ini
+        const listKurikulum = defaultMapelKurikulum[program] || defaultKKMPreset[program];
+        const nilaiMapel = [];
+
+        listKurikulum.forEach(m => {
+          let nilaiFound = null;
+          // Cari kolom di row yang namanya mirip nama mapel
+          Object.keys(row).forEach(origKey => {
+            const kLow = origKey.trim().toLowerCase();
+            const mLow = m.nama.toLowerCase();
+            if (kLow === mLow || (kLow.length > 5 && mLow.includes(kLow)) || (mLow.length > 5 && kLow.includes(mLow))) {
+              const val = Number(row[origKey]);
+              if (!isNaN(val) && row[origKey] !== '') {
+                nilaiFound = val;
+              }
+            }
+          });
+
+          nilaiMapel.push({
+            mapel: m.nama,
+            nama: m.nama,
+            kelompok: m.kelompok,
+            kkm: m.kkm,
+            nilai: nilaiFound !== null ? nilaiFound : m.kkm
+          });
+        });
+
+        // Tentukan apakah masuk ke transkripLuarList atau siswa internal
+        const transkripItem = {
+          id: 'TR-IMP-' + (nisn || (Date.now() + '-' + idx)),
+          isLuar: true,
+          sekolahId: 'import',
+          namaSekolah: asalSekolah,
+          nama,
+          nisn,
+          nik,
+          tempatLahir,
+          tglLahir,
+          tahunLulus,
+          nomorTranskrip,
+          program,
+          nilaiMapel,
+          updatedAt: new Date().toISOString()
+        };
+
+        const existIdx = transkripLuarList.findIndex(t => 
+          (nisn && String(t.nisn) === String(nisn)) || 
+          (t.nama && t.nama.toLowerCase() === nama.toLowerCase() && normalisasiJenjang(t.program) === program)
+        );
+
+        if (existIdx >= 0) {
+          transkripLuarList[existIdx] = { ...transkripLuarList[existIdx], ...transkripItem };
+          countUpdated++;
+        } else {
+          transkripLuarList.unshift(transkripItem);
+          countImported++;
+        }
+      });
+
+      saveTranskripLuarData(transkripLuarList, true);
+      renderTranskripTable();
+      closeModalImportTranskripExcel();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Import Transkrip Berhasil!',
+        html: `Berhasil menambahkan <b>${countImported}</b> transkrip baru dan memperbarui <b>${countUpdated}</b> data transkrip yang sudah ada.`,
+        confirmButtonColor: '#10b981'
+      });
+    } catch (err) {
+      console.error("Gagal import excel:", err);
+      Swal.fire('Gagal Import', 'Terjadi kesalahan saat memproses file Excel: ' + err.message, 'error');
+    }
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+// Window exports untuk fitur KKM & Import Excel
+window.bukaModalSettingKKM = bukaModalSettingKKM;
+window.closeModalSettingKKM = closeModalSettingKKM;
+window.switchKKMTab = switchKKMTab;
+window.simpanPengaturanKKM = simpanPengaturanKKM;
+window.resetKKMToDefault = resetKKMToDefault;
+
+window.bukaModalImportTranskripExcel = bukaModalImportTranskripExcel;
+window.closeModalImportTranskripExcel = closeModalImportTranskripExcel;
+window.unduhTemplateTranskripExcel = unduhTemplateTranskripExcel;
+window.eksekusiImportTranskripExcel = eksekusiImportTranskripExcel;
 
 
 
