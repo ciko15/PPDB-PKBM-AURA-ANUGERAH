@@ -49,6 +49,8 @@ function doPost(e) {
       result = cekKesesuaianDenganAI(params.dataSiswa, urlGambar, params.apiKey);
     } else if (action === "ekstrakDataAI") {
       result = ekstrakDataDenganAI(params.nikTarget, params.kkBase64, params.ijazahBase64, params.apiKey);
+    } else if (action === "generateSoalAI") {
+      result = generateSoalCBTDenganAI(params.topikMateri, params.jenjang, params.kelas, params.mataPelajaran, params.jumlahSoal, params.apiKey);
     } else if (action === "updateStatus") {
       result = updateStatusSiswa(params.idSiswa, params.status, params.koreksiAI);
     } else if (action === "updateStatusAktif") {

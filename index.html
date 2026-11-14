@@ -74,6 +74,12 @@
           <i data-lucide="download" style="width: 16px; height: 16px;"></i>
           <span>Instal Aplikasi</span>
         </button>
+        <button type="button" class="btn" onclick="bukaModalUjianLuar()"
+          style="background: rgba(3, 105, 161, 0.1); border: 1.5px solid #0284c7; color: #0284c7; font-weight: 700; border-radius: 8px; padding: 0 13px; height: 38px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;"
+          title="Masuk Ujian Khusus Peserta / Siswa dari Luar Sekolah">
+          <i data-lucide="edit-3" style="width: 15px; height: 15px;"></i>
+          <span>Ujian Tamu / Luar</span>
+        </button>
         <button id="btn-theme-landing" onclick="toggleTheme()" class="btn btn-icon"
           style="background: var(--surface-2); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;"
           title="Ganti Mode Terang / Gelap" aria-label="Ganti Mode Tampilan">
@@ -749,6 +755,15 @@
                 <i data-lucide="log-in" style="width: 18px; height: 18px;"></i>
                 <span>Masuk Aplikasi</span>
               </button>
+
+              <!-- Tombol Akses Ujian Khusus Peserta Luar -->
+              <div style="margin-top: 10px; text-align: center;">
+                <button type="button" class="btn" onclick="bukaModalUjianLuar()"
+                  style="width: 100%; height: 38px; background: rgba(2, 132, 199, 0.08); border: 1.5px solid #0284c7; color: #0284c7; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 13px;">
+                  <i data-lucide="award" style="width: 15px; height: 15px;"></i>
+                  <span>Peserta Luar / Tamu? Klik Masuk Ujian</span>
+                </button>
+              </div>
 
               <!-- 9. Tombol Pasang / Instal Aplikasi (Muncul jika belum diinstal) -->
               <div id="login-install-app-container" style="display: none; margin-top: 12px;">
@@ -1502,10 +1517,11 @@
                 </div>
                 <div class="filter-controls-group">
                   <select id="filter-ujian-program" class="filter-select" onchange="filterUjianTable()">
-                    <option value="">Semua Jenjang</option>
+                    <option value="">Semua Kategori Peserta</option>
                     <option value="Paket A">Paket A</option>
                     <option value="Paket B">Paket B</option>
                     <option value="Paket C">Paket C</option>
+                    <option value="Peserta Luar">Peserta Luar / Tamu</option>
                   </select>
                   <select id="filter-ujian-predikat" class="filter-select" onchange="filterUjianTable()">
                     <option value="">Semua Predikat</option>
@@ -3277,9 +3293,20 @@
             Soal CBT</p>
         </div>
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-sm" onclick="bukaModalGenerateSoalAI()"
+            style="background: linear-gradient(135deg, #7c3aed, #9333ea); color: #fff; border: none; font-size: 12px; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;"
+            title="Generate Butir Soal Otomatis Berdasarkan Modul Pelajaran menggunakan Gemini AI">
+            <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>Buat Soal via AI
+          </button>
+          <button class="btn btn-sm" onclick="bukaModalAmbilBankSoalMaster()"
+            style="background: rgba(2, 132, 199, 0.12); color: #0284c7; border: 1.5px solid #0284c7; font-size: 12px; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;"
+            title="Tarik Butir Soal yang Tersedia dari Database Bank Soal Master">
+            <i data-lucide="layers" style="width: 14px; height: 14px;"></i>Tarik Bank Soal
+          </button>
           <button class="btn btn-sm" onclick="downloadTemplateExcelSoal()"
             style="background: #059669; color: #fff; border: none; font-size: 12px; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="download" style="width: 14px; height: 14px;"></i>Download Template
+            <i data-lucide="download" style="width: 14px; height: 14px;"></i>Template
           </button>
           <label class="btn btn-sm btn-outline"
             style="cursor: pointer; font-size: 12px; margin: 0; white-space: nowrap; height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;">
@@ -3313,6 +3340,211 @@
         <button type="button" class="btn btn-primary" onclick="simpanSemuaButirSoal()"><i data-lucide="check"
             style="width: 15px; height: 15px;"></i>Simpan Semua Butir Soal</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL GENERATE BUTIR SOAL AI ==================== -->
+  <div id="modal-generate-soal-ai" class="login-modal hidden" style="z-index: 99999;">
+    <div class="login-modal-overlay" onclick="closeModalGenerateSoalAI()"></div>
+    <div class="login-card modal-content" style="max-width: 540px; text-align: left; padding: 22px;">
+      <button class="btn-close-modal" onclick="closeModalGenerateSoalAI()">&times;</button>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(168, 85, 247, 0.2)); display: flex; align-items: center; justify-content: center; color: #7c3aed;">
+          <i data-lucide="sparkles" style="width: 22px; height: 22px;"></i>
+        </div>
+        <div>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">Buat Butir Soal dengan Gemini AI</h3>
+          <span style="font-size: 11.5px; color: var(--text-muted);">Ekstraksi cerdas soal pilihan ganda dari modul pelajaran</span>
+        </div>
+      </div>
+
+      <form id="form-generate-soal-ai" onsubmit="event.preventDefault(); prosesGenerateSoalAI();">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 12.5px; font-weight: 600;">Topik / Bab Materi Modul <span style="color:red">*</span></label>
+          <input type="text" id="ai-soal-topik" class="form-control" required placeholder="Contoh: Modul 1 Hakikat Geografi / Ekosistem Lingkungan" style="height: 38px;">
+        </div>
+
+        <div class="form-group-row" style="display: flex; gap: 10px; margin-bottom: 12px;">
+          <div style="flex: 1;">
+            <label style="font-size: 12.5px; font-weight: 600;">Jenjang</label>
+            <select id="ai-soal-jenjang" class="form-control" style="height: 38px;">
+              <option value="Paket A">Paket A (Setara SD)</option>
+              <option value="Paket B">Paket B (Setara SMP)</option>
+              <option value="Paket C" selected>Paket C (Setara SMA)</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 12.5px; font-weight: 600;">Kelas / Tingkat</label>
+            <input type="text" id="ai-soal-kelas" class="form-control" value="Kelas X" placeholder="Contoh: Kelas X" style="height: 38px;">
+          </div>
+        </div>
+
+        <div class="form-group-row" style="display: flex; gap: 10px; margin-bottom: 12px;">
+          <div style="flex: 1.2;">
+            <label style="font-size: 12.5px; font-weight: 600;">Mata Pelajaran</label>
+            <input type="text" id="ai-soal-mapel" class="form-control" value="Umum" placeholder="Contoh: Sosiologi / Bahasa Indonesia" style="height: 38px;">
+          </div>
+          <div style="flex: 0.8;">
+            <label style="font-size: 12.5px; font-weight: 600;">Jumlah Soal</label>
+            <select id="ai-soal-jumlah" class="form-control" style="height: 38px;">
+              <option value="5" selected>5 Butir Soal</option>
+              <option value="10">10 Butir Soal</option>
+              <option value="15">15 Butir Soal</option>
+              <option value="20">20 Butir Soal</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="ai-soal-loading" style="display: none; padding: 14px; background: rgba(124, 58, 237, 0.08); border: 1px dashed #7c3aed; border-radius: 8px; margin-bottom: 14px; text-align: center;">
+          <span class="spinner-inline" style="display: inline-block;"></span>
+          <span style="font-size: 12.5px; font-weight: 600; color: #7c3aed; margin-left: 8px;">Gemini AI sedang menyusun butir soal & opsi jawaban...</span>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModalGenerateSoalAI()" style="height: 38px;">Batal</button>
+          <button type="submit" id="btn-proses-ai-soal" class="btn btn-primary"
+            style="background: linear-gradient(135deg, #7c3aed, #9333ea); border: none; height: 38px; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="sparkles" style="width: 15px; height: 15px;"></i> Generate Soal Sekarang
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL TARIK DARI BANK SOAL MASTER ==================== -->
+  <div id="modal-ambil-bank-soal" class="login-modal hidden" style="z-index: 99999;">
+    <div class="login-modal-overlay" onclick="closeModalAmbilBankSoalMaster()"></div>
+    <div class="modal-content" style="max-width: 780px; width: 94%; max-height: 88vh; display: flex; flex-direction: column; padding: 22px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(2, 132, 199, 0.12); display: flex; align-items: center; justify-content: center; color: #0284c7;">
+            <i data-lucide="layers" style="width: 20px; height: 20px;"></i>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">Database Bank Soal Master</h3>
+            <span style="font-size: 11.5px; color: var(--text-muted);">Pilih dan gunakan kembali butir soal yang sudah ada untuk paket ujian ini</span>
+          </div>
+        </div>
+        <button class="btn-close-modal" onclick="closeModalAmbilBankSoalMaster()">&times;</button>
+      </div>
+
+      <!-- Filter Bar Bank Soal Master -->
+      <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+        <input type="text" id="filter-master-soal-search" class="form-control" placeholder="Cari kata kunci butir soal..."
+          oninput="renderMasterSoalSelector()" style="flex: 1.5; min-width: 180px; height: 36px; font-size: 12.5px;">
+        <select id="filter-master-soal-jenjang" class="form-control" onchange="renderMasterSoalSelector()" style="flex: 1; min-width: 120px; height: 36px; font-size: 12.5px;">
+          <option value="">Semua Jenjang</option>
+          <option value="Paket A">Paket A</option>
+          <option value="Paket B">Paket B</option>
+          <option value="Paket C">Paket C</option>
+        </select>
+        <select id="filter-master-soal-kelas" class="form-control" onchange="renderMasterSoalSelector()" style="flex: 1; min-width: 120px; height: 36px; font-size: 12.5px;">
+          <option value="">Semua Kelas</option>
+          <option value="Kelas IV">Kelas IV</option>
+          <option value="Kelas V">Kelas V</option>
+          <option value="Kelas VI">Kelas VI</option>
+          <option value="Kelas VII">Kelas VII</option>
+          <option value="Kelas VIII">Kelas VIII</option>
+          <option value="Kelas IX">Kelas IX</option>
+          <option value="Kelas X">Kelas X</option>
+          <option value="Kelas XI">Kelas XI</option>
+          <option value="Kelas XII">Kelas XII</option>
+        </select>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 12px; color: var(--text-muted);">Ditemukan: <b id="count-master-soal-found">0</b> butir pertanyaan</span>
+        <button type="button" class="btn btn-sm btn-outline" onclick="toggleSelectAllMasterSoal()" style="font-size: 11px; padding: 2px 8px;">
+          Pilih Semua
+        </button>
+      </div>
+
+      <!-- List Soal Master yang Bisa Dipilih -->
+      <div id="container-master-soal-list"
+        style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; background: var(--surface-2);">
+        <!-- Rendered by renderMasterSoalSelector() -->
+      </div>
+
+      <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12.5px; font-weight: 600; color: #0284c7;" id="label-terpilih-master-soal">0 soal dipilih</span>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModalAmbilBankSoalMaster()" style="height: 36px;">Batal</button>
+          <button type="button" class="btn btn-primary" onclick="masukkanSoalTerpilihKePaket()"
+            style="background: #0284c7; border: none; height: 36px; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="check" style="width: 14px; height: 14px;"></i> Masukkan ke Paket Ujian
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL CBT KHUSUS PESERTA LUAR / TAMU ==================== -->
+  <div id="modal-ujian-luar" class="login-modal hidden" style="z-index: 99998;">
+    <div class="login-modal-overlay" onclick="closeModalUjianLuar()"></div>
+    <div class="login-card modal-content" style="max-width: 520px; text-align: left; padding: 22px;">
+      <button class="btn-close-modal" onclick="closeModalUjianLuar()">&times;</button>
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(2, 132, 199, 0.12); display: flex; align-items: center; justify-content: center; color: #0284c7;">
+          <i data-lucide="award" style="width: 20px; height: 20px;"></i>
+        </div>
+        <div>
+          <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--text-color);">Portal Ujian CBT Peserta Luar</h3>
+          <span style="font-size: 11.5px; color: var(--text-muted);">Khusus peserta tamu / sekolah mitra</span>
+        </div>
+      </div>
+      <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px; line-height: 1.4;">
+        Silakan isi identitas Anda dan masukkan Token Ujian yang diberikan oleh pengawas/panitia. Anda hanya dapat mengakses lembar soal ujian ini tanpa akun terdaftar.
+      </p>
+
+      <form id="form-ujian-luar" onsubmit="event.preventDefault(); prosesMulaiCbtLuar();">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 12.5px; font-weight: 600;">Nama Lengkap Peserta <span style="color:red">*</span></label>
+          <input type="text" id="ujian-luar-nama" class="form-control" required placeholder="Contoh: Budi Santoso" style="height: 38px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 12.5px; font-weight: 600;">Asal Sekolah / Lembaga / Instansi <span style="color:red">*</span></label>
+          <input type="text" id="ujian-luar-sekolah" class="form-control" required placeholder="Contoh: SMA Negeri 1 Sentani / Umum" style="height: 38px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 12.5px; font-weight: 600;">Pilih Paket Ujian CBT <span style="color:red">*</span></label>
+          <select id="ujian-luar-pilih-paket" class="form-control" required onchange="updateCbtLuarInfoPaket(this.value)" style="height: 38px;">
+            <option value="">-- Pilih Paket Soal --</option>
+          </select>
+        </div>
+
+        <!-- Info Box Paket -->
+        <div id="box-info-ujian-luar"
+          style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Waktu Pengerjaan:</span>
+            <strong id="ujian-luar-durasi" style="color: #0284c7;">-</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+            <span style="color: var(--text-muted);">Jumlah Butir Soal:</span>
+            <strong id="ujian-luar-jumlah-soal">-</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+            <span style="color: var(--text-muted);">Status Ujian:</span>
+            <span id="ujian-luar-status-badge" class="badge" style="background: #dcfce7; color: #15803d; font-weight: 700;">AKTIF</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="font-size: 12.5px; font-weight: 600;">Token Ujian (Diberikan Pengawas) <span style="color:red">*</span></label>
+          <input type="text" id="ujian-luar-token" class="form-control" required placeholder="Masukkan Token Ujian"
+            style="text-transform: uppercase; font-family: monospace; font-size: 15px; font-weight: 800; letter-spacing: 2px; height: 40px;">
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModalUjianLuar()" style="height: 38px;">Batal</button>
+          <button type="submit" class="btn btn-primary"
+            style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; height: 38px;">
+            <i data-lucide="play" style="width: 14px; height: 14px;"></i> Mulai Ujian Sekarang
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

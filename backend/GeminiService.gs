@@ -391,3 +391,112 @@ function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
   return { status: "ERROR", message: lastError || "Gagal memproses AI." };
 }
 
+/**
+ * Pembuatan Butir Soal CBT Otomatis Menggunakan Gemini AI
+ */
+function generateSoalCBTDenganAI(topikMateri, jenjang, kelas, mataPelajaran, jumlahSoal, clientApiKey) {
+  const apiKeys = getApiKeysList(clientApiKey);
+
+  if (!apiKeys || apiKeys.length === 0) {
+    return {
+      status: "ERROR",
+      message: "GEMINI_API_KEY belum dikonfigurasi. Tambahkan API Key di Kelola API Gemini."
+    };
+  }
+
+  const jml = Math.min(25, Math.max(3, parseInt(jumlahSoal, 10) || 5));
+  const candidateModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+
+  const promptText = `Anda adalah seorang guru/tutor profesional di PKBM (Pendidikan Kesetaraan).
+Tugas Anda: Buatlah ${jml} butir soal ujian pilihan ganda (4 opsi: A, B, C, D) yang berkualitas, kontekstual, dan menguji pemahaman literasi/konsep, berdasarkan materi berikut:
+- Topik / Judul Modul: "${topikMateri || 'Materi Pembelajaran Umum'}"
+- Jenjang: ${jenjang || 'Paket C'}
+- Kelas / Tingkat: ${kelas || 'Kelas X'}
+- Mata Pelajaran: ${mataPelajaran || 'Umum'}
+
+ATURAN WAJIB:
+1. Buat tepat ${jml} butir pertanyaan.
+2. Setiap soal memiliki 4 pilihan opsi (A, B, C, D).
+3. Tentukan satu kunci jawaban yang benar (huruf A, B, C, atau D).
+4. Berikan penjelasan/pembahasan ringkas (1-2 kalimat) mengapa jawaban tersebut benar.
+5. Balas HANYA dalam format JSON valid berupa Array of Objects tanpa pembungkus markdown apapun:
+[
+  {
+    "id": 1,
+    "pertanyaan": "Teks soal pertanyaan...",
+    "opsi": [
+      { "k": "A", "t": "Pilihan A" },
+      { "k": "B", "t": "Pilihan B" },
+      { "k": "C", "t": "Pilihan C" },
+      { "k": "D", "t": "Pilihan D" }
+    ],
+    "kunci": "A",
+    "pembahasan": "Penjelasan singkat jawaban benar"
+  }
+]`;
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          { text: promptText }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.4,
+      topK: 32,
+      topP: 0.95
+    }
+  };
+
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  let lastError = "";
+
+  for (let k = 0; k < apiKeys.length; k++) {
+    const currentApiKey = apiKeys[k];
+
+    for (let m = 0; m < candidateModels.length; m++) {
+      const modelName = candidateModels[m];
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${currentApiKey}`;
+
+      try {
+        const response = UrlFetchApp.fetch(url, options);
+        const statusCode = response.getResponseCode();
+        const responseText = response.getContentText();
+
+        if (statusCode === 200) {
+          const resultJson = JSON.parse(responseText);
+          if (resultJson.candidates && resultJson.candidates.length > 0) {
+            if (typeof incrementKeyUsageInDB === "function") {
+              incrementKeyUsageInDB(currentApiKey);
+            }
+            const aiContent = resultJson.candidates[0].content.parts[0].text;
+            const cleaned = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsedArray = JSON.parse(cleaned);
+            return { status: "SUCCESS", data: parsedArray };
+          }
+        } else if (statusCode === 503 || statusCode === 429) {
+          lastError = `Limit kuota terlampaui (HTTP ${statusCode}).`;
+          continue;
+        } else if (statusCode === 400 || statusCode === 401) {
+          lastError = `Kunci API tidak valid (HTTP ${statusCode}).`;
+          break;
+        } else {
+          lastError = `Gemini (${modelName}) Error (${statusCode}): ${responseText.substring(0, 150)}`;
+        }
+      } catch (err) {
+        lastError = err.toString();
+      }
+    }
+  }
+
+  return { status: "ERROR", message: lastError || "Gagal membuat butir soal dengan AI." };
+}
+

@@ -1581,11 +1581,10 @@ async function cekNotifikasiBaruLintasPerangkat() {
 function simpanDaftarNotifikasiOnline(onlineLogs) {
   try {
     if (!onlineLogs || !Array.isArray(onlineLogs)) return;
-    const currentLocal = ambilNotifikasiLokal();
     const readIds = getGlobalReadNotificationIds();
 
     const merged = onlineLogs.map((item, idx) => {
-      const stableId = item.id || ('NOTIF-SVR-' + (item.timestamp || idx));
+      const stableId = getNotificationStableId(item, idx);
       return {
         id: stableId,
         timestamp: item.timestamp || new Date().toISOString(),
@@ -8166,8 +8165,9 @@ function filterUjianTable() {
   const predikat = document.getElementById('filter-ujian-predikat')?.value || '';
 
   const filtered = ujianHasilList.filter(u => {
-    const matchQuery = !query || u.namaSiswa.toLowerCase().includes(query) || u.bukuJudul.toLowerCase().includes(query) || (u.penguji || '').toLowerCase().includes(query);
-    const matchProgram = !program || u.program === program;
+    const asal = (u.asalSekolah || '').toLowerCase();
+    const matchQuery = !query || u.namaSiswa.toLowerCase().includes(query) || u.bukuJudul.toLowerCase().includes(query) || (u.penguji || '').toLowerCase().includes(query) || asal.includes(query);
+    const matchProgram = !program || u.program === program || (program === 'Peserta Luar' && (u.isExternal || u.program === 'Peserta Luar' || (u.namaSiswa && u.namaSiswa.includes('['))));
     const matchPredikat = !predikat || u.predikat.includes(predikat);
     return matchQuery && matchProgram && matchPredikat;
   });
@@ -8197,12 +8197,20 @@ function renderUjianTable(data) {
     const nilaiColor = u.nilai >= 75 ? '#15803d' : (u.nilai >= 60 ? '#b45309' : '#b91c1c');
     const badgeBg = u.nilai >= 75 ? '#dcfce7' : (u.nilai >= 60 ? '#fef3c7' : '#fee2e2');
 
+    const isExternal = u.isExternal || u.program === 'Peserta Luar' || (u.namaSiswa && u.namaSiswa.includes('['));
+    const programTag = isExternal
+      ? '<span class="tag" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; font-weight: 700;">Peserta Luar</span>'
+      : `<span class="tag def">${u.program}</span>`;
+
     return `
       <tr>
         <td>${idx + 1}</td>
         <td><small>${u.tanggal || '-'}</small></td>
-        <td><strong>${u.namaSiswa}</strong></td>
-        <td><span class="tag def">${u.program}</span></td>
+        <td>
+          <strong>${u.namaSiswa}</strong>
+          ${u.asalSekolah ? `<br><small style="color: #0284c7; font-weight: 600;">🏫 ${u.asalSekolah}</small>` : ''}
+        </td>
+        <td>${programTag}</td>
         <td>${u.bukuJudul}</td>
         <td>
           <span style="font-weight: 700; font-size: 15px; color: ${nilaiColor}; background: ${badgeBg}; padding: 3px 10px; border-radius: 6px;">
@@ -9843,13 +9851,13 @@ function simpanNotifikasiKeLokal(notifItem) {
 
 // Helper ID stabil & pelacakan status baca global
 function getNotificationStableId(item, idx = 0) {
-  if (item && item.id && !item.id.startsWith('NOTIF-OLD-') && !item.id.startsWith('NOTIF-SVR-')) {
-    return String(item.id);
-  }
-  const ts = item.timestamp ? String(item.timestamp).trim() : '';
-  const title = item.title ? String(item.title).trim() : '';
+  const ts = item && item.timestamp ? String(item.timestamp).trim() : '';
+  const title = item && item.title ? String(item.title).trim() : '';
   if (ts) {
     return 'NOTIF-' + ts.replace(/[^a-zA-Z0-9]/g, '_');
+  }
+  if (item && item.id && !item.id.startsWith('NOTIF-OLD-') && !item.id.startsWith('NOTIF-SVR-')) {
+    return String(item.id);
   }
   return 'NOTIF-ROW-' + idx + '-' + title.replace(/[^a-zA-Z0-9]/g, '_');
 }
@@ -9922,6 +9930,34 @@ function updateNotifikasiBadgeUI() {
   } else {
     badge.textContent = '0';
     badge.style.display = 'none';
+  }
+}
+
+// Tandai SATU notifikasi sudah dibaca/belum dibaca (toggle checklist)
+function toggleStatusBacaNotifikasi(notifId, event) {
+  if (event) event.stopPropagation();
+  try {
+    const logs = ambilNotifikasiLokal();
+    const item = logs.find(x => String(x.id) === String(notifId));
+    if (!item) return;
+
+    const readIds = getGlobalReadNotificationIds();
+    const targetStatus = !item.isRead;
+    item.isRead = targetStatus;
+
+    if (targetStatus) {
+      readIds[String(item.id)] = true;
+    } else {
+      delete readIds[String(item.id)];
+    }
+    localStorage.setItem('ppdb_read_notif_ids', JSON.stringify(readIds));
+    localStorage.setItem('ppdb_notif_logs', JSON.stringify(logs));
+
+    updateNotifikasiBadgeUI();
+    renderLogNotifikasiDashboard();
+    renderPopupNotifikasiList(logs);
+  } catch (e) {
+    console.warn('Gagal mengubah status baca notifikasi:', e);
   }
 }
 
@@ -10057,8 +10093,7 @@ function renderLogNotifikasiDashboard(customLogs) {
         style="background: ${isUnread ? 'rgba(59, 130, 246, 0.08)' : 'var(--surface-2)'}; 
                border: 1.5px solid ${isUnread ? 'rgba(59, 130, 246, 0.4)' : 'var(--border-color)'}; 
                border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; transition: all 0.2s ease; position: relative;">
-        ${isUnread ? `<span style="position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; background: #3b82f6; border-radius: 50%;" title="Belum dibaca"></span>` : ''}
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-right: ${isUnread ? '14px' : '0'};">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
           <strong style="font-size: 13.5px; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
             🔔 ${item.title || 'Pemberitahuan'}
           </strong>
@@ -10066,11 +10101,16 @@ function renderLogNotifikasiDashboard(customLogs) {
         </div>
         <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">${item.body || ''}</div>
         <div style="display: flex; gap: 8px; margin-top: 4px; font-size: 11.5px; align-items: center; justify-content: space-between;">
-          <div style="display: flex; gap: 6px;">
+          <div style="display: flex; gap: 6px; align-items: center;">
             <span style="background: rgba(59, 130, 246, 0.12); color: #2563eb; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Target: ${item.targetRole || 'Semua'}</span>
             ${item.tag ? `<span style="background: rgba(16, 185, 129, 0.12); color: #10b981; padding: 2px 8px; border-radius: 4px;">Tag: ${item.tag}</span>` : ''}
           </div>
-          <span style="font-size: 11px; color: var(--primary-color); font-weight: 600;">Klik untuk buka ➔</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; color: ${isUnread ? '#2563eb' : 'var(--text-muted)'}; font-weight: ${isUnread ? '700' : '500'};">
+              ${isUnread ? '● Belum Dilihat' : '✓ Sudah Dilihat'}
+            </span>
+            <span style="font-size: 11px; color: var(--primary-color); font-weight: 600;">Buka ➔</span>
+          </div>
         </div>
       </div>
     `;
@@ -10098,14 +10138,13 @@ function renderPopupNotifikasiList(logs) {
         style="background: ${isUnread ? 'rgba(59, 130, 246, 0.08)' : 'var(--surface-2)'}; 
                border: 1.5px solid ${isUnread ? 'rgba(59, 130, 246, 0.4)' : 'var(--border-color)'}; 
                border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: all 0.2s ease; position: relative;">
-        ${isUnread ? `<span style="position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; background: #3b82f6; border-radius: 50%;" title="Belum dibaca"></span>` : ''}
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding-right: ${isUnread ? '14px' : '0'};">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
           <strong style="font-size: 13.5px; color: var(--text-color);">🔔 ${item.title || 'Pemberitahuan'}</strong>
           <small style="color: var(--text-muted);">${dateStr}</small>
         </div>
         <p style="margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.4;">${item.body || ''}</p>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
-          <span style="font-size: 11px; color: ${isUnread ? '#2563eb' : 'var(--text-muted)'}; font-weight: ${isUnread ? '700' : '400'};">
+          <span style="font-size: 11px; color: ${isUnread ? '#2563eb' : 'var(--text-muted)'}; font-weight: ${isUnread ? '700' : '500'};">
             ${isUnread ? '● Belum Dilihat' : '✓ Sudah Dilihat'}
           </span>
           <span style="font-size: 11px; color: var(--primary-color); font-weight: 600;">Lihat detail ➔</span>
@@ -10202,6 +10241,7 @@ window.muatLogNotifikasiDashboard = muatLogNotifikasiDashboard;
 window.bukaModalNotifikasiDashboard = bukaModalNotifikasiDashboard;
 window.tutupModalNotifikasiDashboard = tutupModalNotifikasiDashboard;
 window.tandaiSemuaNotifikasiDibaca = tandaiSemuaNotifikasiDibaca;
+window.toggleStatusBacaNotifikasi = toggleStatusBacaNotifikasi;
 window.klikItemNotifikasi = klikItemNotifikasi;
 window.navigasikanKePeruntukanNotifikasi = navigasikanKePeruntukanNotifikasi;
 

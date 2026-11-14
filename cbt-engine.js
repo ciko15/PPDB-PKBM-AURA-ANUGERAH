@@ -508,6 +508,113 @@ function closeModalPilihCBT() {
   if (modal) modal.classList.add('hidden');
 }
 
+// ==================== CBT KHUSUS PESERTA LUAR / TAMU ====================
+function bukaModalUjianLuar(presetPaketId) {
+  const modal = document.getElementById('modal-ujian-luar');
+  if (!modal) return;
+
+  const selectPaket = document.getElementById('ujian-luar-pilih-paket');
+  if (selectPaket) {
+    selectPaket.innerHTML = '<option value="">-- Pilih Paket Soal CBT --</option>';
+    if (typeof cbtBankSoalList !== 'undefined' && cbtBankSoalList.length > 0) {
+      // Tampilkan paket soal yang AKTIF
+      cbtBankSoalList.forEach(pkt => {
+        const isAktif = (pkt.statusUjian || 'AKTIF') === 'AKTIF';
+        if (isAktif) {
+          const opt = document.createElement('option');
+          opt.value = pkt.id;
+          opt.textContent = `[${pkt.jenisUjian || 'Ujian'}] ${pkt.judul} (${pkt.jenjang || 'Umum'})`;
+          if (presetPaketId && String(pkt.id) === String(presetPaketId)) {
+            opt.selected = true;
+          }
+          selectPaket.appendChild(opt);
+        }
+      });
+    }
+  }
+
+  const initialVal = selectPaket ? selectPaket.value : '';
+  updateCbtLuarInfoPaket(initialVal);
+
+  const inputToken = document.getElementById('ujian-luar-token');
+  if (inputToken) inputToken.value = '';
+
+  modal.classList.remove('hidden');
+}
+
+function closeModalUjianLuar() {
+  const modal = document.getElementById('modal-ujian-luar');
+  if (modal) modal.classList.add('hidden');
+}
+
+function updateCbtLuarInfoPaket(paketId) {
+  const elDurasi = document.getElementById('ujian-luar-durasi');
+  const elJumlah = document.getElementById('ujian-luar-jumlah-soal');
+  const elBadge = document.getElementById('ujian-luar-status-badge');
+
+  if (!paketId) {
+    if (elDurasi) elDurasi.textContent = '-';
+    if (elJumlah) elJumlah.textContent = '-';
+    return;
+  }
+
+  const pkt = (typeof cbtBankSoalList !== 'undefined') ? cbtBankSoalList.find(x => x.id === paketId) : null;
+  if (pkt) {
+    if (elDurasi) elDurasi.textContent = `${pkt.durasiMenit || 30} Menit`;
+    if (elJumlah) elJumlah.textContent = `${pkt.soalList ? pkt.soalList.length : 0} Butir Pilihan Ganda`;
+    if (elBadge) {
+      elBadge.textContent = pkt.statusUjian || 'AKTIF';
+      elBadge.style.background = (pkt.statusUjian === 'NON AKTIF') ? '#fee2e2' : '#dcfce7';
+      elBadge.style.color = (pkt.statusUjian === 'NON AKTIF') ? '#b91c1c' : '#15803d';
+    }
+  }
+}
+
+function prosesMulaiCbtLuar() {
+  const namaPeserta = (document.getElementById('ujian-luar-nama')?.value || '').trim();
+  const asalSekolah = (document.getElementById('ujian-luar-sekolah')?.value || '').trim();
+  const paketId = document.getElementById('ujian-luar-pilih-paket')?.value;
+  const inputToken = (document.getElementById('ujian-luar-token')?.value || '').trim().toUpperCase();
+
+  if (!namaPeserta || !asalSekolah || !paketId) {
+    Swal.fire('Perhatian', 'Lengkapi nama peserta, asal sekolah, dan paket ujian terlebih dahulu!', 'warning');
+    return;
+  }
+
+  const pkt = (typeof cbtBankSoalList !== 'undefined') ? cbtBankSoalList.find(x => x.id === paketId) : null;
+  if (!pkt) {
+    Swal.fire('Error', 'Paket soal tidak ditemukan atau belum aktif!', 'error');
+    return;
+  }
+
+  if (pkt.statusUjian && pkt.statusUjian === 'NON AKTIF') {
+    Swal.fire('Ujian Ditutup', 'Paket ujian ini saat ini berstatus <b>NON AKTIF</b> (ditutup oleh Pengawas/Guru).', 'warning');
+    return;
+  }
+
+  const requiredToken = (pkt.token || pkt.kode || 'BEESMART').toUpperCase();
+  if (inputToken !== requiredToken) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Token Ujian Salah!',
+      html: `Token yang Anda masukkan (<b>${inputToken || '-'}</b>) tidak sesuai.<br>Silakan tanyakan token resmi kepada pengawas ujian.`
+    });
+    return;
+  }
+
+  // Siapkan objek student tamu
+  const guestStudent = {
+    id: 'GUEST-' + Date.now(),
+    nama: `${namaPeserta} [${asalSekolah}]`,
+    program: 'Peserta Luar',
+    isExternal: true,
+    asalSekolah: asalSekolah
+  };
+
+  closeModalUjianLuar();
+  launchCbtDariPaketSoal(pkt, guestStudent);
+}
+
 function updateCbtInfoPaket(pilihanId) {
   const elDurasi = document.getElementById('cbt-info-durasi');
   const elJumlah = document.getElementById('cbt-info-jumlah');
@@ -1038,34 +1145,39 @@ function selesaikanDanHitungNilaiCBT(isTimeUp) {
     }
   } catch (e) {}
 
+  const isExternalGuest = session.siswaId && String(session.siswaId).startsWith('GUEST-');
+
   const hasilUjianBaru = {
     id: 'EX-' + Date.now(),
     tanggal: new Date().toLocaleDateString('id-ID'),
     siswaId: session.siswaId,
     namaSiswa: session.namaSiswa,
-    program: session.program,
+    program: isExternalGuest ? 'Peserta Luar' : session.program,
     bukuJudul: session.bukuJudul,
     nilai: skorNilai,
     predikat: predikat,
-    catatan: `Ujian CBT Mandiri (${benar} dari ${total} soal benar). ${isTimeUp ? '[Waktu Selesai Otomatis]' : '[Selesai Tepat Waktu]'}`,
+    catatan: isExternalGuest
+      ? `Ujian Peserta Luar/Tamu (${benar} dari ${total} soal benar). ${isTimeUp ? '[Waktu Habis]' : '[Selesai]'}`
+      : `Ujian CBT Mandiri (${benar} dari ${total} soal benar). ${isTimeUp ? '[Waktu Selesai Otomatis]' : '[Selesai Tepat Waktu]'}`,
     penguji: `${pengujiNama} (${pengujiJabatan})`,
     pengujiJabatan: pengujiJabatan,
     pengujiNip: pengujiNip,
-    pengujiTtd: pengujiTtd
+    pengujiTtd: pengujiTtd,
+    isExternal: isExternalGuest
   };
 
   if (typeof ujianHasilList !== 'undefined') {
     ujianHasilList.unshift(hasilUjianBaru);
   }
-  saveUjianListToStorage();
+  saveUjianListToStorage(hasilUjianBaru);
   renderUjianTable();
 
   // 🔔 Kirim Web Push Notification ke Admin & Siswa terkait status hasil ujian
   if (typeof window.sendAppPushNotification === 'function') {
     // 1. Notifikasi ke Admin: Siswa telah menyelesaikan ujian
     window.sendAppPushNotification({
-      title: 'Ujian Diselesaikan 📝',
-      body: `Siswa ${hasilUjianBaru.namaSiswa} telah menyelesaikan ujian ${hasilUjianBaru.bukuJudul} dengan skor ${skorNilai} (${predikat}).`,
+      title: isExternalGuest ? 'Ujian Peserta Luar Selesai 📝' : 'Ujian Diselesaikan 📝',
+      body: `${hasilUjianBaru.namaSiswa} telah menyelesaikan ujian ${hasilUjianBaru.bukuJudul} dengan skor ${skorNilai} (${predikat}).`,
       url: '/portal',
       targetRole: 'Admin',
       tag: 'exam-finished-admin'
@@ -1092,23 +1204,23 @@ function selesaikanDanHitungNilaiCBT(isTimeUp) {
 
   // Dialog Skor Hasil CBT
   Swal.fire({
-    title: 'Hasil Ujian CBT Mandiri 🎉',
+    title: isExternalGuest ? 'Ujian Selesai! 🎉' : 'Hasil Ujian CBT Mandiri 🎉',
     html: `
       <div style="text-align: center; color: var(--text-color);">
-        <p>Selamat <b>${hasilUjianBaru.namaSiswa}</b>, ujian modul CBT telah berhasil diselesaikan!</p>
+        <p>Terima kasih <b>${hasilUjianBaru.namaSiswa}</b>, ujian Anda telah berhasil terekam ke sistem panitia!</p>
         <div style="margin: 16px auto; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 16px; max-width: 380px;">
           <div style="font-size: 13px; color: #166534;">Mata Uji: <b>${hasilUjianBaru.bukuJudul}</b></div>
           <div style="font-size: 36px; font-weight: 900; color: #15803d; margin: 8px 0;">${skorNilai}</div>
           <div style="font-size: 14px; font-weight: 700; color: #166534;">${predikat} · ${benar}/${total} Soal Benar</div>
           <div style="font-size: 12px; color: #15803d; margin-top: 4px;">${skorNilai >= 70 ? 'STATUS: LULUS KOMPETEN ✅' : 'STATUS: REMEDIAL ⚠️'}</div>
         </div>
-        <p style="font-size: 12px; color: var(--text-muted);">Nilai telah otomatis tersimpan ke rapor dan siap dicetak sertifikat kelulusan modulnya.</p>
+        <p style="font-size: 12px; color: var(--text-muted);">${isExternalGuest ? 'Hasil ujian telah tersimpan dan siap diproses oleh panitia penguji.' : 'Nilai telah otomatis tersimpan ke rapor dan siap dicetak sertifikat kelulusan modulnya.'}</p>
       </div>
     `,
     icon: skorNilai >= 70 ? 'success' : 'info',
     showCancelButton: true,
-    confirmButtonText: '📜 Lihat Sertifikat & Transkrip',
-    cancelButtonText: 'Tutup',
+    confirmButtonText: '📜 Transkrip / Sertifikat',
+    cancelButtonText: 'Keluar / Selesai',
     confirmButtonColor: '#059669'
   }).then(r => {
     if (r.isConfirmed) {
@@ -2358,6 +2470,305 @@ function handleImportExcelSoal(input) {
   reader.readAsArrayBuffer(file);
 }
 
+// ==================== DATABASE BUTIR SOAL MASTER & REUSABLE ITEM BANK ====================
+
+function ambilSemuaButirSoalMaster() {
+  const masterList = [];
+  if (typeof cbtBankSoalList === 'undefined' || !cbtBankSoalList) return masterList;
+
+  cbtBankSoalList.forEach(pkt => {
+    if (pkt.soalList && Array.isArray(pkt.soalList)) {
+      pkt.soalList.forEach((s, idx) => {
+        masterList.push({
+          masterId: `${pkt.id}-S${idx + 1}`,
+          paketId: pkt.id,
+          paketKode: pkt.kode || 'CBT',
+          paketJudul: pkt.judul || 'Paket Ujian',
+          jenjang: s.jenjang || pkt.jenjang || 'Paket C',
+          kelas: s.kelas || pkt.kelas || 'Semua Kelas',
+          mapel: s.mapel || (pkt.judul ? pkt.judul.split(':')[0] : 'Umum'),
+          pertanyaan: s.pertanyaan || '',
+          opsi: s.opsi || [],
+          kunci: s.kunci || 'A',
+          media: s.media || null,
+          pembahasan: s.pembahasan || ''
+        });
+      });
+    }
+  });
+
+  return masterList;
+}
+
+let selectedMasterSoalIds = new Set();
+
+function bukaModalAmbilBankSoalMaster() {
+  selectedMasterSoalIds.clear();
+  const modal = document.getElementById('modal-ambil-bank-soal');
+  if (!modal) return;
+
+  // Samakan filter default dengan paket yang sedang dibuka jika ada
+  if (activePaketSoalId) {
+    const pkt = cbtBankSoalList.find(x => x.id === activePaketSoalId);
+    if (pkt) {
+      const selJenjang = document.getElementById('filter-master-soal-jenjang');
+      const selKelas = document.getElementById('filter-master-soal-kelas');
+      if (selJenjang && pkt.jenjang) selJenjang.value = pkt.jenjang;
+      if (selKelas && pkt.kelas && pkt.kelas !== 'Semua Kelas') selKelas.value = pkt.kelas;
+    }
+  }
+
+  renderMasterSoalSelector();
+  modal.classList.remove('hidden');
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+function closeModalAmbilBankSoalMaster() {
+  const modal = document.getElementById('modal-ambil-bank-soal');
+  if (modal) modal.classList.add('hidden');
+  selectedMasterSoalIds.clear();
+}
+
+function renderMasterSoalSelector() {
+  const container = document.getElementById('container-master-soal-list');
+  const countLabel = document.getElementById('count-master-soal-found');
+  const selectedLabel = document.getElementById('label-terpilih-master-soal');
+  if (!container) return;
+
+  const query = (document.getElementById('filter-master-soal-search')?.value || '').toLowerCase().trim();
+  const jenjang = document.getElementById('filter-master-soal-jenjang')?.value || '';
+  const kelas = document.getElementById('filter-master-soal-kelas')?.value || '';
+
+  const allItems = ambilSemuaButirSoalMaster();
+
+  const filtered = allItems.filter(item => {
+    const matchQuery = !query || item.pertanyaan.toLowerCase().includes(query) || item.paketJudul.toLowerCase().includes(query) || item.mapel.toLowerCase().includes(query);
+    const matchJenjang = !jenjang || item.jenjang === jenjang || item.jenjang === 'Umum';
+    const matchKelas = !kelas || item.kelas === kelas || item.kelas === 'Semua Kelas';
+    return matchQuery && matchJenjang && matchKelas;
+  });
+
+  if (countLabel) countLabel.textContent = filtered.length;
+  if (selectedLabel) selectedLabel.textContent = `${selectedMasterSoalIds.size} soal dipilih`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 13px;">
+        Tidak ada butir soal yang sesuai dengan kriteria filter.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(item => {
+    const isChecked = selectedMasterSoalIds.has(item.masterId);
+    return `
+      <div style="background: var(--surface-color); border: 1.5px solid ${isChecked ? '#0284c7' : 'var(--border-color)'}; border-radius: 8px; padding: 12px; display: flex; gap: 10px; cursor: pointer; transition: all 0.2s;"
+        onclick="togglePilihMasterSoalItem('${item.masterId}')">
+        <input type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation(); togglePilihMasterSoalItem('${item.masterId}')"
+          style="width: 18px; height: 18px; margin-top: 2px; accent-color: #0284c7; cursor: pointer;">
+        <div style="flex: 1;">
+          <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px; flex-wrap: wrap;">
+            <span class="badge" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; font-weight: 700; font-size: 11px;">${item.jenjang}</span>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; font-weight: 700; font-size: 11px;">${item.kelas}</span>
+            <span style="font-size: 11px; color: var(--text-muted);">Asal: ${item.paketKode}</span>
+            <span style="font-size: 11px; color: #16a34a; font-weight: 700; margin-left: auto;">Kunci: ${item.kunci}</span>
+          </div>
+          <div style="font-size: 13px; color: var(--text-color); font-weight: 500; line-height: 1.4;">${item.pertanyaan}</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 4px; margin-top: 8px; font-size: 12px; color: var(--text-muted);">
+            ${item.opsi.map(o => `<div style="${o.k === item.kunci ? 'font-weight: 700; color: #16a34a;' : ''}"><b>${o.k}.</b> ${o.t}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function togglePilihMasterSoalItem(masterId) {
+  if (selectedMasterSoalIds.has(masterId)) {
+    selectedMasterSoalIds.delete(masterId);
+  } else {
+    selectedMasterSoalIds.add(masterId);
+  }
+  renderMasterSoalSelector();
+}
+
+function toggleSelectAllMasterSoal() {
+  const query = (document.getElementById('filter-master-soal-search')?.value || '').toLowerCase().trim();
+  const jenjang = document.getElementById('filter-master-soal-jenjang')?.value || '';
+  const kelas = document.getElementById('filter-master-soal-kelas')?.value || '';
+
+  const allItems = ambilSemuaButirSoalMaster();
+  const filtered = allItems.filter(item => {
+    const matchQuery = !query || item.pertanyaan.toLowerCase().includes(query) || item.paketJudul.toLowerCase().includes(query) || item.mapel.toLowerCase().includes(query);
+    const matchJenjang = !jenjang || item.jenjang === jenjang || item.jenjang === 'Umum';
+    const matchKelas = !kelas || item.kelas === kelas || item.kelas === 'Semua Kelas';
+    return matchQuery && matchJenjang && matchKelas;
+  });
+
+  if (selectedMasterSoalIds.size >= filtered.length) {
+    selectedMasterSoalIds.clear();
+  } else {
+    filtered.forEach(it => selectedMasterSoalIds.add(it.masterId));
+  }
+  renderMasterSoalSelector();
+}
+
+function masukkanSoalTerpilihKePaket() {
+  if (selectedMasterSoalIds.size === 0) {
+    Swal.fire('Perhatian', 'Pilih minimal satu butir soal untuk dimasukkan!', 'warning');
+    return;
+  }
+
+  const allItems = ambilSemuaButirSoalMaster();
+  const itemsToAdd = allItems.filter(x => selectedMasterSoalIds.has(x.masterId));
+
+  const startIndex = editingButirList.length;
+  itemsToAdd.forEach((item, idx) => {
+    editingButirList.push({
+      id: startIndex + idx + 1,
+      jenjang: item.jenjang,
+      kelas: item.kelas,
+      mapel: item.mapel,
+      pertanyaan: item.pertanyaan,
+      opsi: JSON.parse(JSON.stringify(item.opsi)),
+      kunci: item.kunci,
+      media: item.media,
+      pembahasan: item.pembahasan || ''
+    });
+  });
+
+  renderDaftarButirSoalEditor();
+  closeModalAmbilBankSoalMaster();
+
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'success',
+    title: `${itemsToAdd.length} butir soal berhasil ditarik ke paket ujian ini!`,
+    showConfirmButton: false,
+    timer: 2500
+  });
+}
+
+// ==================== GENERATOR BUTIR SOAL DENGAN GEMINI AI ====================
+
+function bukaModalGenerateSoalAI() {
+  const modal = document.getElementById('modal-generate-soal-ai');
+  if (!modal) return;
+
+  // Auto-fill topik materi dan jenjang dari paket yang aktif
+  if (activePaketSoalId) {
+    const pkt = cbtBankSoalList.find(x => x.id === activePaketSoalId);
+    if (pkt) {
+      const topikInput = document.getElementById('ai-soal-topik');
+      const jenjangSelect = document.getElementById('ai-soal-jenjang');
+      const kelasInput = document.getElementById('ai-soal-kelas');
+      const mapelInput = document.getElementById('ai-soal-mapel');
+
+      if (topikInput) topikInput.value = pkt.judul || '';
+      if (jenjangSelect && pkt.jenjang) jenjangSelect.value = pkt.jenjang;
+      if (kelasInput) kelasInput.value = (pkt.kelas && pkt.kelas !== 'Semua Kelas') ? pkt.kelas : 'Kelas X';
+      if (mapelInput) {
+        // Ambil nama mapel dari judul paket atau buku
+        const linkedBook = (typeof bukuList !== 'undefined' && pkt.bukuId) ? bukuList.find(b => String(b.id) === String(pkt.bukuId)) : null;
+        mapelInput.value = linkedBook ? (linkedBook.mapel || linkedBook.kategori || 'Umum') : 'Umum';
+      }
+    }
+  }
+
+  const loadingEl = document.getElementById('ai-soal-loading');
+  if (loadingEl) loadingEl.style.display = 'none';
+
+  modal.classList.remove('hidden');
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+function closeModalGenerateSoalAI() {
+  const modal = document.getElementById('modal-generate-soal-ai');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function prosesGenerateSoalAI() {
+  const topikMateri = (document.getElementById('ai-soal-topik')?.value || '').trim();
+  const jenjang = document.getElementById('ai-soal-jenjang')?.value || 'Paket C';
+  const kelas = (document.getElementById('ai-soal-kelas')?.value || 'Kelas X').trim();
+  const mataPelajaran = (document.getElementById('ai-soal-mapel')?.value || 'Umum').trim();
+  const jumlahSoal = parseInt(document.getElementById('ai-soal-jumlah')?.value, 10) || 5;
+
+  if (!topikMateri) {
+    Swal.fire('Perhatian', 'Tuliskan topik atau bab modul pelajaran terlebih dahulu!', 'warning');
+    return;
+  }
+
+  const loadingEl = document.getElementById('ai-soal-loading');
+  const btnSubmit = document.getElementById('btn-proses-ai-soal');
+  if (loadingEl) loadingEl.style.display = 'block';
+  if (btnSubmit) btnSubmit.disabled = true;
+
+  try {
+    const userApiKey = localStorage.getItem('gemini_api_key') || '';
+    const res = await callAPI({
+      action: "generateSoalAI",
+      topikMateri: topikMateri,
+      jenjang: jenjang,
+      kelas: kelas,
+      mataPelajaran: mataPelajaran,
+      jumlahSoal: jumlahSoal,
+      apiKey: userApiKey
+    });
+
+    if (res && res.status === 'SUCCESS' && Array.isArray(res.data) && res.data.length > 0) {
+      const startIndex = editingButirList.length;
+      res.data.forEach((s, idx) => {
+        editingButirList.push({
+          id: startIndex + idx + 1,
+          jenjang: jenjang,
+          kelas: kelas,
+          mapel: mataPelajaran,
+          pertanyaan: s.pertanyaan || '',
+          opsi: s.opsi || [
+            { k: 'A', t: 'Opsi A' },
+            { k: 'B', t: 'Opsi B' },
+            { k: 'C', t: 'Opsi C' },
+            { k: 'D', t: 'Opsi D' }
+          ],
+          kunci: s.kunci || 'A',
+          pembahasan: s.pembahasan || ''
+        });
+      });
+
+      renderDaftarButirSoalEditor();
+      closeModalGenerateSoalAI();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Soal Berhasil Dibuat AI! ✨',
+        text: `Gemini AI berhasil menyusun ${res.data.length} butir soal pilihan ganda lengkap dengan kunci jawaban dan telah ditambahkan ke paket ujian ini.`,
+        confirmButtonColor: '#7c3aed'
+      });
+    } else {
+      throw new Error(res.message || 'Gagal menghasilkan butir soal dari AI.');
+    }
+  } catch (err) {
+    console.error('AI Generation Error:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Pembuatan Soal Gagal',
+      text: err.message || 'Terjadi gangguan saat menghubungi Gemini AI. Pastikan API Key di Kelola API Gemini telah aktif.'
+    });
+  } finally {
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (btnSubmit) btnSubmit.disabled = false;
+  }
+}
+
 // ==================== RESTORE CBT STATE ON REFRESH / RELOAD / CRASH ====================
 function restoreActiveCbtSessionIfAny() {
   try {
@@ -2432,6 +2843,15 @@ document.addEventListener('DOMContentLoaded', () => {
     renderBankSoalTable();
     // Pulihkan sesi ujian jika reload halaman
     restoreActiveCbtSessionIfAny();
+
+    // Auto-open modal ujian luar jika diakses via query string ?ujian=ID atau ?cbt-luar=1
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetUjian = urlParams.get('ujian') || urlParams.get('soal');
+      if (urlParams.has('cbt-luar') || targetUjian) {
+        bukaModalUjianLuar(targetUjian);
+      }
+    } catch (e) { }
   }, 600);
 });
 
@@ -2899,6 +3319,10 @@ function gambarHalamanKartuUjian(doc, pkt, s) {
 }
 
 // Ekspos fungsi ke global window agar dapat dipanggil dari elemen HTML
+window.bukaModalUjianLuar = bukaModalUjianLuar;
+window.closeModalUjianLuar = closeModalUjianLuar;
+window.updateCbtLuarInfoPaket = updateCbtLuarInfoPaket;
+window.prosesMulaiCbtLuar = prosesMulaiCbtLuar;
 window.bukaModalPilihCetakKartuUjian = bukaModalPilihCetakKartuUjian;
 window.closeModalPilihCetakKartuUjian = closeModalPilihCetakKartuUjian;
 window.onPaketKartuUjianChange = onPaketKartuUjianChange;
@@ -2908,4 +3332,13 @@ window.prosesCetakKartuUjianDariModal = prosesCetakKartuUjianDariModal;
 window.cetakKartuUjianResmi = cetakKartuUjianResmi;
 window.toggleAsalPesertaKartu = toggleAsalPesertaKartu;
 window.simpanPaketSoal = simpanPaketSoalBaru;
+window.bukaModalAmbilBankSoalMaster = bukaModalAmbilBankSoalMaster;
+window.closeModalAmbilBankSoalMaster = closeModalAmbilBankSoalMaster;
+window.renderMasterSoalSelector = renderMasterSoalSelector;
+window.togglePilihMasterSoalItem = togglePilihMasterSoalItem;
+window.toggleSelectAllMasterSoal = toggleSelectAllMasterSoal;
+window.masukkanSoalTerpilihKePaket = masukkanSoalTerpilihKePaket;
+window.bukaModalGenerateSoalAI = bukaModalGenerateSoalAI;
+window.closeModalGenerateSoalAI = closeModalGenerateSoalAI;
+window.prosesGenerateSoalAI = prosesGenerateSoalAI;
 
