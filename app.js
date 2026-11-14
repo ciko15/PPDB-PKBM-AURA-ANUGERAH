@@ -7982,6 +7982,30 @@ function catatLogBelajarBaru(session) {
   });
   saveLogBelajarToStorage();
   renderBelajarLogTable();
+
+  // Otomatis catat ke Rekap Kehadiran Belajar Mandiri hari ini
+  try {
+    const tbodyAbsen = document.getElementById('table-absensi-body');
+    if (tbodyAbsen) {
+      const now = new Date();
+      const tgl = now.toLocaleDateString('id-ID');
+      const waktu = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>#</td>
+        <td>${tgl}</td>
+        <td><strong>${session.namaSiswa || 'Siswa'}</strong></td>
+        <td>${session.jenjang || 'Paket Kesetaraan'}</td>
+        <td>${waktu} WIT</td>
+        <td><span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 6px; font-weight:600; font-size: 0.8rem;">Hadir Belajar Mandiri</span></td>
+        <td>Membaca Modul: ${session.bukuJudul || '-'}</td>
+      `;
+      if (tbodyAbsen.children.length === 1 && tbodyAbsen.children[0].innerText.includes('Belum ada')) {
+        tbodyAbsen.innerHTML = '';
+      }
+      tbodyAbsen.prepend(tr);
+    }
+  } catch (e) {}
 }
 
 function updateLogBelajarSession(session) {
@@ -8318,13 +8342,26 @@ function renderUjianTable(data) {
   const isPetugas = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin' || currentUser.role === 'Guru');
 
   tbody.innerHTML = list.map((u, idx) => {
-    const nilaiColor = u.nilai >= 75 ? '#15803d' : (u.nilai >= 60 ? '#b45309' : '#b91c1c');
-    const badgeBg = u.nilai >= 75 ? '#dcfce7' : (u.nilai >= 60 ? '#fef3c7' : '#fee2e2');
+    // Cari KKM mata pelajaran atau paket ujian terkait (default 70)
+    let kkmBatas = 70;
+    try {
+      if (typeof defaultMapelKurikulum !== 'undefined' && u.program) {
+        const jnj = u.program.includes('Paket A') ? 'Paket A' : (u.program.includes('Paket B') ? 'Paket B' : 'Paket C');
+        const mapelMatch = (defaultMapelKurikulum[jnj] || []).find(m =>
+          (u.bukuJudul || '').toLowerCase().includes(m.nama.toLowerCase()) || m.nama.toLowerCase().includes((u.bukuJudul || '').toLowerCase())
+        );
+        if (mapelMatch && mapelMatch.kkm) kkmBatas = Number(mapelMatch.kkm);
+      }
+    } catch (e) {}
 
-    const isExternal = u.isExternal || u.program === 'Peserta Luar' || (u.namaSiswa && u.namaSiswa.includes('['));
-    const programTag = isExternal
-      ? '<span class="tag" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; font-weight: 700;">Peserta Luar</span>'
-      : `<span class="tag def">${u.program}</span>`;
+    const isTuntas = Number(u.nilai) >= kkmBatas;
+    const nilaiColor = isTuntas ? '#15803d' : '#b91c1c';
+    const badgeBg = isTuntas ? '#dcfce7' : '#fee2e2';
+    const statusKkmBadge = isTuntas
+      ? `<span style="font-size: 10.5px; font-weight: 700; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 2px 7px; border-radius: 99px; display: inline-block; margin-top: 3px;">✅ Tuntas (≥${kkmBatas})</span>`
+      : `<span style="font-size: 10.5px; font-weight: 700; color: #dc2626; background: rgba(239, 68, 68, 0.12); padding: 2px 7px; border-radius: 99px; display: inline-block; margin-top: 3px;">⚠️ Remedial (<${kkmBatas})</span>`;
+
+    const programTag = `<span class="tag def">${u.program || 'Paket C'}</span>`;
 
     return `
       <tr>
@@ -8332,20 +8369,25 @@ function renderUjianTable(data) {
         <td><small>${u.tanggal || '-'}</small></td>
         <td>
           <strong>${u.namaSiswa}</strong>
-          ${u.asalSekolah ? `<br><small style="color: #0284c7; font-weight: 600;">🏫 ${u.asalSekolah}</small>` : ''}
         </td>
         <td>${programTag}</td>
         <td>${u.bukuJudul}</td>
-        <td>
-          <span style="font-weight: 700; font-size: 15px; color: ${nilaiColor}; background: ${badgeBg}; padding: 3px 10px; border-radius: 6px;">
+        <td style="text-align: center;">
+          <span style="font-weight: 800; font-size: 15px; color: ${nilaiColor}; background: ${badgeBg}; padding: 3px 10px; border-radius: 6px; display: inline-block;">
             ${u.nilai}
           </span>
+          <br>${statusKkmBadge}
         </td>
         <td>${u.predikat}</td>
         <td><small style="color: var(--text-muted);">${u.penguji || '-'}</small></td>
-        <td style="text-align: right;">
-          <button class="btn btn-sm btn-outline" onclick="cetakSertifikatUjian('${u.id}')" title="Cetak Transkrip / Sertifikat Kelulusan Modul">
-            📜 Transkrip
+        <td style="text-align: right; white-space: nowrap;">
+          ${(!isTuntas && isPetugas) ? `
+            <button class="btn btn-sm" onclick="izinkanRemedialUjian('${u.id}')" style="background: rgba(245, 158, 11, 0.15); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 11px; padding: 4px 8px; font-weight: 700;" title="Reset & Izinkan Siswa Mengulang Ujian Remedial">
+              🔄 Remedial
+            </button>
+          ` : ''}
+          <button class="btn btn-sm btn-outline" onclick="cetakSertifikatUjian('${u.id}')" title="Cetak Sertifikat Kelulusan Modul">
+            📜 Sertifikat
           </button>
           ${isPetugas ? `
             <button class="btn btn-icon btn-danger-text" onclick="hapusNilaiUjian('${u.id}')" title="Hapus Nilai">
@@ -8361,6 +8403,34 @@ function renderUjianTable(data) {
     window.lucide.createIcons();
   }
 }
+
+function izinkanRemedialUjian(id) {
+  const u = ujianHasilList.find(x => x.id === id);
+  if (!u) return;
+
+  Swal.fire({
+    title: 'Izinkan Ujian Remedial?',
+    html: `Reset hasil ujian <b>${u.bukuJudul}</b> untuk siswa <b>${u.namaSiswa}</b> (Nilai saat ini: <b style="color:#dc2626;">${u.nilai}</b>) agar siswa dapat mengerjakan ulang ujian CBT?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Reset & Izinkan Remedial',
+    confirmButtonColor: '#d97706',
+    cancelButtonText: 'Batal'
+  }).then(res => {
+    if (res.isConfirmed) {
+      ujianHasilList = ujianHasilList.filter(x => x.id !== id);
+      saveUjianListToStorage();
+      renderUjianTable();
+      Swal.fire({
+        icon: 'success',
+        title: 'Akses Remedial Dibuka',
+        text: `${u.namaSiswa} kini dapat mengerjakan ulang paket ujian "${u.bukuJudul}" untuk memperbaiki nilai di atas KKM.`,
+        confirmButtonColor: '#059669'
+      });
+    }
+  });
+}
+window.izinkanRemedialUjian = izinkanRemedialUjian;
 
 function hapusNilaiUjian(id) {
   Swal.fire({

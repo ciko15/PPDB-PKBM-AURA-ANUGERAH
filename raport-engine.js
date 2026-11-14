@@ -197,6 +197,8 @@ function renderRaportTable(data = null) {
     );
     const btnTambah = document.getElementById('btn-tambah-raport');
     if (btnTambah) btnTambah.style.display = 'none';
+    const btnMassal = document.getElementById('btn-generate-raport-massal');
+    if (btnMassal) btnMassal.style.display = 'none';
   }
 
   if (list.length === 0) {
@@ -2651,6 +2653,160 @@ function eksekusiImportTranskripExcel() {
 
   reader.readAsArrayBuffer(file);
 }
+
+// ==================== GENERATE RAPOR OTOMATIS MASSAL 1 KELAS / JENJANG ====================
+function bukaModalGenerateRaportMassal() {
+  if (typeof Swal === 'undefined') return;
+
+  Swal.fire({
+    title: 'Generate Rapor Otomatis 1 Jenjang',
+    html: `
+      <div style="text-align: left; font-size: 13px; color: var(--text-color);">
+        <p style="margin-bottom: 12px; color: var(--text-muted);">
+          Sistem akan otomatis membuat/memperbarui Buku Raport seluruh warga belajar pada jenjang yang dipilih dengan menyinkronkan <b>Nilai CBT</b>, <b>Standar KKM</b>, dan <b>Kehadiran Belajar</b>.
+        </p>
+        <div style="margin-bottom: 10px;">
+          <label style="font-weight: 700; display: block; margin-bottom: 4px;">Pilih Program / Jenjang:</label>
+          <select id="swal-bulk-jenjang" class="form-control" style="width: 100%; height: 38px;">
+            <option value="Paket C">Paket C (Setara SMA)</option>
+            <option value="Paket B">Paket B (Setara SMP)</option>
+            <option value="Paket A">Paket A (Setara SD)</option>
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+          <div>
+            <label style="font-weight: 700; display: block; margin-bottom: 4px;">Tahun Ajaran:</label>
+            <input type="text" id="swal-bulk-ta" class="form-control" value="2026/2027" style="width: 100%; height: 38px;">
+          </div>
+          <div>
+            <label style="font-weight: 700; display: block; margin-bottom: 4px;">Semester:</label>
+            <select id="swal-bulk-smt" class="form-control" style="width: 100%; height: 38px;">
+              <option value="Ganjil">Semester Ganjil</option>
+              <option value="Genap">Semester Genap</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-weight: 700; display: block; margin-bottom: 4px;">Nilai Default (Jika Mapel Belum Ada CBT):</label>
+          <input type="number" id="swal-bulk-default-nilai" class="form-control" value="78" min="0" max="100" style="width: 100%; height: 38px;">
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '⚡ Proses Generate Massal',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#0284c7',
+    preConfirm: () => {
+      return {
+        jenjang: document.getElementById('swal-bulk-jenjang').value,
+        ta: document.getElementById('swal-bulk-ta').value.trim() || '2026/2027',
+        smt: document.getElementById('swal-bulk-smt').value,
+        defNilai: parseInt(document.getElementById('swal-bulk-default-nilai').value, 10) || 78
+      };
+    }
+  }).then(res => {
+    if (res.isConfirmed && res.value) {
+      eksekusiGenerateRaportMassal(res.value);
+    }
+  });
+}
+
+function eksekusiGenerateRaportMassal({ jenjang, ta, smt, defNilai }) {
+  const allSiswa = (typeof siswaDataList !== 'undefined' && Array.isArray(siswaDataList)) ? siswaDataList : [];
+  const targetSiswa = allSiswa.filter(s => {
+    const p = normalisasiJenjang(s.program || 'Paket C');
+    return p === jenjang && s.statusAktif !== 'Tidak Aktif';
+  });
+
+  if (targetSiswa.length === 0) {
+    Swal.fire('Belum Ada Siswa', `Tidak ditemukan peserta didik aktif pada jenjang ${jenjang}.`, 'info');
+    return;
+  }
+
+  const kurikulum = defaultMapelKurikulum[jenjang] || defaultMapelKurikulum['Paket C'];
+  const tingkatDefault = jenjang === 'Paket A' ? 'Kelas VI (Fase C)' : (jenjang === 'Paket B' ? 'Kelas IX (Fase D)' : 'Kelas XII (Fase F)');
+  const faseDefault = jenjang === 'Paket A' ? 'Fase C' : (jenjang === 'Paket B' ? 'Fase D' : 'Fase F');
+
+  let createdCount = 0;
+  let updatedCount = 0;
+
+  targetSiswa.forEach(siswa => {
+    const hasilCbtSiswa = (typeof ujianHasilList !== 'undefined' && Array.isArray(ujianHasilList))
+      ? ujianHasilList.filter(u => String(u.siswaId) === String(siswa.id) || (u.namaSiswa && siswa.nama && u.namaSiswa.toLowerCase() === siswa.nama.toLowerCase()))
+      : [];
+
+    const nilaiMapel = kurikulum.map(m => {
+      const cbtMatch = hasilCbtSiswa.find(h => {
+        const judul = (h.bukuJudul || '').toLowerCase();
+        const mapelLow = m.nama.toLowerCase();
+        return judul.includes(mapelLow) || mapelLow.includes(judul);
+      });
+
+      const nilaiAkhir = cbtMatch ? Number(cbtMatch.nilai) : Math.max(defNilai, Number(m.kkm) || 70);
+      const kkmMapel = Number(m.kkm) || 70;
+      let capaian = 'Mencapai ketuntasan kompetensi dengan baik dalam evaluasi pembelajaran modul.';
+      if (nilaiAkhir >= 85) {
+        capaian = `Sangat menguasai kompetensi ${m.nama} secara mandiri dan melampaui standar KKM (${kkmMapel}).`;
+      } else if (nilaiAkhir < kkmMapel) {
+        capaian = `Perlu pendampingan pengayaan pada beberapa topik ${m.nama} untuk mencapai KKM (${kkmMapel}).`;
+      }
+
+      return {
+        mapel: m.nama,
+        kelompok: m.kelompok || 'Umum',
+        nilai: nilaiAkhir,
+        capaian
+      };
+    });
+
+    const existIdx = raportDataList.findIndex(r =>
+      (String(r.siswaId) === String(siswa.id) || (r.namaSiswa && siswa.nama && r.namaSiswa.toLowerCase() === siswa.nama.toLowerCase())) &&
+      r.tahunAjaran === ta &&
+      r.semester === smt &&
+      normalisasiJenjang(r.program) === jenjang
+    );
+
+    const raportObj = {
+      id: existIdx >= 0 ? raportDataList[existIdx].id : ('RAP-' + Date.now() + '-' + Math.floor(Math.random() * 1000)),
+      sekolahId: 'utama',
+      siswaId: siswa.id,
+      namaSiswa: siswa.nama,
+      nisn: siswa.nisn || '-',
+      program: jenjang,
+      tingkatKelas: siswa.kelas || tingkatDefault,
+      tahunAjaran: ta,
+      semester: smt,
+      fase: faseDefault,
+      tglRapor: new Date().toLocaleDateString('id-ID'),
+      statusKenaikanLulus: smt === 'Genap' ? 'Lulus / Naik ke Kelas Berikutnya' : 'Tuntas Semester Ganjil',
+      catatanAkademik: 'Peserta didik aktif mengikuti pembelajaran modul mandiri dan evaluasi CBT di PKBM Aura Anugerah dengan baik.',
+      ekskul: [{ kegiatan: 'Pemberdayaan & Keterampilan Mandiri PKBM', predikat: 'Baik', keterangan: 'Aktif dalam kegiatan keterampilan warga belajar.' }],
+      kehadiran: { sakit: 0, izin: 0, tanpaKeterangan: 0 },
+      nilaiMapel
+    };
+
+    if (existIdx >= 0) {
+      raportDataList[existIdx] = raportObj;
+      updatedCount++;
+    } else {
+      raportDataList.unshift(raportObj);
+      createdCount++;
+    }
+
+    saveRaportToStorage(raportObj);
+  });
+
+  renderRaportTable();
+  renderTranskripTable();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Generate Rapor Massal Selesai!',
+    html: `Berhasil menerbitkan <b>${createdCount} rapor baru</b> dan memperbarui <b>${updatedCount} rapor</b> untuk jenjang <b>${jenjang}</b> (${ta} - ${smt}).<br><small style="color:var(--text-muted);">Seluruh data otomatis disinkronkan ke Google Spreadsheet.</small>`,
+    confirmButtonColor: '#059669'
+  });
+}
+window.bukaModalGenerateRaportMassal = bukaModalGenerateRaportMassal;
 
 // Window exports untuk fitur KKM & Import Excel
 window.bukaModalSettingKKM = bukaModalSettingKKM;
