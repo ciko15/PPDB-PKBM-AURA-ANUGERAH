@@ -421,8 +421,16 @@ function loadMoreMenuSection() {
 
   const btnUsers = document.getElementById('more-menu-admin-users');
   const btnMitra = document.getElementById('more-menu-admin-mitra');
+  const btnProfilSkh = document.getElementById('more-menu-admin-profil-sekolah');
   const btnApi = document.getElementById('more-menu-admin-api');
   const btnKeamanan = document.getElementById('more-menu-admin-keamanan');
+  if (btnProfilSkh) {
+    if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
+      btnProfilSkh.classList.remove('hidden');
+    } else {
+      btnProfilSkh.classList.add('hidden');
+    }
+  }
   if (btnMitra) {
     if (currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin')) {
       btnMitra.classList.remove('hidden');
@@ -1464,11 +1472,15 @@ function showDashboard() {
     if (mobileSheetValidasi) mobileSheetValidasi.style.display = '';
 
     const menuKeamanan = document.getElementById('menu-pengaturan-keamanan');
+    const menuInfoSekolah = document.getElementById('menu-info-tk');
+    const menuMitraPengaturan = document.getElementById('menu-sekolah-mitra-pengaturan');
     if (currentUser.role === 'Super Admin') {
       if (dropPengaturan) dropPengaturan.classList.remove('hidden');
       menuUsers.classList.remove('hidden');
       if (menuApiKeys) menuApiKeys.classList.remove('hidden');
       if (menuKeamanan) menuKeamanan.classList.remove('hidden');
+      if (menuInfoSekolah) menuInfoSekolah.classList.remove('hidden');
+      if (menuMitraPengaturan) menuMitraPengaturan.classList.remove('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = '';
       if (mobileSheetApi) mobileSheetApi.style.display = '';
     } else if (currentUser.role === 'Admin') {
@@ -1476,6 +1488,8 @@ function showDashboard() {
       menuUsers.classList.remove('hidden');
       if (menuApiKeys) menuApiKeys.classList.add('hidden');
       if (menuKeamanan) menuKeamanan.classList.add('hidden');
+      if (menuInfoSekolah) menuInfoSekolah.classList.remove('hidden');
+      if (menuMitraPengaturan) menuMitraPengaturan.classList.remove('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = '';
       if (mobileSheetApi) mobileSheetApi.style.display = 'none';
     } else {
@@ -1483,6 +1497,8 @@ function showDashboard() {
       menuUsers.classList.add('hidden');
       if (menuApiKeys) menuApiKeys.classList.add('hidden');
       if (menuKeamanan) menuKeamanan.classList.add('hidden');
+      if (menuInfoSekolah) menuInfoSekolah.classList.add('hidden');
+      if (menuMitraPengaturan) menuMitraPengaturan.classList.add('hidden');
       if (mobileSheetUsers) mobileSheetUsers.style.display = 'none';
       if (mobileSheetApi) mobileSheetApi.style.display = 'none';
     }

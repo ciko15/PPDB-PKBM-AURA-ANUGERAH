@@ -993,9 +993,13 @@
                   <i data-lucide="bell-ring" class="menu-icon"></i>
                   <span>Notifikasi HP</span>
                 </li>
-                <li class="nav-item" data-target="section-info-tk" id="menu-info-tk">
+                <li class="nav-item hidden" data-target="section-sekolah-mitra" id="menu-sekolah-mitra-pengaturan">
+                  <i data-lucide="building-2" class="menu-icon"></i>
+                  <span>Data Sekolah Mitra</span>
+                </li>
+                <li class="nav-item hidden" data-target="section-info-tk" id="menu-info-tk">
                   <i data-lucide="map-pin" class="menu-icon"></i>
-                  <span>Informasi</span>
+                  <span>Pengaturan Data Sekolah</span>
                 </li>
               </ul>
             </li>
@@ -2800,6 +2804,23 @@
                 <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
               </div>
 
+              <!-- Menu Khusus Admin / Super Admin: Pengaturan Data Sekolah PKBM -->
+              <div id="more-menu-admin-profil-sekolah" class="card-panel menu-list-row hidden"
+                onclick="openModalEditTK()"
+                style="padding: 14px 16px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); background: var(--surface-color);">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <div
+                    style="width: 38px; height: 38px; border-radius: 10px; background: rgba(2, 132, 199, 0.12); color: #0284c7; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="school" style="width: 20px; height: 20px;"></i>
+                  </div>
+                  <div>
+                    <div style="font-weight: 700; font-size: 14px; color: var(--text-color);">Pengaturan Data Sekolah</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Ubah nama, alamat, kontak, & lokasi resmi PKBM</div>
+                  </div>
+                </div>
+                <i data-lucide="chevron-right" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
+              </div>
+
               <!-- Menu Khusus Admin: Sekolah Mitra / Numpang -->
               <div id="more-menu-admin-mitra" class="card-panel menu-list-row hidden"
                 onclick="switchMobileTab('section-sekolah-mitra')"
@@ -4347,6 +4368,14 @@
             <option value="2026" selected>Tahun 2026</option>
             <option value="2025">Tahun 2025</option>
             <option value="2024">Tahun 2024</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 12.5px; font-weight: 700;">Asal Satuan Pendidikan / Sekolah Penyelenggara</label>
+          <select id="export-transkrip-sekolah" class="form-control" style="height: 38px;">
+            <option value="">Semua Sekolah (PKBM & Mitra Numpang)</option>
+            <option value="utama">Hanya PKBM Aura Anugerah (Utama)</option>
           </select>
         </div>
 

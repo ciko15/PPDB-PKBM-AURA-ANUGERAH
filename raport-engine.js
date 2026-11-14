@@ -718,6 +718,7 @@ function simpanDataRaport() {
   const siswa = (siswaDataList || []).find(s => String(s.id) === String(targetId));
 
   const editId = document.getElementById('raport-edit-id').value;
+  const skhId = document.getElementById('raport-select-sekolah')?.value || 'utama';
   const prog = document.getElementById('raport-input-program').value || (siswa ? siswa.program : 'Paket C');
   const kls = document.getElementById('raport-select-kelas').value;
   const thn = document.getElementById('raport-input-thn').value || '2026/2027';
@@ -750,6 +751,7 @@ function simpanDataRaport() {
   const existingRaport = editId ? raportDataList.find(r => r.id === editId) : null;
   const newRaport = {
     id: editId || ('RAP-' + Date.now()),
+    sekolahId: skhId,
     siswaId: targetId || (existingRaport ? existingRaport.siswaId : '1'),
     namaSiswa: (siswa ? siswa.nama : (existingRaport ? existingRaport.namaSiswa : 'Siswa PKBM')),
     nisn: (siswa ? siswa.nisn : (existingRaport ? existingRaport.nisn : '-')),
@@ -792,6 +794,8 @@ function editDataRaport(id) {
   bukaModalInputRaport();
   document.getElementById('modal-raport-title').textContent = 'Edit Data Buku Raport';
   document.getElementById('raport-edit-id').value = r.id;
+  const selectSekolah = document.getElementById('raport-select-sekolah');
+  if (selectSekolah) selectSekolah.value = r.sekolahId || 'utama';
   document.getElementById('raport-select-siswa').value = r.siswaId || '';
   document.getElementById('raport-input-program').value = r.program || 'Paket C';
   document.getElementById('raport-select-kelas').value = r.tingkatKelas || 'Kelas X (Fase E)';
@@ -1432,7 +1436,7 @@ function filterTranskripTable() {
 // ==================== GENERATOR TRANSKRIP NILAI RESMI PDF ====================
 // Berstandar Blanko Ijazah & Transkrip Kumulatif Kemendikbudristek
 function cetakTranskripNilaiResmi(siswaId, options = {}) {
-  const { docInstance = null, isBatch = false, previewOnly = true } = options;
+  const { docInstance = null, isBatch = false, previewOnly = true, forcedSekolahId = null } = options;
   const s = (siswaDataList || []).find(x => String(x.id) === String(siswaId)) || 
             (raportDataList || []).find(r => String(r.siswaId) === String(siswaId)) || {
               nama: 'Siswa PKBM',
@@ -1454,6 +1458,35 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   const pageHeight = 297;
   const marginX = 14;
 
+  // Resolusi identitas sekolah (Bisa PKBM Aura Anugerah atau Sekolah Mitra)
+  const rapSiswa = (raportDataList || []).find(r => String(r.siswaId) === String(siswaId) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
+  const targetSekolahId = forcedSekolahId || s.sekolahId || (rapSiswa ? rapSiswa.sekolahId : 'utama') || 'utama';
+
+  let namaSekolahKop = 'PKBM AURA ANUGERAH SENTANI';
+  let namaLembagaBiodata = 'PKBM Aura Anugerah Sentani';
+  let npsnKop = '69910495';
+  let izinKop = '421.1/043/DPMPTSP/2021';
+  let alamatKop = 'Sentani, Jayapura, Papua (99352)';
+  let kepalaNama = 'ANTHONIUS, S.Pd';
+  let kepalaNip = 'NIY. 201804.001';
+  let ttdJabatan = 'Ketua Penyelenggara PKBM Aura Anugerah,';
+  let logoBase64 = dapatkanLogoSekolahBase64();
+
+  if (targetSekolahId && targetSekolahId !== 'utama' && Array.isArray(sekolahMitraList)) {
+    const sm = sekolahMitraList.find(m => String(m.id) === String(targetSekolahId));
+    if (sm) {
+      namaSekolahKop = (sm.namaSekolah || namaSekolahKop).toUpperCase();
+      namaLembagaBiodata = sm.namaSekolah || namaLembagaBiodata;
+      npsnKop = sm.npsn || npsnKop;
+      izinKop = sm.catatanIzin || sm.skIzin || izinKop;
+      alamatKop = `${sm.alamat || ''}, ${sm.kabupaten || 'Jayapura'}, ${sm.provinsi || 'Papua'}`.trim().replace(/^,\s*/, '');
+      kepalaNama = sm.namaKepala || kepalaNama;
+      kepalaNip = sm.nipNiy ? `NIP/NIY. ${sm.nipNiy}` : '-';
+      ttdJabatan = `Ketua / Pimpinan ${sm.namaSekolah},`;
+      if (sm.logoBase64) logoBase64 = sm.logoBase64;
+    }
+  }
+
   // Bingkai / Border Keaslian Dokumen Resmi
   doc.setDrawColor(2, 132, 199);
   doc.setLineWidth(0.6);
@@ -1463,7 +1496,6 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   doc.rect(9.5, 9.5, pageWidth - 19, pageHeight - 19);
 
   // KOP RESMI DENGAN LOGO SEKOLAH
-  const logoBase64 = dapatkanLogoSekolahBase64();
   if (logoBase64) {
     try {
       doc.addImage(logoBase64, 'PNG', marginX + 2, 13, 23, 23);
@@ -1478,15 +1510,15 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   doc.setTextColor(30, 41, 59);
   doc.text('PEMERINTAH KABUPATEN JAYAPURA', kopCenterX, 17, { align: 'center' });
   doc.text('DINAS PENDIDIKAN DAN KEBUDAYAAN', kopCenterX, 22, { align: 'center' });
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setTextColor(2, 132, 199);
-  doc.text('PKBM AURA ANUGERAH SENTANI', kopCenterX, 28, { align: 'center' });
+  doc.text(namaSekolahKop, kopCenterX, 28, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
-  doc.text('Penyelenggara Pendidikan Kesetaraan Terakreditasi Nasional | NPSN: 69910495', kopCenterX, 32.5, { align: 'center' });
-  doc.text('SK Izin Operasional: 421.1/043/DPMPTSP/2021 | Sentani, Jayapura, Papua (99352)', kopCenterX, 36.5, { align: 'center' });
+  doc.text(`Penyelenggara Pendidikan Kesetaraan Terakreditasi Nasional | NPSN: ${npsnKop}`, kopCenterX, 32.5, { align: 'center' });
+  doc.text(`SK Izin Operasional: ${izinKop} | ${alamatKop}`, kopCenterX, 36.5, { align: 'center' });
 
   // Garis Pembatas Kop
   doc.setDrawColor(2, 132, 199);
@@ -1516,7 +1548,7 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
     ['Nomor Induk Siswa Nasional (NISN)', s.nisn || '-'],
     ['Nomor Induk Kependudukan (NIK)', s.nik || '-'],
     ['Program Pendidikan Kesetaraan', s.program || 'Paket C (Setara SMA)'],
-    ['Satuan Pendidikan Penyelenggara', 'PKBM Aura Anugerah Sentani']
+    ['Satuan Pendidikan Penyelenggara', namaLembagaBiodata]
   ];
 
   bioFields.forEach((b, i) => {
@@ -1696,21 +1728,21 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   doc.setFontSize(8);
   doc.setTextColor(30, 41, 59);
   doc.text(`Sentani, ${new Date().toLocaleDateString('id-ID')}`, kananX, ttdY);
-  doc.text('Ketua Penyelenggara PKBM Aura Anugerah,', kananX, ttdY + 4);
+  doc.text(ttdJabatan, kananX, ttdY + 4);
   
   doc.line(kananX, ttdY + 24, kananX + 52, ttdY + 24);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
-  doc.text('ANTHONIUS, S.Pd', kananX, ttdY + 28);
+  doc.text(kepalaNama, kananX, ttdY + 28);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.text('NIY. 201804.001', kananX, ttdY + 32);
+  doc.text(kepalaNip, kananX, ttdY + 32);
 
   // Watermark Footer
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184);
-  doc.text(`Transkrip nilai resmi diterbitkan secara sah oleh Lembaga Penyelenggara PKBM Aura Anugerah - Dicetak pada ${new Date().toLocaleString('id-ID')}`, marginX + 2, pageHeight - 12);
+  doc.text(`Transkrip nilai resmi diterbitkan secara sah oleh Lembaga Penyelenggara ${namaLembagaBiodata} - Dicetak pada ${new Date().toLocaleString('id-ID')}`, marginX + 2, pageHeight - 12);
 
   if (!isBatch) {
     const namaFile = `Transkrip_Nilai_${(s.nama || 'Siswa').replace(/\s+/g, '_')}_${(s.nisn || 'Resmi')}.pdf`;
@@ -1818,6 +1850,18 @@ function prosesExportGlobalRaport() {
 function bukaModalExportGlobalTranskrip() {
   const modal = document.getElementById('modal-export-global-transkrip');
   if (modal) {
+    // Isi dropdown sekolah mitra
+    const selectSekolah = document.getElementById('export-transkrip-sekolah');
+    if (selectSekolah) {
+      selectSekolah.innerHTML = '<option value="">Semua Sekolah (PKBM & Mitra Numpang)</option><option value="utama">Hanya PKBM Aura Anugerah (Utama)</option>';
+      (sekolahMitraList || []).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.namaSekolah} (${m.npsn || 'Mitra'})`;
+        selectSekolah.appendChild(opt);
+      });
+    }
+
     modal.classList.remove('hidden');
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
       window.lucide.createIcons();
@@ -1833,16 +1877,26 @@ function closeModalExportGlobalTranskrip() {
 function prosesExportGlobalTranskrip() {
   const prog = document.getElementById('export-transkrip-program')?.value || '';
   const thn = document.getElementById('export-transkrip-tahun')?.value || new Date().getFullYear();
+  const skh = document.getElementById('export-transkrip-sekolah')?.value || '';
   const status = document.getElementById('export-transkrip-status')?.value || '';
 
   const list = (siswaDataList || []).filter(s => {
     const matchProg = !prog || (s.program && s.program.includes(prog));
     const matchStatus = !status || (status === 'aktif' ? (s.statusValidasi === 'diterima' || s.statusValidasi === 'sesuai' || !s.statusValidasi) : true);
-    return matchProg && matchStatus;
+    
+    // Filter sekolah: cek dari raport tersimpan atau properti siswa
+    let matchSkh = true;
+    if (skh) {
+      const rapSiswa = (raportDataList || []).find(r => String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
+      const siswaSkhId = s.sekolahId || (rapSiswa ? rapSiswa.sekolahId : 'utama') || 'utama';
+      matchSkh = (skh === 'utama') ? (siswaSkhId === 'utama' || !siswaSkhId) : (String(siswaSkhId) === String(skh));
+    }
+
+    return matchProg && matchStatus && matchSkh;
   });
 
   if (list.length === 0) {
-    Swal.fire('Data Kosong', 'Tidak ada siswa yang sesuai dengan filter program kelulusan yang dipilih.', 'warning');
+    Swal.fire('Data Kosong', 'Tidak ada siswa yang sesuai dengan filter kriteria program dan sekolah yang dipilih.', 'warning');
     return;
   }
 
@@ -1866,11 +1920,16 @@ function prosesExportGlobalTranskrip() {
         if (index > 0) {
           globalDoc.addPage('a4', 'portrait');
         }
-        cetakTranskripNilaiResmi(siswa.id, { docInstance: globalDoc, isBatch: true });
+        cetakTranskripNilaiResmi(siswa.id, { 
+          docInstance: globalDoc, 
+          isBatch: true,
+          forcedSekolahId: skh && skh !== 'utama' ? skh : null 
+        });
       });
 
       const progTag = prog ? prog.replace(/\s+/g, '_') : 'Semua_Program';
-      const namaFileGlobal = `Transkrip_Nilai_Global_${progTag}_${thn}.pdf`;
+      const skhTag = skh ? (skh === 'utama' ? '_PKBM' : '_Mitra') : '';
+      const namaFileGlobal = `Transkrip_Nilai_Global_${progTag}${skhTag}_${thn}.pdf`;
       Swal.close();
       tampilkanPratinjauPDF(globalDoc, `Transkrip Nilai Global (${list.length} Siswa · ${prog || 'Semua Program'} ${thn})`, namaFileGlobal);
     } catch (err) {
