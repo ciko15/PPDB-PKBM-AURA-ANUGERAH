@@ -5441,9 +5441,150 @@ function renderPortalSiswaData(siswa) {
     activeUserAvatar.src = siswa.foto;
   }
 
-  // Muat riwayat bacaan siswa di portal
+  // Muat riwayat bacaan & Alur Belajar Siswa (My Learning Journey) di portal
   loadRiwayatBacaData();
+  renderStudentLearningJourney(siswa);
 }
+
+function normalizeJenjangKeyPortal(prog) {
+  const p = String(prog || '').toLowerCase();
+  if (p.includes('paket a')) return 'Paket A';
+  if (p.includes('paket b')) return 'Paket B';
+  if (p.includes('paket c')) return 'Paket C';
+  if (p.includes('tk') || p.includes('paud')) return 'TK';
+  return 'Paket C';
+}
+
+function bukaUjianCBTLangsungDariPortal(paketVal, namaSiswa) {
+  bukaModalPilihUjianCBT(null, namaSiswa);
+  const selectBuku = document.getElementById('cbt-pilih-buku');
+  if (selectBuku && paketVal) {
+    selectBuku.value = paketVal;
+    if (typeof updateCbtInfoPaket === 'function') updateCbtInfoPaket(paketVal);
+    if (typeof makeSearchableSelect === 'function') {
+      makeSearchableSelect(selectBuku, { searchPlaceholder: 'Cari paket ujian / modul CBT...' });
+    }
+  }
+}
+
+function renderStudentLearningJourney(siswaParam = null) {
+  const s = siswaParam || (currentUser && currentUser.dataSiswa) || null;
+  const container = document.getElementById('portal-siswa-cbt-journey-list');
+  if (!container || !s) return;
+
+  const jenjangKey = normalizeJenjangKeyPortal(s.program);
+  const namaSiswaLower = String(s.nama || '').toLowerCase().trim();
+
+  // 1. Hitung Modul Bacaan untuk jenjang siswa
+  const modulJenjang = (typeof bukuList !== 'undefined' && Array.isArray(bukuList))
+    ? bukuList.filter(b => normalizeJenjangKeyPortal(b.jenjang) === jenjangKey)
+    : [];
+  const elStatModul = document.getElementById('journey-stat-modul');
+  if (elStatModul) elStatModul.textContent = `${modulJenjang.length} Modul (${jenjangKey})`;
+
+  // 2. Kumpulkan Paket Ujian CBT untuk jenjang siswa
+  const paketJenjang = (typeof cbtBankSoalList !== 'undefined' && Array.isArray(cbtBankSoalList))
+    ? cbtBankSoalList.filter(p => normalizeJenjangKeyPortal(p.jenjang) === jenjangKey && p.statusUjian !== 'NON AKTIF')
+    : [];
+
+  // 3. Kumpulkan hasil ujian siswa ini
+  const hasilSiswa = (typeof ujianHasilList !== 'undefined' && Array.isArray(ujianHasilList))
+    ? ujianHasilList.filter(u => String(u.siswaId) === String(s.id) || String(u.namaSiswa || '').toLowerCase().trim() === namaSiswaLower)
+    : [];
+
+  // Hitung rata-rata nilai siswa
+  const elStatRata = document.getElementById('journey-stat-rata');
+  if (elStatRata) {
+    if (hasilSiswa.length > 0) {
+      const avg = Math.round(hasilSiswa.reduce((acc, cur) => acc + (Number(cur.nilai) || 0), 0) / hasilSiswa.length);
+      elStatRata.textContent = `${avg} (${hasilSiswa.length} Ujian)`;
+    } else {
+      elStatRata.textContent = 'Belum Ada Nilai';
+    }
+  }
+
+  let tuntasCount = 0;
+
+  if (paketJenjang.length === 0) {
+    const elStatUjian = document.getElementById('journey-stat-ujian');
+    if (elStatUjian) elStatUjian.textContent = `${hasilSiswa.length} Selesai`;
+    container.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px; background: var(--surface-2); border-radius: 10px; border: 1px dashed var(--border-color);">
+        Belum ada jadwal paket ujian CBT aktif untuk <b>${jenjangKey}</b> saat ini. Silakan pelajari modul di Ruang Belajar Mandiri.
+      </div>
+    `;
+    return;
+  }
+
+  const cardsHtml = paketJenjang.map(pkt => {
+    const kkm = Number(pkt.kkm) || 70;
+    const judulLower = String(pkt.judul || '').toLowerCase();
+    // Cari apakah siswa sudah mengerjakan paket ini
+    const matchHasil = hasilSiswa.find(u =>
+      String(u.paketId) === String(pkt.id) ||
+      String(u.bukuId) === String(pkt.id) ||
+      String(u.bukuJudul || '').toLowerCase() === judulLower
+    );
+
+    let badgeHtml = `<span style="background: rgba(100,116,139,0.12); color: var(--text-muted); padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;">⏳ Belum Dikerjakan</span>`;
+    let borderTopColor = '#64748b';
+    let nilaiInfoHtml = `<div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">Standar KKM: <b>${kkm}</b> · Durasi: <b>${pkt.durasiMenit || 30} mnt</b></div>`;
+    let actionBtnHtml = `
+      <button class="btn btn-sm btn-primary" onclick="bukaUjianCBTLangsungDariPortal('PAKET:${pkt.id}', '${(s.nama || '').replace(/'/g, "\\'")}')" style="width: 100%; margin-top: 10px; font-size: 12px; justify-content: center;">
+        🚀 Kerjakan Ujian Sekarang
+      </button>
+    `;
+
+    if (matchHasil) {
+      const nilai = Number(matchHasil.nilai) || 0;
+      const isTuntas = nilai >= kkm;
+      if (isTuntas) {
+        tuntasCount++;
+        borderTopColor = '#10b981';
+        badgeHtml = `<span style="background: #dcfce7; color: #166534; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;">✅ Tuntas KKM (${nilai})</span>`;
+        nilaiInfoHtml = `<div style="font-size: 12px; color: #059669; font-weight: 600; margin-top: 6px;">Nilai Anda: <b>${nilai}</b> (KKM: ${kkm}) · Predikat: ${matchHasil.predikat || 'Baik'}</div>`;
+        actionBtnHtml = `
+          <button class="btn btn-sm btn-outline" onclick="cetakSertifikatUjian('${matchHasil.id}')" style="width: 100%; margin-top: 10px; font-size: 12px; justify-content: center;">
+            🏅 Lihat Sertifikat Nilai
+          </button>
+        `;
+      } else {
+        borderTopColor = '#f59e0b';
+        badgeHtml = `<span style="background: #fef3c7; color: #b45309; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 700;">⚠️ Remedial (${nilai} < ${kkm})</span>`;
+        nilaiInfoHtml = `<div style="font-size: 12px; color: #d97706; font-weight: 600; margin-top: 6px;">Nilai Anda: <b>${nilai}</b> (Di bawah KKM ${kkm})</div>`;
+        actionBtnHtml = `
+          <button class="btn btn-sm btn-outline" onclick="bukaUjianCBTLangsungDariPortal('PAKET:${pkt.id}', '${(s.nama || '').replace(/'/g, "\\'")}')" style="width: 100%; margin-top: 10px; font-size: 12px; justify-content: center; border-color: #f59e0b; color: #d97706;">
+            🔄 Ujian Ulang / Perbaikan
+          </button>
+        `;
+      }
+    }
+
+    return `
+      <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-top: 3px solid ${borderTopColor}; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 6px;">
+            <span style="font-size: 10.5px; font-weight: 700; color: var(--primary-color); text-transform: uppercase;">${pkt.jenisUjian || 'Evaluasi CBT'} · ${pkt.kelas || 'Semua Kelas'}</span>
+            ${badgeHtml}
+          </div>
+          <div style="font-weight: 700; font-size: 13.5px; color: var(--text-color); line-height: 1.35;">${pkt.judul}</div>
+          ${nilaiInfoHtml}
+        </div>
+        ${actionBtnHtml}
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = cardsHtml;
+
+  const elStatUjian = document.getElementById('journey-stat-ujian');
+  if (elStatUjian) {
+    elStatUjian.textContent = `${tuntasCount} / ${paketJenjang.length} Tuntas KKM`;
+  }
+}
+
+window.renderStudentLearningJourney = renderStudentLearningJourney;
+window.bukaUjianCBTLangsungDariPortal = bukaUjianCBTLangsungDariPortal;
 
 function cetakKartuPendaftaranSiswa() {
   if (!currentUser || currentUser.role !== 'Siswa') {
@@ -8294,6 +8435,7 @@ async function loadUjianData() {
     if (saved) ujianHasilList = JSON.parse(saved);
   } catch (e) { }
   renderUjianTable();
+  if (typeof renderStudentLearningJourney === 'function') renderStudentLearningJourney();
 
   try {
     const cloudHasil = await callAPI({ action: "getHasilUjian" });
@@ -8301,6 +8443,7 @@ async function loadUjianData() {
       ujianHasilList = cloudHasil;
       try { localStorage.setItem('ppdb_ujian_list', JSON.stringify(ujianHasilList)); } catch (e) { }
       renderUjianTable();
+      if (typeof renderStudentLearningJourney === 'function') renderStudentLearningJourney();
     }
   } catch (err) {
     console.warn("Gagal ambil hasil ujian dari cloud database:", err.message);

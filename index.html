@@ -2023,83 +2023,127 @@
           <div class="list-header"
             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
             <div>
-              <h2 style="color: var(--primary-color); margin-bottom: 4px;">🎓 Portal Peserta Didik</h2>
-              <p style="color: var(--text-muted); font-size: 0.9rem;">Selamat datang di portal akademik PKBM Aura
+              <h2 style="color: var(--primary-color); margin-bottom: 4px;">🎓 Portal Peserta Didik & Alur Belajar</h2>
+              <p style="color: var(--text-muted); font-size: 0.9rem;">Selamat datang di portal akademik mandiri PKBM Aura
                 Anugerah.</p>
             </div>
-            <button class="btn btn-outline" onclick="cetakKartuPendaftaranSiswa()"
-              style="display: inline-flex; align-items: center; gap: 6px;">
-              🖨️ Cetak Kartu Siswa
-            </button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="switchNavigation('section-belajar-mandiri')"
+                style="display: inline-flex; align-items: center; gap: 6px;">
+                <i data-lucide="book-open" style="width: 16px; height: 16px;"></i> Ruang Belajar
+              </button>
+              <button class="btn btn-outline" onclick="cetakKartuPendaftaranSiswa()"
+                style="display: inline-flex; align-items: center; gap: 6px;">
+                🖨️ Cetak Kartu Siswa
+              </button>
+            </div>
           </div>
 
           <div
-            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
             <!-- Kartu Status Berkas -->
             <div
-              style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid var(--primary-color);">
+              style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid var(--primary-color);">
               <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Status Verifikasi Berkas
               </div>
               <div id="siswa-portal-status-badge"
-                style="margin-top: 10px; font-size: 1.15rem; font-weight: 700; color: #059669;">
+                style="margin-top: 8px; font-size: 1.1rem; font-weight: 700; color: #059669;">
                 ✅ Terverifikasi & Diterima
               </div>
-              <p id="siswa-portal-catatan" style="margin-top: 8px; font-size: 0.85rem; color: #475569;">
+              <p id="siswa-portal-catatan" style="margin-top: 6px; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0;">
                 Semua dokumen pendaftaran telah sesuai dengan arsip kependudukan.
               </p>
             </div>
 
             <!-- Kartu Jenjang Paket -->
             <div
-              style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid #0284c7;">
+              style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid #0284c7;">
               <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Program Pendidikan</div>
               <div id="siswa-portal-program"
-                style="margin-top: 10px; font-size: 1.25rem; font-weight: 700; color: #0284c7;">
+                style="margin-top: 8px; font-size: 1.2rem; font-weight: 700; color: #0284c7;">
                 Paket C (Setara SMA)
               </div>
-              <div style="margin-top: 6px; font-size: 0.85rem; color: #64748b;">
+              <div style="margin-top: 6px; font-size: 0.82rem; color: var(--text-muted);">
                 Tahun Ajaran 2026/2027 · Sentani Jayapura
               </div>
             </div>
 
             <!-- Kartu Administrasi -->
             <div
-              style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid #10b981;">
+              style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: var(--shadow-sm); border-top: 4px solid #10b981;">
               <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Status Administrasi / SPP
               </div>
               <div id="siswa-portal-spp-badge"
-                style="margin-top: 10px; font-size: 1.15rem; font-weight: 700; color: #10b981;">
+                style="margin-top: 8px; font-size: 1.1rem; font-weight: 700; color: #10b981;">
                 Lunas Bulan Ini
               </div>
-              <div style="margin-top: 6px; font-size: 0.85rem; color: #64748b;">
-                Tidak ada tunggakan iuran
+              <div style="margin-top: 6px; font-size: 0.82rem; color: var(--text-muted);">
+                Tidak ada tunggakan iuran akademik
               </div>
             </div>
           </div>
 
-          <!-- Rincian Biodata Terdaftar -->
-          <div style="background: #f8fafc; border-radius: 12px; padding: 1.5rem; border: 1px solid #e2e8f0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
-              <h3 style="font-size: 1.05rem; margin: 0; color: #1e293b;">📋 Informasi Biodata Terdaftar</h3>
-              <button class="btn btn-sm btn-primary" onclick="showEditProfilSiswaModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 6px 12px;">
-                <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Sesuaikan Profil & Password
-              </button>
+          <!-- ==================== ALUR BELAJAR & EVALUASI SAYA (MY LEARNING JOURNEY) ==================== -->
+          <div style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                  <i data-lucide="compass" style="width: 20px; height: 20px;"></i>
+                </span>
+                <div>
+                  <h3 style="font-size: 1.05rem; margin: 0; color: var(--text-color); font-weight: 800;">🚀 Alur Belajar & Evaluasi Saya (My Learning Journey)</h3>
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">Pantau ketuntasan modul bacaan, daftar ujian CBT wajib, dan rata-rata capaian KKM Anda</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-sm btn-outline" onclick="switchNavigation('section-ujian-modul')" style="font-size: 12px; display: inline-flex; align-items: center; gap: 5px;">
+                  <i data-lucide="monitor-check" style="width: 14px; height: 14px;"></i> Riwayat Nilai CBT
+                </button>
+                <button class="btn btn-sm btn-outline" onclick="switchNavigation('section-raport-akademik')" style="font-size: 12px; display: inline-flex; align-items: center; gap: 5px;">
+                  <i data-lucide="award" style="width: 14px; height: 14px;"></i> E-Raport & Transkrip
+                </button>
+              </div>
             </div>
-            <div
-              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; font-size: 0.9rem;">
-              <div><strong>Nama Lengkap:</strong> <span id="siswa-portal-nama">-</span></div>
-              <div><strong>NIK:</strong> <span id="siswa-portal-nik">-</span></div>
-              <div><strong>NISN:</strong> <span id="siswa-portal-nisn">-</span></div>
-              <div><strong>Tempat, Tgl Lahir:</strong> <span id="siswa-portal-ttl">-</span></div>
-              <div><strong>No. Handphone:</strong> <span id="siswa-portal-nohp">-</span></div>
-              <div><strong>Nama Ibu Kandung:</strong> <span id="siswa-portal-ibu">-</span></div>
-              <div style="grid-column: 1 / -1;"><strong>Alamat Domisili:</strong> <span id="siswa-portal-alamat">-</span></div>
+
+            <!-- 3 Metrik Ringkasan Progres Siswa -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 1.25rem;">
+              <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); color: #2563eb; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">📚</div>
+                <div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 600;">Modul Jenjang Saya</div>
+                  <div id="journey-stat-modul" style="font-size: 1.1rem; font-weight: 800; color: var(--text-color);">0 Modul</div>
+                </div>
+              </div>
+              <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); color: #059669; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">📝</div>
+                <div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 600;">Ketuntasan Ujian CBT</div>
+                  <div id="journey-stat-ujian" style="font-size: 1.1rem; font-weight: 800; color: #059669;">0 / 0 Tuntas</div>
+                </div>
+              </div>
+              <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); color: #d97706; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">⭐</div>
+                <div>
+                  <div style="font-size: 11.5px; color: var(--text-muted); font-weight: 600;">Rata-rata Nilai Saya</div>
+                  <div id="journey-stat-rata" style="font-size: 1.1rem; font-weight: 800; color: var(--text-color);">-</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Daftar Paket Ujian CBT Jenjang Siswa -->
+            <div style="margin-bottom: 8px; font-size: 12.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">
+              📋 Daftar Evaluasi & Ujian CBT Jenjang Anda
+            </div>
+            <div id="portal-siswa-cbt-journey-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
+              <div style="grid-column: 1 / -1; text-align: center; padding: 18px; color: var(--text-muted); font-size: 13px;">
+                Memuat daftar ujian jenjang Anda...
+              </div>
             </div>
           </div>
 
           <!-- Riwayat Bacaan Siswa (Widget Lanjutkan Membaca di Portal Siswa) -->
           <div
-            style="margin-top: 1.5rem; background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm);">
+            style="margin-bottom: 1.5rem; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm);">
             <div
               style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -2107,7 +2151,7 @@
                   style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: rgba(30, 64, 175, 0.1); color: var(--primary-color);">
                   <i data-lucide="book-marked" style="width: 17px; height: 17px;"></i>
                 </span>
-                <h3 style="font-size: 1.05rem; margin: 0; color: #1e293b;">📖 Riwayat / Modul Sedang Dipelajari</h3>
+                <h3 style="font-size: 1.05rem; margin: 0; color: var(--text-color);">📖 Riwayat / Modul Sedang Dipelajari</h3>
               </div>
               <button class="btn btn-sm btn-outline" onclick="loadRiwayatBacaData()"
                 style="font-size: 12px; padding: 4px 10px;">
@@ -2120,6 +2164,26 @@
                 style="grid-column: 1 / -1; text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px;">
                 Memuat riwayat bacaan...
               </div>
+            </div>
+          </div>
+
+          <!-- Rincian Biodata Terdaftar -->
+          <div style="background: var(--surface-2); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px;">
+              <h3 style="font-size: 1.05rem; margin: 0; color: var(--text-color);">📋 Informasi Biodata Terdaftar</h3>
+              <button class="btn btn-sm btn-primary" onclick="showEditProfilSiswaModal()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 6px 12px;">
+                <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Sesuaikan Profil & Password
+              </button>
+            </div>
+            <div
+              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; font-size: 0.9rem; color: var(--text-color);">
+              <div><strong>Nama Lengkap:</strong> <span id="siswa-portal-nama">-</span></div>
+              <div><strong>NIK:</strong> <span id="siswa-portal-nik">-</span></div>
+              <div><strong>NISN:</strong> <span id="siswa-portal-nisn">-</span></div>
+              <div><strong>Tempat, Tgl Lahir:</strong> <span id="siswa-portal-ttl">-</span></div>
+              <div><strong>No. Handphone:</strong> <span id="siswa-portal-nohp">-</span></div>
+              <div><strong>Nama Ibu Kandung:</strong> <span id="siswa-portal-ibu">-</span></div>
+              <div style="grid-column: 1 / -1;"><strong>Alamat Domisili:</strong> <span id="siswa-portal-alamat">-</span></div>
             </div>
           </div>
         </div>

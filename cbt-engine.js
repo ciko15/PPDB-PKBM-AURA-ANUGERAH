@@ -1078,6 +1078,7 @@ function selesaikanDanHitungNilaiCBT(isTimeUp) {
   }
   saveUjianListToStorage(hasilUjianBaru);
   renderUjianTable();
+  if (typeof renderStudentLearningJourney === 'function') renderStudentLearningJourney();
 
   // 🔔 Kirim Web Push Notification ke Admin & Siswa terkait status hasil ujian
   if (typeof window.sendAppPushNotification === 'function') {
