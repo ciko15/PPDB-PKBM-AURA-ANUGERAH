@@ -795,6 +795,11 @@
         </div>
       </div>
       <div style="display: flex; gap: 8px; align-items: center;">
+        <div id="cloud-sync-badge-mobile" title="Status Sinkronisasi Database Google Sheets"
+          style="display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25);">
+          <span class="sync-dot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+          <span class="sync-label">Cloud Aktif</span>
+        </div>
         <button id="btn-notif-nav" onclick="bukaModalNotifikasiDashboard()" class="btn btn-icon"
           style="background: transparent; border: none; box-shadow: none; padding: 4px; position: relative;"
           title="Pemberitahuan & Notifikasi">
@@ -826,12 +831,19 @@
         </div>
 
         <div class="sidebar-nav-scroll">
-          <div class="sidebar-section-label">MENU UTAMA</div>
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 12px 6px 12px;">
+            <div class="sidebar-section-label" id="sidebar-main-category-label" style="padding: 0; margin: 0;">RINGKASAN & KESISWAAN</div>
+            <div id="cloud-sync-badge-desktop" title="Semua perubahan tersimpan otomatis ke Google Spreadsheet"
+              style="display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25);">
+              <span class="sync-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+              <span class="sync-label">Cloud Sync</span>
+            </div>
+          </div>
           <ul id="main-menu" class="siswa-list">
             <!-- Menu Utama Petugas -->
             <li class="nav-item active" data-target="section-dashboard" id="menu-dashboard">
               <i data-lucide="layout-dashboard" class="menu-icon"></i>
-              <span>Dashboard</span>
+              <span>Dashboard Utama</span>
             </li>
 
             <!-- Dropdown: Data Siswa & Administrasi -->
@@ -859,6 +871,8 @@
               </ul>
             </li>
 
+            <li class="sidebar-group-divider" id="divider-kbm" style="list-style: none; padding: 10px 12px 4px 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.8px; color: var(--text-muted); text-transform: uppercase;">KBM & EVALUASI AKADEMIK</li>
+
             <!-- Dropdown: Akademik & CBT -->
             <li class="menu-dropdown open" id="dropdown-akademik">
               <div class="dropdown-header" onclick="toggleDropdownMenu('dropdown-akademik')">
@@ -879,7 +893,7 @@
                 </li>
                 <li class="nav-item" data-target="section-ujian" id="menu-ujian">
                   <i data-lucide="file-check-2" class="menu-icon"></i>
-                  <span>Bank Soal & Nilai</span>
+                  <span>Bank Soal & Nilai CBT</span>
                 </li>
                 <li class="nav-item" data-target="section-kegiatan" id="menu-kegiatan">
                   <i data-lucide="newspaper" class="menu-icon"></i>
@@ -893,7 +907,7 @@
               <div class="dropdown-header" onclick="toggleDropdownMenu('dropdown-dokumen')">
                 <div class="dropdown-header-left">
                   <i data-lucide="file-text" class="menu-icon"></i>
-                  <span>Dokumen Akademik</span>
+                  <span>Dokumen Kelulusan</span>
                 </div>
                 <i data-lucide="chevron-right" class="dropdown-arrow"></i>
               </div>
@@ -914,45 +928,39 @@
               <div class="dropdown-header" onclick="toggleDropdownMenu('dropdown-portal-siswa')">
                 <div class="dropdown-header-left">
                   <i data-lucide="graduation-cap" class="menu-icon"></i>
-                  <span>Portal Siswa</span>
+                  <span>Ruang Belajar Siswa</span>
                 </div>
                 <i data-lucide="chevron-right" class="dropdown-arrow"></i>
               </div>
               <ul class="dropdown-sublist">
                 <li class="nav-item" data-target="section-portal-siswa" id="menu-portal-siswa">
-                  <i data-lucide="user" class="menu-icon"></i>
-                  <span>Profil & Status Saya</span>
+                  <i data-lucide="compass" class="menu-icon"></i>
+                  <span>Alur Belajar & Profil Saya</span>
                 </li>
                 <li class="nav-item" data-target="section-materi" id="menu-siswa-materi">
                   <i data-lucide="book-open" class="menu-icon"></i>
-                  <span>Buku Belajar Saya</span>
+                  <span>Ruang Baca Modul</span>
+                </li>
+                <li class="nav-item" data-target="section-ujian" id="menu-siswa-ujian">
+                  <i data-lucide="file-check-2" class="menu-icon"></i>
+                  <span>Ruang Ujian CBT & Nilai</span>
+                </li>
+                <li class="nav-item" data-target="section-raport" id="menu-siswa-raport">
+                  <i data-lucide="award" class="menu-icon"></i>
+                  <span>Rapor & Transkrip Saya</span>
                 </li>
                 <li class="nav-item" data-target="section-riwayat-baca" id="menu-siswa-riwayat-baca">
                   <i data-lucide="history" class="menu-icon"></i>
-                  <span>History Baca Buku</span>
-                </li>
-                <li class="nav-item" data-target="section-ujian" id="menu-siswa-ujian">
-                  <i data-lucide="award" class="menu-icon"></i>
-                  <span>Ujian CBT & Nilai</span>
-                </li>
-                <li class="nav-item" data-target="section-raport" id="menu-siswa-raport">
-                  <i data-lucide="file-text" class="menu-icon"></i>
-                  <span>Raport & Transkrip Saya</span>
+                  <span>Progres Baca Saya</span>
                 </li>
                 <li class="nav-item" data-target="section-pengumuman-siswa" id="menu-pengumuman-siswa">
                   <i data-lucide="bell" class="menu-icon"></i>
-                  <span>Pengumuman</span>
-                </li>
-                <li class="nav-item" data-target="section-kegiatan" id="menu-siswa-kegiatan">
-                  <i data-lucide="newspaper" class="menu-icon"></i>
-                  <span>Warta Kegiatan PKBM</span>
-                </li>
-                <li class="nav-item" data-target="section-info-tk" id="menu-siswa-tk">
-                  <i data-lucide="map-pin" class="menu-icon"></i>
-                  <span>Info Lembaga & Lokasi</span>
+                  <span>Pengumuman Akademik</span>
                 </li>
               </ul>
             </li>
+
+            <li class="sidebar-group-divider" id="divider-sistem" style="list-style: none; padding: 10px 12px 4px 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.8px; color: var(--text-muted); text-transform: uppercase;">SISTEM & KONFIGURASI</li>
 
             <!-- Dropdown Pengaturan Sistem (Admin / Super Admin) -->
             <li class="menu-dropdown open hidden" id="dropdown-pengaturan">
@@ -4436,17 +4444,20 @@
           </div>
         </div>
 
-        <!-- Controls: Font Size, Sisa Waktu & Finish -->
-        <div style="display: flex; align-items: center; gap: 14px;">
-          <!-- Font Size Controls -->
+        <!-- Controls: Font Size, Fullscreen, Sisa Waktu & Finish -->
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <!-- Font Size & Focus Controls -->
           <div
             style="display: flex; align-items: center; gap: 4px; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border-color);">
-            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); padding-right: 4px;">Ukuran
-              Font:</span>
-            <button type="button" class="btn btn-sm" onclick="adjustCbtFontSize(-1)"
-              style="padding: 2px 8px; font-weight: 800; height: 26px;" title="Perkecil Font">A-</button>
-            <button type="button" class="btn btn-sm" onclick="adjustCbtFontSize(1)"
-              style="padding: 2px 8px; font-weight: 800; height: 26px;" title="Perbesar Font">A+</button>
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); padding-right: 2px;">Teks:</span>
+            <button type="button" class="btn btn-sm" onclick="adjustCbtFontSize(-2)"
+              style="padding: 2px 8px; font-weight: 800; height: 26px;" title="Perkecil Huruf Soal">A-</button>
+            <button type="button" class="btn btn-sm" onclick="adjustCbtFontSize(2)"
+              style="padding: 2px 8px; font-weight: 800; height: 26px;" title="Perbesar Huruf Soal">A+</button>
+            <button type="button" class="btn btn-sm" onclick="toggleCbtFullscreen()"
+              style="padding: 2px 8px; font-weight: 700; height: 26px; display: inline-flex; align-items: center; gap: 4px;" title="Mode Fokus Layar Penuh (Fullscreen)">
+              <i data-lucide="maximize-2" style="width: 13px; height: 13px;"></i>
+            </button>
           </div>
 
           <!-- Timer Box -->

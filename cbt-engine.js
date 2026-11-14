@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==================== STATE ENGINE CBT BEESMART ====================
 let cbtActiveSession = null;
 let cbtTimerInterval = null;
-let cbtFontSizeLevel = 16;
+let cbtFontSizeLevel = parseInt(localStorage.getItem('ppdb_cbt_font_size') || '16', 10) || 16;
 
 function saveCbtActiveSessionToStorage() {
   if (cbtActiveSession) {
@@ -950,11 +950,24 @@ function renderCbtGridNomor() {
 }
 
 function adjustCbtFontSize(delta) {
-  cbtFontSizeLevel = Math.max(13, Math.min(22, cbtFontSizeLevel + delta));
+  cbtFontSizeLevel = Math.max(13, Math.min(26, cbtFontSizeLevel + delta));
+  try { localStorage.setItem('ppdb_cbt_font_size', String(cbtFontSizeLevel)); } catch (e) {}
   if (cbtActiveSession) {
     tampilkanSoalCBT(cbtActiveSession.currentNo);
   }
 }
+
+function toggleCbtFullscreen() {
+  const modal = document.getElementById('modal-cbt-ujian');
+  const target = modal || document.documentElement;
+  if (!document.fullscreenElement) {
+    if (target.requestFullscreen) target.requestFullscreen().catch(() => {});
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  }
+}
+window.toggleCbtFullscreen = toggleCbtFullscreen;
+window.adjustCbtFontSize = adjustCbtFontSize;
 
 function toggleDaftarSoalPanel() {
   const drawer = document.getElementById('cbt-daftar-soal-drawer');

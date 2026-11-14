@@ -878,8 +878,46 @@ function syncCameraToInput(camInput, targetInputId) {
   }
 }
 
+// ======================= LIVE CLOUD SYNC STATUS BADGE =======================
+let activeCloudRequests = 0;
+
+function updateCloudSyncStatusUI(state, customLabel = null) {
+  const badges = [
+    document.getElementById('cloud-sync-badge-desktop'),
+    document.getElementById('cloud-sync-badge-mobile')
+  ];
+  badges.forEach(badge => {
+    if (!badge) return;
+    const dot = badge.querySelector('.sync-dot');
+    const lbl = badge.querySelector('.sync-label');
+    if (state === 'syncing') {
+      badge.style.background = 'rgba(14, 165, 233, 0.14)';
+      badge.style.color = '#0284c7';
+      badge.style.borderColor = 'rgba(14, 165, 233, 0.3)';
+      if (dot) dot.style.background = '#0ea5e9';
+      if (lbl) lbl.textContent = customLabel || 'Sinkronisasi...';
+    } else if (state === 'error') {
+      badge.style.background = 'rgba(245, 158, 11, 0.14)';
+      badge.style.color = '#d97706';
+      badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      if (dot) dot.style.background = '#f59e0b';
+      if (lbl) lbl.textContent = customLabel || 'Mode Lokal';
+    } else {
+      badge.style.background = 'rgba(16, 185, 129, 0.12)';
+      badge.style.color = '#059669';
+      badge.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+      if (dot) dot.style.background = '#10b981';
+      if (lbl) lbl.textContent = customLabel || 'Cloud Tersimpan';
+    }
+  });
+}
+
 // ======================= API CALLER =======================
 async function callAPI(payload) {
+  const isWriteAction = payload && payload.action && /^(save|add|update|delete|register|import)/i.test(payload.action);
+  activeCloudRequests++;
+  updateCloudSyncStatusUI('syncing', isWriteAction ? 'Menyimpan...' : 'Sinkronisasi...');
+
   async function parseFetchResponse(response) {
     const rawText = await response.text();
     let result;
@@ -917,17 +955,31 @@ async function callAPI(payload) {
     }
 
     const response = await fetch(API_URL, fetchOptions);
-    return await parseFetchResponse(response);
+    const data = await parseFetchResponse(response);
+    activeCloudRequests = Math.max(0, activeCloudRequests - 1);
+    if (activeCloudRequests === 0) updateCloudSyncStatusUI('synced');
+    return data;
   } catch (err) {
     // Jika server lokal gagal dan fallback tersedia, coba ke SCRIPT_URL
     if (API_URL !== SCRIPT_URL) {
       console.warn("Koneksi server lokal gagal, beralih ke Apps Script URL...", err);
-      const fbResponse = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      return await parseFetchResponse(fbResponse);
+      try {
+        const fbResponse = await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        const fbData = await parseFetchResponse(fbResponse);
+        activeCloudRequests = Math.max(0, activeCloudRequests - 1);
+        if (activeCloudRequests === 0) updateCloudSyncStatusUI('synced');
+        return fbData;
+      } catch (fbErr) {
+        activeCloudRequests = Math.max(0, activeCloudRequests - 1);
+        if (activeCloudRequests === 0) updateCloudSyncStatusUI('error');
+        throw fbErr;
+      }
     }
+    activeCloudRequests = Math.max(0, activeCloudRequests - 1);
+    if (activeCloudRequests === 0) updateCloudSyncStatusUI('error');
     throw err;
   }
 }
@@ -1417,6 +1469,9 @@ function showDashboard() {
   const dropDokumen = document.getElementById('dropdown-dokumen');
   const dropPortalSiswa = document.getElementById('dropdown-portal-siswa');
   const dropPengaturan = document.getElementById('dropdown-pengaturan');
+  const dividerKbm = document.getElementById('divider-kbm');
+  const dividerSistem = document.getElementById('divider-sistem');
+  const mainCatLabel = document.getElementById('sidebar-main-category-label');
 
   if (currentUser.role === 'Siswa') {
     // Sembunyikan menu petugas
@@ -1425,6 +1480,9 @@ function showDashboard() {
     if (dropAkademik) dropAkademik.classList.add('hidden');
     if (dropDokumen) dropDokumen.classList.add('hidden');
     if (dropPengaturan) dropPengaturan.classList.add('hidden');
+    if (dividerKbm) dividerKbm.classList.add('hidden');
+    if (dividerSistem) dividerSistem.classList.add('hidden');
+    if (mainCatLabel) mainCatLabel.textContent = 'MENU WARGA BELAJAR';
 
     // Tampilkan portal siswa
     if (dropPortalSiswa) dropPortalSiswa.classList.remove('hidden');
@@ -1443,6 +1501,15 @@ function showDashboard() {
   if (dropAkademik) dropAkademik.classList.remove('hidden');
   if (dropDokumen) dropDokumen.classList.remove('hidden');
   if (dropPortalSiswa) dropPortalSiswa.classList.add('hidden');
+  if (dividerKbm) dividerKbm.classList.remove('hidden');
+  if (dividerSistem) {
+    if (currentUser.role === 'Admin' || currentUser.role === 'Super Admin') {
+      dividerSistem.classList.remove('hidden');
+    } else {
+      dividerSistem.classList.add('hidden');
+    }
+  }
+  if (mainCatLabel) mainCatLabel.textContent = 'RINGKASAN & KESISWAAN';
 
   loadBukuData();
   loadUjianData();
