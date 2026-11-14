@@ -396,6 +396,7 @@ function switchMobileTab(targetId, btnEl, recordHistory = true) {
   if (targetId === 'section-ujian') loadUjianData();
   if (targetId === 'section-raport') loadRaportData();
   if (targetId === 'section-transkrip') loadTranskripData();
+  if (targetId === 'section-sekolah-mitra') loadSekolahMitraData();
   if (targetId === 'section-users') loadAllUsers();
   if (targetId === 'section-api-keys') loadApiKeys();
   if (targetId === 'section-kegiatan') loadKegiatanData();
@@ -509,6 +510,7 @@ function setupEventListeners() {
       if (targetId === 'section-ujian') loadUjianData();
       if (targetId === 'section-raport') loadRaportData();
       if (targetId === 'section-transkrip') loadTranskripData();
+      if (targetId === 'section-sekolah-mitra') loadSekolahMitraData();
       if (targetId === 'section-users') loadAllUsers();
       if (targetId === 'section-api-keys') loadApiKeys();
       if (targetId === 'section-kegiatan') loadKegiatanData();
@@ -4679,7 +4681,11 @@ function exportDataToPDF() {
   });
 
   const fileName = `Data_Peserta_Didik_PKBM_Aura_Anugerah_${new Date().toISOString().slice(0, 10)}.pdf`;
-  doc.save(fileName);
+  if (typeof window.tampilkanPratinjauPDF === 'function') {
+    window.tampilkanPratinjauPDF(doc, `Laporan Data Peserta Didik (${siswaDataList.length} Siswa)`, fileName);
+  } else {
+    doc.save(fileName);
+  }
 }
 
 function importDataFromFile(event) {
@@ -5412,7 +5418,12 @@ function cetakKartuPendaftaranSiswa() {
   doc.setTextColor(100, 116, 139);
   doc.text('Simpan kartu ini sebagai bukti resmi pendaftaran & identitas belajar di PKBM Aura Anugerah.', 14, 120);
 
-  doc.save(`Kartu_Siswa_${s.nama || 'PKBM'}.pdf`);
+  const fileName = `Kartu_Siswa_${(s.nama || 'PKBM').replace(/\s+/g, '_')}.pdf`;
+  if (typeof window.tampilkanPratinjauPDF === 'function') {
+    window.tampilkanPratinjauPDF(doc, `Kartu Tanda Siswa: ${s.nama || 'PKBM'}`, fileName);
+  } else {
+    doc.save(fileName);
+  }
 }
 
 function catatAbsensiCepat() {

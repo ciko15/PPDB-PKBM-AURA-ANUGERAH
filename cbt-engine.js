@@ -1869,9 +1869,12 @@ function editPaketSoal(id) {
   document.getElementById('paket-judul').value = pkt.judul || '';
   document.getElementById('paket-durasi-menit').value = pkt.durasiMenit || 15;
   document.getElementById('paket-kkm').value = pkt.kkm || 70;
-  document.getElementById('paket-instruksi').value = pkt.instruksi || '';
-  document.getElementById('paket-token-input').value = pkt.token || 'BEESMART';
-  document.getElementById('paket-status-ujian').value = pkt.statusUjian || 'AKTIF';
+  const elInstruksi = document.getElementById('paket-instruksi');
+  if (elInstruksi) elInstruksi.value = pkt.instruksi || '';
+  const elToken = document.getElementById('paket-token-input');
+  if (elToken) elToken.value = pkt.token || 'BEESMART';
+  const elStatus = document.getElementById('paket-status-ujian');
+  if (elStatus) elStatus.value = pkt.statusUjian || 'AKTIF';
   const checkKartu = document.getElementById('paket-butuh-kartu');
   if (checkKartu) checkKartu.checked = !!pkt.butuhKartu;
 
@@ -1891,7 +1894,7 @@ function simpanPaketSoalBaru() {
   const judul = document.getElementById('paket-judul').value.trim();
   const durasiMenit = parseInt(document.getElementById('paket-durasi-menit').value, 10) || 15;
   const kkm = parseInt(document.getElementById('paket-kkm').value, 10) || 70;
-  const instruksi = document.getElementById('paket-instruksi').value.trim();
+  const instruksi = document.getElementById('paket-instruksi')?.value.trim() || '';
   const butuhKartu = document.getElementById('paket-butuh-kartu') ? document.getElementById('paket-butuh-kartu').checked : false;
 
   const pembuat = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.nama : 'Tutor PKBM';
@@ -3090,16 +3093,20 @@ function cetakKartuUjianResmi(paketId, siswaData) {
   gambarHalamanKartuUjian(doc, pkt, s);
 
   const namaFile = `Kartu_Ujian_${(s.nama || 'Peserta').replace(/\s+/g, '_')}_${(pkt ? pkt.kode : 'CBT')}.pdf`;
-  doc.save(namaFile);
-
-  if (typeof Swal !== 'undefined') {
-    Swal.fire({
-      icon: 'success',
-      title: 'Kartu Ujian Berhasil Dibuat',
-      text: `File ${namaFile} telah diunduh. Silakan cetak pada kertas A5 atau F4/A4.`,
-      timer: 3500,
-      showConfirmButton: false
-    });
+  
+  if (typeof window.tampilkanPratinjauPDF === 'function') {
+    window.tampilkanPratinjauPDF(doc, `Kartu Ujian: ${s.nama || 'Peserta'} (${pkt ? pkt.kode : 'CBT'})`, namaFile);
+  } else {
+    doc.save(namaFile);
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'success',
+        title: 'Kartu Ujian Berhasil Dibuat',
+        text: `File ${namaFile} telah diunduh. Silakan cetak pada kertas A5 atau F4/A4.`,
+        timer: 3500,
+        showConfirmButton: false
+      });
+    }
   }
 }
 
@@ -3117,16 +3124,20 @@ function cetakBatchKartuUjianResmi(paket, siswaArray) {
   });
 
   const namaFile = `Batch_Kartu_Ujian_${paket.kode}_${siswaArray.length}_Siswa.pdf`;
-  doc.save(namaFile);
-
-  if (typeof Swal !== 'undefined') {
-    Swal.fire({
-      icon: 'success',
-      title: 'Kartu Ujian Kolektif Berhasil Diunduh',
-      text: `Berhasil mencetak ${siswaArray.length} kartu peserta ujian ke dalam file: ${namaFile}`,
-      timer: 4000,
-      showConfirmButton: false
-    });
+  
+  if (typeof window.tampilkanPratinjauPDF === 'function') {
+    window.tampilkanPratinjauPDF(doc, `Kartu Ujian Kolektif (${siswaArray.length} Siswa - ${paket.kode})`, namaFile);
+  } else {
+    doc.save(namaFile);
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'success',
+        title: 'Kartu Ujian Kolektif Berhasil Diunduh',
+        text: `Berhasil mencetak ${siswaArray.length} kartu peserta ujian ke dalam file: ${namaFile}`,
+        timer: 4000,
+        showConfirmButton: false
+      });
+    }
   }
 }
 

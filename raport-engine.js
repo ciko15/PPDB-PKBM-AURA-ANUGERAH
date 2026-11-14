@@ -38,7 +38,326 @@ let defaultMapelKurikulum = {
   ]
 };
 
-// Inisialisasi Bank Raport dari LocalStorage & Cloud
+// Cache data base64 logo sekolah untuk disematkan pada PDF
+let cachedLogoBase64 = null;
+
+function dapatkanLogoSekolahBase64() {
+  if (cachedLogoBase64) return cachedLogoBase64;
+  try {
+    const existingImg = document.querySelector('.brand-logo-img') || document.querySelector('.login-logo-img') || document.querySelector('.app-brand-logo');
+    if (existingImg && existingImg.complete && existingImg.naturalWidth > 0) {
+      const cvs = document.createElement('canvas');
+      cvs.width = existingImg.naturalWidth;
+      cvs.height = existingImg.naturalHeight;
+      const ctx = cvs.getContext('2d');
+      ctx.drawImage(existingImg, 0, 0);
+      cachedLogoBase64 = cvs.toDataURL('image/png');
+      return cachedLogoBase64;
+    }
+  } catch (e) {
+    console.warn("Logo base64 extract:", e.message);
+  }
+  return null;
+}
+
+// ==================== MASTER SEKOLAH MITRA / NUMPANG ====================
+let sekolahMitraList = [];
+
+async function loadSekolahMitraData() {
+  try {
+    const local = localStorage.getItem('ppdb_sekolah_mitra_list');
+    if (local) sekolahMitraList = JSON.parse(local);
+  } catch (e) {}
+
+  if (!sekolahMitraList || sekolahMitraList.length === 0) {
+    sekolahMitraList = [
+      {
+        id: 'SCH-SAMPLE-01',
+        namaSekolah: 'PKBM Harapan Bangsa Sentani',
+        npsn: 'P9961234',
+        statusSekolah: 'Mitra Numpang',
+        bentukPendidikan: 'PKBM / Kesetaraan',
+        alamat: 'Jl. Kemiri No. 12, Sentani Kota',
+        kabupaten: 'Kabupaten Jayapura',
+        provinsi: 'Papua',
+        namaKepala: 'Drs. YOHANES WAMANG, M.Pd',
+        nipNiy: '19750812 200301 1 005',
+        kontakPic: '081248001122',
+        catatanIzin: '421.1/088/DISDIK/2022',
+        logoBase64: ''
+      }
+    ];
+    saveSekolahMitraToStorage();
+  }
+
+  renderSekolahMitraTable();
+  updateDropdownPilihanSekolahMitra();
+
+  if (typeof callAPI === 'function') {
+    callAPI({ action: "getSekolahMitra" }).then(cloud => {
+      if (Array.isArray(cloud) && cloud.length > 0) {
+        sekolahMitraList = cloud;
+        try { localStorage.setItem('ppdb_sekolah_mitra_list', JSON.stringify(sekolahMitraList)); } catch (e) {}
+        renderSekolahMitraTable();
+        updateDropdownPilihanSekolahMitra();
+      }
+    }).catch(err => {
+      console.warn("Gagal ambil sekolah mitra dari cloud:", err.message);
+    });
+  }
+}
+
+function saveSekolahMitraToStorage(newSekolah = null) {
+  try {
+    localStorage.setItem('ppdb_sekolah_mitra_list', JSON.stringify(sekolahMitraList));
+  } catch (e) {}
+
+  if (newSekolah && typeof callAPI === 'function') {
+    callAPI({ action: "saveSekolahMitra", sekolah: newSekolah }).catch(err => {
+      console.warn("Gagal simpan sekolah mitra ke cloud:", err.message);
+    });
+  }
+}
+
+function renderSekolahMitraTable(data = null) {
+  const tbody = document.getElementById('table-sekolah-mitra-body');
+  if (!tbody) return;
+
+  const list = data || sekolahMitraList;
+  if (!list || list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">Belum ada data sekolah mitra yang terdaftar.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map((m, idx) => {
+    const logoImg = m.logoBase64 ? 
+      `<img src="${m.logoBase64}" style="width: 32px; height: 32px; object-fit: contain; border-radius: 6px; border: 1px solid var(--border-color); padding: 2px;">` :
+      `<div style="width: 32px; height: 32px; border-radius: 6px; background: rgba(2, 132, 199, 0.12); color: #0284c7; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">🏫</div>`;
+
+    return `
+      <tr>
+        <td style="text-align: center;">${idx + 1}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            ${logoImg}
+            <div>
+              <strong>${m.namaSekolah}</strong>
+              <br><small style="color: var(--text-muted);">${m.catatanIzin ? 'Izin: ' + m.catatanIzin : '-'}</small>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span style="font-weight: 600;">NPSN: ${m.npsn || '-'}</span>
+          <br><small class="tag def">${m.bentukPendidikan || 'PKBM'}</small>
+        </td>
+        <td>
+          <small>${m.alamat || '-'}</small>
+          <br><small style="color: var(--text-muted); font-weight: 600;">${m.kabupaten || 'Sentani, Jayapura'}</small>
+        </td>
+        <td>
+          <strong>${m.namaKepala || '-'}</strong>
+          <br><small style="color: var(--text-muted);">${m.nipNiy ? 'NIP: ' + m.nipNiy : ''}</small>
+        </td>
+        <td>
+          <small>${m.kontakPic || '-'}</small>
+        </td>
+        <td style="text-align: right; white-space: nowrap;">
+          <button class="btn btn-sm btn-outline" onclick="editDataSekolahMitra('${m.id}')" title="Edit Data Sekolah Mitra" style="padding: 4px 8px;">
+            <i data-lucide="edit" style="width: 13px; height: 13px;"></i>
+          </button>
+          <button class="btn btn-icon btn-danger-text" onclick="hapusDataSekolahMitra('${m.id}')" title="Hapus Sekolah Mitra">
+            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+function filterSekolahMitraTable() {
+  const query = (document.getElementById('search-sekolah-mitra')?.value || '').toLowerCase().trim();
+  const filtered = (sekolahMitraList || []).filter(m => {
+    return !query || 
+      (m.namaSekolah || '').toLowerCase().includes(query) ||
+      (m.npsn || '').toLowerCase().includes(query) ||
+      (m.namaKepala || '').toLowerCase().includes(query);
+  });
+  renderSekolahMitraTable(filtered);
+}
+
+function updateDropdownPilihanSekolahMitra() {
+  const selectRaport = document.getElementById('raport-select-sekolah');
+  if (selectRaport) {
+    const prevVal = selectRaport.value || 'utama';
+    selectRaport.innerHTML = '<option value="utama">PKBM Aura Anugerah (Sekolah Penyelenggara)</option>' +
+      (sekolahMitraList || []).map(m => `<option value="${m.id}">${m.namaSekolah} (NPSN: ${m.npsn})</option>`).join('');
+    selectRaport.value = prevVal;
+  }
+}
+
+function bukaModalFormSekolahMitra() {
+  const modal = document.getElementById('modal-form-sekolah-mitra');
+  if (!modal) return;
+
+  document.getElementById('modal-sekolah-mitra-title').textContent = 'Tambah Sekolah Mitra / Numpang';
+  document.getElementById('sekolah-mitra-id').value = '';
+  document.getElementById('sekolah-mitra-nama').value = '';
+  document.getElementById('sekolah-mitra-npsn').value = '';
+  document.getElementById('sekolah-mitra-bentuk').value = 'PKBM / Kesetaraan';
+  document.getElementById('sekolah-mitra-alamat').value = '';
+  document.getElementById('sekolah-mitra-kabupaten').value = 'Kabupaten Jayapura';
+  document.getElementById('sekolah-mitra-provinsi').value = 'Papua';
+  document.getElementById('sekolah-mitra-kepala').value = '';
+  document.getElementById('sekolah-mitra-nip').value = '';
+  document.getElementById('sekolah-mitra-kontak').value = '';
+  document.getElementById('sekolah-mitra-izin').value = '';
+  document.getElementById('sekolah-mitra-logo-base64').value = '';
+  document.getElementById('preview-logo-mitra-box').style.display = 'none';
+
+  modal.classList.remove('hidden');
+}
+
+function closeModalFormSekolahMitra() {
+  const modal = document.getElementById('modal-form-sekolah-mitra');
+  if (modal) modal.classList.add('hidden');
+}
+
+function handleUploadLogoMitra(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('sekolah-mitra-logo-base64').value = e.target.result;
+      const previewImg = document.getElementById('img-preview-logo-mitra');
+      previewImg.src = e.target.result;
+      document.getElementById('preview-logo-mitra-box').style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function simpanDataSekolahMitra() {
+  const id = document.getElementById('sekolah-mitra-id').value;
+  const nama = document.getElementById('sekolah-mitra-nama').value.trim();
+  const npsn = document.getElementById('sekolah-mitra-npsn').value.trim();
+  const bentuk = document.getElementById('sekolah-mitra-bentuk').value;
+  const alamat = document.getElementById('sekolah-mitra-alamat').value.trim();
+  const kab = document.getElementById('sekolah-mitra-kabupaten').value.trim();
+  const prov = document.getElementById('sekolah-mitra-provinsi').value.trim();
+  const kepala = document.getElementById('sekolah-mitra-kepala').value.trim();
+  const nip = document.getElementById('sekolah-mitra-nip').value.trim();
+  const kontak = document.getElementById('sekolah-mitra-kontak').value.trim();
+  const izin = document.getElementById('sekolah-mitra-izin').value.trim();
+  const logo = document.getElementById('sekolah-mitra-logo-base64').value;
+
+  if (!nama) {
+    Swal.fire('Error', 'Nama sekolah mitra wajib diisi.', 'error');
+    return;
+  }
+
+  const newMitra = {
+    id: id || ('SCH-' + Date.now()),
+    namaSekolah: nama,
+    npsn: npsn,
+    statusSekolah: 'Mitra Numpang',
+    bentukPendidikan: bentuk,
+    alamat: alamat,
+    kabupaten: kab,
+    provinsi: prov,
+    namaKepala: kepala,
+    nipNiy: nip,
+    kontakPic: kontak,
+    catatanIzin: izin,
+    logoBase64: logo
+  };
+
+  if (id) {
+    const idx = sekolahMitraList.findIndex(x => x.id === id);
+    if (idx !== -1) sekolahMitraList[idx] = newMitra;
+  } else {
+    sekolahMitraList.unshift(newMitra);
+  }
+
+  saveSekolahMitraToStorage(newMitra);
+  renderSekolahMitraTable();
+  updateDropdownPilihanSekolahMitra();
+  closeModalFormSekolahMitra();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Sekolah Mitra Tersimpan',
+    text: `Identitas lembaga ${nama} berhasil disimpan ke database.`,
+    confirmButtonColor: '#0284c7'
+  });
+}
+
+function editDataSekolahMitra(id) {
+  const m = sekolahMitraList.find(x => x.id === id);
+  if (!m) return;
+
+  bukaModalFormSekolahMitra();
+  document.getElementById('modal-sekolah-mitra-title').textContent = 'Edit Data Sekolah Mitra';
+  document.getElementById('sekolah-mitra-id').value = m.id;
+  document.getElementById('sekolah-mitra-nama').value = m.namaSekolah || '';
+  document.getElementById('sekolah-mitra-npsn').value = m.npsn || '';
+  document.getElementById('sekolah-mitra-bentuk').value = m.bentukPendidikan || 'PKBM / Kesetaraan';
+  document.getElementById('sekolah-mitra-alamat').value = m.alamat || '';
+  document.getElementById('sekolah-mitra-kabupaten').value = m.kabupaten || 'Kabupaten Jayapura';
+  document.getElementById('sekolah-mitra-provinsi').value = m.provinsi || 'Papua';
+  document.getElementById('sekolah-mitra-kepala').value = m.namaKepala || '';
+  document.getElementById('sekolah-mitra-nip').value = m.nipNiy || '';
+  document.getElementById('sekolah-mitra-kontak').value = m.kontakPic || '';
+  document.getElementById('sekolah-mitra-izin').value = m.catatanIzin || '';
+
+  if (m.logoBase64) {
+    document.getElementById('sekolah-mitra-logo-base64').value = m.logoBase64;
+    document.getElementById('img-preview-logo-mitra').src = m.logoBase64;
+    document.getElementById('preview-logo-mitra-box').style.display = 'flex';
+  }
+}
+
+function hapusDataSekolahMitra(id) {
+  Swal.fire({
+    title: 'Hapus Sekolah Mitra?',
+    text: 'Data sekolah mitra ini akan dihapus dari arsip lembaga.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#e11d48'
+  }).then(res => {
+    if (res.isConfirmed) {
+      sekolahMitraList = sekolahMitraList.filter(x => x.id !== id);
+      saveSekolahMitraToStorage();
+      renderSekolahMitraTable();
+      updateDropdownPilihanSekolahMitra();
+      if (typeof callAPI === 'function') {
+        callAPI({ action: "deleteSekolahMitra", id: id }).catch(() => {});
+      }
+      Swal.fire('Terhapus', 'Data sekolah mitra telah dihapus.', 'success');
+    }
+  });
+}
+
+// Inisialisasi Sekolah Mitra saat load raport-engine
+loadSekolahMitraData();
+
+// Ekspos fungsi sekolah mitra ke window
+window.loadSekolahMitraData = loadSekolahMitraData;
+window.renderSekolahMitraTable = renderSekolahMitraTable;
+window.filterSekolahMitraTable = filterSekolahMitraTable;
+window.bukaModalFormSekolahMitra = bukaModalFormSekolahMitra;
+window.closeModalFormSekolahMitra = closeModalFormSekolahMitra;
+window.handleUploadLogoMitra = handleUploadLogoMitra;
+window.simpanDataSekolahMitra = simpanDataSekolahMitra;
+window.editDataSekolahMitra = editDataSekolahMitra;
+window.hapusDataSekolahMitra = hapusDataSekolahMitra;
+window.updateDropdownPilihanSekolahMitra = updateDropdownPilihanSekolahMitra;
+
 async function loadRaportData() {
   try {
     const local = localStorage.getItem('ppdb_raport_list');
@@ -257,7 +576,7 @@ function onRaportSiswaChange() {
   const targetId = selectSiswa.value;
   const siswa = (siswaDataList || []).find(s => String(s.id) === String(targetId));
   if (siswa) {
-    const prog = siswa.program || 'Paket C';
+    const prog = String(siswa.program || 'Paket C');
     if (inputProg) inputProg.value = prog;
 
     if (prog.includes('Paket A')) {
@@ -438,7 +757,7 @@ function simpanDataRaport() {
     tingkatKelas: kls,
     tahunAjaran: thn,
     semester: smt,
-    fase: kls.includes('Fase B') ? 'Fase B' : (kls.includes('Fase C') ? 'Fase C' : (kls.includes('Fase D') ? 'Fase D' : (kls.includes('Fase E') ? 'Fase E' : 'Fase F'))),
+    fase: String(kls || '').includes('Fase B') ? 'Fase B' : (String(kls || '').includes('Fase C') ? 'Fase C' : (String(kls || '').includes('Fase D') ? 'Fase D' : (String(kls || '').includes('Fase E') ? 'Fase E' : 'Fase F'))),
     tglRapor: new Date().toLocaleDateString('id-ID'),
     statusKenaikanLulus: statusKeputusan,
     catatanAkademik: catatan,
@@ -537,9 +856,79 @@ function hapusDataRaport(id) {
   });
 }
 
+// ==================== VIEWER / PRATINJAU DOKUMEN PDF INTERAKTIF ====================
+let currentPdfBlobUrl = null;
+
+function tampilkanPratinjauPDF(doc, judulDokumen, namaFileDownload) {
+  if (!doc) return;
+
+  const modal = document.getElementById('modal-preview-pdf');
+  const iframe = document.getElementById('iframe-preview-pdf');
+  const titleEl = document.getElementById('modal-preview-pdf-title');
+  const btnDownload = document.getElementById('btn-modal-preview-download');
+  const btnPrint = document.getElementById('btn-modal-preview-print');
+
+  if (titleEl) titleEl.textContent = judulDokumen || 'Pratinjau Dokumen PDF';
+
+  // Hapus blob URL lama jika ada
+  if (currentPdfBlobUrl) {
+    URL.revokeObjectURL(currentPdfBlobUrl);
+    currentPdfBlobUrl = null;
+  }
+
+  // Buat blob URL dari output jsPDF
+  const pdfBlob = doc.output('blob');
+  currentPdfBlobUrl = URL.createObjectURL(pdfBlob);
+
+  if (iframe) {
+    iframe.src = currentPdfBlobUrl;
+  }
+
+  if (btnDownload) {
+    btnDownload.onclick = () => {
+      doc.save(namaFileDownload || 'Dokumen_Akademik.pdf');
+    };
+  }
+
+  if (btnPrint) {
+    btnPrint.onclick = () => {
+      try {
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } else {
+          window.open(currentPdfBlobUrl, '_blank');
+        }
+      } catch (e) {
+        window.open(currentPdfBlobUrl, '_blank');
+      }
+    };
+  }
+
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+function closeModalPreviewPDF() {
+  const modal = document.getElementById('modal-preview-pdf');
+  const iframe = document.getElementById('iframe-preview-pdf');
+  if (modal) modal.classList.add('hidden');
+  if (iframe) iframe.src = '';
+  if (currentPdfBlobUrl) {
+    URL.revokeObjectURL(currentPdfBlobUrl);
+    currentPdfBlobUrl = null;
+  }
+}
+
 // ==================== GENERATOR PDF RESMI BUKU RAPORT ====================
 // Berstandar A4 Portrait Permendikbudristek No. 21 Tahun 2022
-function cetakBukuRaportPDF(id) {
+function cetakBukuRaportPDF(id, options = {}) {
+  const { previewOnly = true } = options;
   const r = raportDataList.find(x => x.id === id);
   if (!r) return;
 
@@ -554,21 +943,31 @@ function cetakBukuRaportPDF(id) {
   const pageHeight = 297;
   const marginX = 14;
 
-  // 1. KOP SURAT RESMI LEMBAGA PKBM
+  // 1. KOP SURAT RESMI LEMBAGA PKBM DENGAN LOGO RESMI
+  const logoBase64 = dapatkanLogoSekolahBase64();
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', marginX + 1, 11, 23, 23);
+    } catch (e) {
+      console.warn("Gagal render logo kop:", e.message);
+    }
+  }
+
+  const kopCenterX = logoBase64 ? (pageWidth / 2) + 6 : pageWidth / 2;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(30, 41, 59);
-  doc.text('PEMERINTAH KABUPATEN JAYAPURA', pageWidth / 2, 14, { align: 'center' });
-  doc.text('DINAS PENDIDIKAN DAN KEBUDAYAAN', pageWidth / 2, 19, { align: 'center' });
-  doc.setFontSize(12.5);
+  doc.text('PEMERINTAH KABUPATEN JAYAPURA', kopCenterX, 14, { align: 'center' });
+  doc.text('DINAS PENDIDIKAN DAN KEBUDAYAAN', kopCenterX, 19, { align: 'center' });
+  doc.setFontSize(13);
   doc.setTextColor(5, 150, 105);
-  doc.text('PKBM AURA ANUGERAH', pageWidth / 2, 25, { align: 'center' });
+  doc.text('PKBM AURA ANUGERAH', kopCenterX, 25, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.8);
   doc.setTextColor(71, 85, 105);
-  doc.text('NPSN: 69910495 | Izin Operasional: 421.1/043/DPMPTSP/2021 | Terakreditasi', pageWidth / 2, 29.5, { align: 'center' });
-  doc.text('Alamat: JL. Yahim KOMP.Buton Samping Hotel Citra Buana, Sentani, Jayapura, Papua - Kode Pos 99352', pageWidth / 2, 33.5, { align: 'center' });
+  doc.text('NPSN: 69910495 | Izin Operasional: 421.1/043/DPMPTSP/2021 | Terakreditasi', kopCenterX, 29.5, { align: 'center' });
+  doc.text('Alamat: JL. Yahim KOMP.Buton Samping Hotel Citra Buana, Sentani, Jayapura, Papua - Kode Pos 99352', kopCenterX, 33.5, { align: 'center' });
 
   // Garis Pembatas Kop Ganda
   doc.setDrawColor(5, 150, 105);
@@ -785,14 +1184,18 @@ function cetakBukuRaportPDF(id) {
   doc.text(`Dokumen resmi Laporan Hasil Belajar diterbitkan oleh Sistem Informasi Akademik PKBM Aura Anugerah pada ${new Date().toLocaleString('id-ID')}`, marginX, pageHeight - 6);
 
   const namaFile = `Rapor_${(r.namaSiswa || 'Siswa').replace(/\s+/g, '_')}_${(r.semester || 'Smt')}_${(r.tingkatKelas || 'Kelas')}.pdf`;
-  doc.save(namaFile);
 
-  Swal.fire({
-    icon: 'success',
-    title: 'Buku Raport Berhasil Diterbitkan',
-    text: `File ${namaFile} telah diunduh siap dicetak resmi.`,
-    confirmButtonColor: '#059669'
-  });
+  if (previewOnly) {
+    tampilkanPratinjauPDF(doc, `Buku Raport: ${r.namaSiswa || 'Siswa'} (${r.tingkatKelas || ''})`, namaFile);
+  } else {
+    doc.save(namaFile);
+    Swal.fire({
+      icon: 'success',
+      title: 'Buku Raport Berhasil Diterbitkan',
+      text: `File ${namaFile} telah diunduh siap dicetak resmi.`,
+      confirmButtonColor: '#059669'
+    });
+  }
 }
 
 // ==================== PENGATURAN FORMULA TRANSKRIP & TEMPLATE NOMOR ====================
@@ -826,11 +1229,11 @@ loadConfigTranskrip();
 function formatNomorDokumenTranskrip(s, indexUrut = 1) {
   const tahun = new Date().getFullYear();
   let jjg = 'PKT-C';
-  const prog = (s && s.program) ? s.program : 'Paket C';
+  const prog = String((s && s.program) ? s.program : 'Paket C');
   if (prog.includes('Paket A')) jjg = 'PKT-A';
   else if (prog.includes('Paket B')) jjg = 'PKT-B';
 
-  const noUrut = String(s.id || indexUrut).padStart(4, '0');
+  const noUrut = String((s && s.id) ? s.id : indexUrut).padStart(4, '0');
   const tpl = configTranskrip.templateNomor || 'PKBM-AA/TR/{TAHUN}/{JENJANG}/{NO}';
 
   return tpl.replace('{TAHUN}', tahun)
@@ -1008,7 +1411,8 @@ function filterTranskripTable() {
 
 // ==================== GENERATOR TRANSKRIP NILAI RESMI PDF ====================
 // Berstandar Blanko Ijazah & Transkrip Kumulatif Kemendikbudristek
-function cetakTranskripNilaiResmi(siswaId) {
+function cetakTranskripNilaiResmi(siswaId, options = {}) {
+  const { docInstance = null, isBatch = false, previewOnly = true } = options;
   const s = (siswaDataList || []).find(x => String(x.id) === String(siswaId)) || 
             (raportDataList || []).find(r => String(r.siswaId) === String(siswaId)) || {
               nama: 'Siswa PKBM',
@@ -1020,12 +1424,12 @@ function cetakTranskripNilaiResmi(siswaId) {
             };
 
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    Swal.fire('Error', 'Library PDF belum termuat.', 'error');
-    return;
+    if (!isBatch) Swal.fire('Error', 'Library PDF belum termuat.', 'error');
+    return null;
   }
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const doc = docInstance || new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = 210;
   const pageHeight = 297;
   const marginX = 14;
@@ -1038,21 +1442,31 @@ function cetakTranskripNilaiResmi(siswaId) {
   doc.setLineWidth(0.25);
   doc.rect(9.5, 9.5, pageWidth - 19, pageHeight - 19);
 
-  // KOP RESMI
+  // KOP RESMI DENGAN LOGO SEKOLAH
+  const logoBase64 = dapatkanLogoSekolahBase64();
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', marginX + 2, 13, 23, 23);
+    } catch (e) {
+      console.warn("Gagal render logo kop transkrip:", e.message);
+    }
+  }
+
+  const kopCenterX = logoBase64 ? (pageWidth / 2) + 6 : pageWidth / 2;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
   doc.setTextColor(30, 41, 59);
-  doc.text('PEMERINTAH KABUPATEN JAYAPURA', pageWidth / 2, 17, { align: 'center' });
-  doc.text('DINAS PENDIDIKAN DAN KEBUDAYAAN', pageWidth / 2, 22, { align: 'center' });
+  doc.text('PEMERINTAH KABUPATEN JAYAPURA', kopCenterX, 17, { align: 'center' });
+  doc.text('DINAS PENDIDIKAN DAN KEBUDAYAAN', kopCenterX, 22, { align: 'center' });
   doc.setFontSize(13);
   doc.setTextColor(2, 132, 199);
-  doc.text('PKBM AURA ANUGERAH SENTANI', pageWidth / 2, 28, { align: 'center' });
+  doc.text('PKBM AURA ANUGERAH SENTANI', kopCenterX, 28, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
-  doc.text('Penyelenggara Pendidikan Kesetaraan Terakreditasi Nasional | NPSN: 69910495', pageWidth / 2, 32.5, { align: 'center' });
-  doc.text('SK Izin Operasional: 421.1/043/DPMPTSP/2021 | Sentani, Jayapura, Papua (99352)', pageWidth / 2, 36.5, { align: 'center' });
+  doc.text('Penyelenggara Pendidikan Kesetaraan Terakreditasi Nasional | NPSN: 69910495', kopCenterX, 32.5, { align: 'center' });
+  doc.text('SK Izin Operasional: 421.1/043/DPMPTSP/2021 | Sentani, Jayapura, Papua (99352)', kopCenterX, 36.5, { align: 'center' });
 
   // Garis Pembatas Kop
   doc.setDrawColor(2, 132, 199);
@@ -1094,7 +1508,8 @@ function cetakTranskripNilaiResmi(siswaId) {
   });
 
   // TABEL NILAI TRANSKRIP KUMULATIF
-  const progKey = (s.program && s.program.includes('Paket A')) ? 'Paket A' : ((s.program && s.program.includes('Paket B')) ? 'Paket B' : 'Paket C');
+  const progStr = String(s.program || '');
+  const progKey = progStr.includes('Paket A') ? 'Paket A' : (progStr.includes('Paket B') ? 'Paket B' : 'Paket C');
   const baseMapel = defaultMapelKurikulum[progKey] || defaultMapelKurikulum['Paket C'];
 
   // Cek apakah ada raport & CBT tersimpan untuk siswa ini
@@ -1277,14 +1692,79 @@ function cetakTranskripNilaiResmi(siswaId) {
   doc.setTextColor(148, 163, 184);
   doc.text(`Transkrip nilai resmi diterbitkan secara sah oleh Lembaga Penyelenggara PKBM Aura Anugerah - Dicetak pada ${new Date().toLocaleString('id-ID')}`, marginX + 2, pageHeight - 12);
 
-  const namaFile = `Transkrip_Nilai_${(s.nama || 'Siswa').replace(/\s+/g, '_')}_${(s.nisn || 'Resmi')}.pdf`;
-  doc.save(namaFile);
+  if (!isBatch) {
+    const namaFile = `Transkrip_Nilai_${(s.nama || 'Siswa').replace(/\s+/g, '_')}_${(s.nisn || 'Resmi')}.pdf`;
+    if (previewOnly) {
+      tampilkanPratinjauPDF(doc, `Transkrip Nilai Resmi: ${s.nama || 'Siswa'} (${s.nisn || '-'})`, namaFile);
+    } else {
+      doc.save(namaFile);
+      Swal.fire({
+        icon: 'success',
+        title: 'Transkrip Nilai Resmi Berhasil Diunduh',
+        text: `File ${namaFile} telah diunduh dalam format PDF resmi.`,
+        confirmButtonColor: '#0284c7'
+      });
+    }
+  }
+
+  return doc;
+}
+
+// ==================== UNDUH SEMUA TRANSKRIP NILAI PDF (GLOBAL BATCH) ====================
+function unduhSemuaTranskripPDF() {
+  const list = siswaDataList || [];
+  if (!list.length) {
+    Swal.fire('Perhatian', 'Tidak ada data siswa untuk diunduh.', 'warning');
+    return;
+  }
+
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    Swal.fire('Error', 'Library PDF belum termuat.', 'error');
+    return;
+  }
 
   Swal.fire({
-    icon: 'success',
-    title: 'Transkrip Nilai Resmi Berhasil Diunduh',
-    text: `File ${namaFile} telah diunduh dalam format PDF resmi.`,
-    confirmButtonColor: '#0284c7'
+    title: 'Unduh Semua Transkrip Nilai?',
+    text: `Sistem akan menggabungkan transkrip nilai ${list.length} siswa ke dalam 1 dokumen PDF global. Lanjutkan?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#0284c7',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Ya, Unduh Global',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: 'Memproses PDF Global...',
+      text: 'Mohon tunggu beberapa saat...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    setTimeout(() => {
+      try {
+        const { jsPDF } = window.jspdf;
+        const globalDoc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        list.forEach((siswa, index) => {
+          if (index > 0) {
+            globalDoc.addPage();
+          }
+          cetakTranskripNilaiResmi(siswa.id, { docInstance: globalDoc, isBatch: true });
+        });
+
+        const tahun = new Date().getFullYear();
+        const namaFileGlobal = `Transkrip_Nilai_Global_PKBM_Aura_Anugerah_${tahun}.pdf`;
+        Swal.close();
+        tampilkanPratinjauPDF(globalDoc, `Transkrip Nilai Global (${list.length} Siswa)`, namaFileGlobal);
+      } catch (err) {
+        console.error("Gagal cetak global transkrip:", err);
+        Swal.fire('Gagal', 'Terjadi kesalahan saat memproses unduhan global: ' + err.message, 'error');
+      }
+    }, 400);
   });
 }
 
@@ -1304,7 +1784,8 @@ function lihatDetailTranskrip(siswaId) {
               tglLahir: '15 Mei 2005'
             };
 
-  const progKey = (s.program && s.program.includes('Paket A')) ? 'Paket A' : ((s.program && s.program.includes('Paket B')) ? 'Paket B' : 'Paket C');
+  const progStr = String(s.program || '');
+  const progKey = progStr.includes('Paket A') ? 'Paket A' : (progStr.includes('Paket B') ? 'Paket B' : 'Paket C');
   const baseMapel = defaultMapelKurikulum[progKey] || defaultMapelKurikulum['Paket C'];
   const rap = (raportDataList || []).find(r => String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase()));
 
@@ -1404,11 +1885,14 @@ window.simpanDataRaport = simpanDataRaport;
 window.editDataRaport = editDataRaport;
 window.hapusDataRaport = hapusDataRaport;
 window.cetakBukuRaportPDF = cetakBukuRaportPDF;
+window.tampilkanPratinjauPDF = tampilkanPratinjauPDF;
+window.closeModalPreviewPDF = closeModalPreviewPDF;
 
 window.loadTranskripData = loadTranskripData;
 window.renderTranskripTable = renderTranskripTable;
 window.filterTranskripTable = filterTranskripTable;
 window.cetakTranskripNilaiResmi = cetakTranskripNilaiResmi;
+window.unduhSemuaTranskripPDF = unduhSemuaTranskripPDF;
 window.lihatDetailTranskrip = lihatDetailTranskrip;
 window.closeModalDetailTranskrip = closeModalDetailTranskrip;
 window.bukaModalAturFormulaTranskrip = bukaModalAturFormulaTranskrip;

@@ -1529,6 +1529,104 @@ function deleteRaportFromDB(id) {
   return { success: false, message: "Data raport tidak ditemukan." };
 }
 
+// ==================== DATABASE TABEL SEKOLAH MITRA / NUMPANG ====================
+function getSekolahMitraSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Sekolah_Mitra');
+  if (!sheet) {
+    sheet = ss.insertSheet('Sekolah_Mitra');
+    sheet.appendRow([
+      'ID', 'NamaSekolah', 'NPSN', 'StatusSekolah', 'BentukPendidikan', 
+      'Alamat', 'Kabupaten', 'Provinsi', 'NamaKepala', 'NipNiy', 
+      'KontakPIC', 'LogoBase64', 'CatatanIzin', 'Updated_At'
+    ]);
+  }
+  return sheet;
+}
+
+function getSekolahMitraListFromDB() {
+  const sheet = getSekolahMitraSheet();
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    list.push({
+      id: String(row[0]),
+      namaSekolah: String(row[1] || ''),
+      npsn: String(row[2] || ''),
+      statusSekolah: String(row[3] || 'Mitra Numpang'),
+      bentukPendidikan: String(row[4] || 'PKBM / Kesetaraan'),
+      alamat: String(row[5] || ''),
+      kabupaten: String(row[6] || 'Kabupaten Jayapura'),
+      provinsi: String(row[7] || 'Papua'),
+      namaKepala: String(row[8] || ''),
+      nipNiy: String(row[9] || ''),
+      kontakPic: String(row[10] || ''),
+      logoBase64: String(row[11] || ''),
+      catatanIzin: String(row[12] || ''),
+      updatedAt: String(row[13] || '')
+    });
+  }
+  return list;
+}
+
+function saveSekolahMitraToDB(sekolah) {
+  if (!sekolah || !sekolah.namaSekolah) throw new Error("Nama sekolah mitra wajib diisi.");
+  const sheet = getSekolahMitraSheet();
+  const data = sheet.getDataRange().getValues();
+  const id = sekolah.id || ('SCH-' + Date.now());
+  const now = new Date().toISOString();
+
+  let foundRow = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id) || String(data[i][1]).toLowerCase() === String(sekolah.namaSekolah).toLowerCase()) {
+      foundRow = i + 1;
+      break;
+    }
+  }
+
+  const rowValues = [
+    id,
+    sekolah.namaSekolah || '',
+    sekolah.npsn || '',
+    sekolah.statusSekolah || 'Mitra Numpang',
+    sekolah.bentukPendidikan || 'PKBM / Kesetaraan',
+    sekolah.alamat || '',
+    sekolah.kabupaten || 'Kabupaten Jayapura',
+    sekolah.provinsi || 'Papua',
+    sekolah.namaKepala || '',
+    sekolah.nipNiy || '',
+    sekolah.kontakPic || '',
+    sekolah.logoBase64 || '',
+    sekolah.catatanIzin || '',
+    now
+  ];
+
+  if (foundRow > 0) {
+    sheet.getRange(foundRow, 1, 1, rowValues.length).setValues([rowValues]);
+  } else {
+    sheet.appendRow(rowValues);
+  }
+
+  return { success: true, message: "Data sekolah mitra berhasil disimpan ke cloud database.", id: id };
+}
+
+function deleteSekolahMitraFromDB(id) {
+  const sheet = getSekolahMitraSheet();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: "Sekolah mitra berhasil dihapus dari cloud database." };
+    }
+  }
+  return { success: false, message: "Sekolah mitra tidak ditemukan." };
+}
+
+
 
 
 
