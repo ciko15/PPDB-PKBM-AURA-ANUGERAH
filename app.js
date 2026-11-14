@@ -932,6 +932,27 @@ async function callAPI(payload) {
 }
 
 // ======================= CLIENT ROUTING & SESSION =======================
+function bukaModalLoginPortal() {
+  if (modalLogin) {
+    modalLogin.classList.remove('hidden');
+    setTimeout(() => {
+      applyCaptchaVisibility();
+      try {
+        const remUser = localStorage.getItem('ppdb_remember_username');
+        if (remUser && inputLoginUser) {
+          inputLoginUser.value = remUser;
+          const remCheck = document.getElementById('login-remember-me');
+          if (remCheck) remCheck.checked = true;
+        }
+      } catch (e) { }
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    }, 60);
+  }
+}
+window.bukaModalLoginPortal = bukaModalLoginPortal;
+
 function handleClientRouting() {
   const path = window.location.pathname.toLowerCase();
   const session = localStorage.getItem('ppdb_session');
@@ -955,23 +976,7 @@ function handleClientRouting() {
   if (isPortal) {
     pageLanding.classList.remove('hidden');
     pageDashboard.classList.add('hidden');
-    if (modalLogin) {
-      modalLogin.classList.remove('hidden');
-      setTimeout(() => {
-        applyCaptchaVisibility();
-        try {
-          const remUser = localStorage.getItem('ppdb_remember_username');
-          if (remUser && inputLoginUser) {
-            inputLoginUser.value = remUser;
-            const remCheck = document.getElementById('login-remember-me');
-            if (remCheck) remCheck.checked = true;
-          }
-        } catch (e) { }
-        if (window.lucide && typeof window.lucide.createIcons === 'function') {
-          window.lucide.createIcons();
-        }
-      }, 60);
-    }
+    bukaModalLoginPortal();
   } else {
     // Publik via web browser standar: '/' atau '/pkbm'
     pageLanding.classList.remove('hidden');
