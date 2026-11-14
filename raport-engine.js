@@ -1724,20 +1724,20 @@ function unduhSemuaTranskripPDF() {
   }
 
   Swal.fire({
-    title: 'Unduh Semua Transkrip Nilai?',
-    text: `Sistem akan menggabungkan transkrip nilai ${list.length} siswa ke dalam 1 dokumen PDF global. Lanjutkan?`,
+    title: 'Pratinjau Semua Transkrip Nilai?',
+    text: `Sistem akan menggabungkan transkrip nilai ${list.length} siswa ke dalam 1 dokumen PDF global dan membukanya dalam mode pratinjau. Lanjutkan?`,
     icon: 'question',
     showCancelButton: true,
     confirmButtonColor: '#0284c7',
     cancelButtonColor: '#64748b',
-    confirmButtonText: 'Ya, Unduh Global',
+    confirmButtonText: 'Ya, Buka Pratinjau',
     cancelButtonText: 'Batal'
   }).then((result) => {
     if (!result.isConfirmed) return;
 
     Swal.fire({
-      title: 'Memproses PDF Global...',
-      text: 'Mohon tunggu beberapa saat...',
+      title: 'Menyiapkan Pratinjau Global...',
+      text: `Sedang memproses transkrip ${list.length} siswa, mohon tunggu...`,
       allowOutsideClick: false,
       didOpen: () => {
         Swal.showLoading();
@@ -1759,10 +1759,10 @@ function unduhSemuaTranskripPDF() {
         const tahun = new Date().getFullYear();
         const namaFileGlobal = `Transkrip_Nilai_Global_PKBM_Aura_Anugerah_${tahun}.pdf`;
         Swal.close();
-        tampilkanPratinjauPDF(globalDoc, `Transkrip Nilai Global (${list.length} Siswa)`, namaFileGlobal);
+        tampilkanPratinjauPDF(globalDoc, `Pratinjau Transkrip Nilai Global (${list.length} Siswa)`, namaFileGlobal);
       } catch (err) {
-        console.error("Gagal cetak global transkrip:", err);
-        Swal.fire('Gagal', 'Terjadi kesalahan saat memproses unduhan global: ' + err.message, 'error');
+        console.error("Gagal pratinjau global transkrip:", err);
+        Swal.fire('Gagal', 'Terjadi kesalahan saat memproses pratinjau: ' + err.message, 'error');
       }
     }, 400);
   });
