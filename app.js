@@ -394,6 +394,8 @@ function switchMobileTab(targetId, btnEl, recordHistory = true) {
   if (targetId === 'section-list') loadAllSiswa();
   if (targetId === 'section-materi') loadBukuData();
   if (targetId === 'section-ujian') loadUjianData();
+  if (targetId === 'section-raport') loadRaportData();
+  if (targetId === 'section-transkrip') loadTranskripData();
   if (targetId === 'section-users') loadAllUsers();
   if (targetId === 'section-api-keys') loadApiKeys();
   if (targetId === 'section-kegiatan') loadKegiatanData();
@@ -505,6 +507,8 @@ function setupEventListeners() {
         loadRiwayatBacaData();
       }
       if (targetId === 'section-ujian') loadUjianData();
+      if (targetId === 'section-raport') loadRaportData();
+      if (targetId === 'section-transkrip') loadTranskripData();
       if (targetId === 'section-users') loadAllUsers();
       if (targetId === 'section-api-keys') loadApiKeys();
       if (targetId === 'section-kegiatan') loadKegiatanData();
@@ -1373,6 +1377,7 @@ function showDashboard() {
 
   const dropSekolah = document.getElementById('dropdown-sekolah');
   const dropAkademik = document.getElementById('dropdown-akademik');
+  const dropDokumen = document.getElementById('dropdown-dokumen');
   const dropPortalSiswa = document.getElementById('dropdown-portal-siswa');
   const dropPengaturan = document.getElementById('dropdown-pengaturan');
 
@@ -1381,6 +1386,7 @@ function showDashboard() {
     menuDashboard.classList.add('hidden');
     if (dropSekolah) dropSekolah.classList.add('hidden');
     if (dropAkademik) dropAkademik.classList.add('hidden');
+    if (dropDokumen) dropDokumen.classList.add('hidden');
     if (dropPengaturan) dropPengaturan.classList.add('hidden');
 
     // Tampilkan portal siswa
@@ -1398,6 +1404,7 @@ function showDashboard() {
   menuDashboard.classList.remove('hidden');
   if (dropSekolah) dropSekolah.classList.remove('hidden');
   if (dropAkademik) dropAkademik.classList.remove('hidden');
+  if (dropDokumen) dropDokumen.classList.remove('hidden');
   if (dropPortalSiswa) dropPortalSiswa.classList.add('hidden');
 
   loadBukuData();

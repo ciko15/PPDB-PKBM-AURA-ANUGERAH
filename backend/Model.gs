@@ -1420,5 +1420,115 @@ function saveBankSoalBatchToDB(paketArr) {
   return { message: `${rows.length} paket bank soal berhasil disimpan ke Database.` };
 }
 
+// ==================== DATABASE TABEL RAPORT & TRANSKRIP NILAI ====================
+function getRaportSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Raport_Nilai');
+  if (!sheet) {
+    sheet = ss.insertSheet('Raport_Nilai');
+    sheet.appendRow([
+      'ID', 'SiswaID', 'NamaSiswa', 'NISN', 'Program', 'TingkatKelas', 
+      'TahunAjaran', 'Semester', 'Fase', 'NilaiMapel_JSON', 'CatatanAkademik', 
+      'Ekskul_JSON', 'Kehadiran_JSON', 'StatusKenaikanLulus', 'TglRapor', 'Updated_At'
+    ]);
+  }
+  return sheet;
+}
+
+function getRaportListFromDB() {
+  const sheet = getRaportSheet();
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    let mapel = [];
+    let ekskul = [];
+    let kehadiran = { sakit: 0, izin: 0, tanpaKeterangan: 0 };
+    try { mapel = JSON.parse(row[9] || '[]'); } catch (e) {}
+    try { ekskul = JSON.parse(row[11] || '[]'); } catch (e) {}
+    try { kehadiran = JSON.parse(row[12] || '{}'); } catch (e) {}
+
+    list.push({
+      id: String(row[0]),
+      siswaId: String(row[1]),
+      namaSiswa: String(row[2]),
+      nisn: String(row[3] || ''),
+      program: String(row[4] || ''),
+      tingkatKelas: String(row[5] || ''),
+      tahunAjaran: String(row[6] || '2026/2027'),
+      semester: String(row[7] || 'Ganjil'),
+      fase: String(row[8] || ''),
+      nilaiMapel: mapel,
+      catatanAkademik: String(row[10] || ''),
+      ekskul: ekskul,
+      kehadiran: kehadiran,
+      statusKenaikanLulus: String(row[13] || 'Lulus / Naik Kelas'),
+      tglRapor: String(row[14] || ''),
+      updatedAt: String(row[15] || '')
+    });
+  }
+  return list;
+}
+
+function saveRaportToDB(raport) {
+  if (!raport) throw new Error("Data raport tidak boleh kosong.");
+  const sheet = getRaportSheet();
+  const data = sheet.getDataRange().getValues();
+  const id = raport.id || 'RAP-' + Date.now();
+  const now = new Date().toISOString();
+
+  let foundRow = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id) || 
+       (String(data[i][1]) === String(raport.siswaId) && String(data[i][6]) === String(raport.tahunAjaran) && String(data[i][7]) === String(raport.semester))) {
+      foundRow = i + 1;
+      break;
+    }
+  }
+
+  const rowValues = [
+    id,
+    raport.siswaId || '',
+    raport.namaSiswa || '',
+    raport.nisn || '',
+    raport.program || '',
+    raport.tingkatKelas || '',
+    raport.tahunAjaran || '2026/2027',
+    raport.semester || 'Ganjil',
+    raport.fase || '',
+    JSON.stringify(raport.nilaiMapel || []),
+    raport.catatanAkademik || '',
+    JSON.stringify(raport.ekskul || []),
+    JSON.stringify(raport.kehadiran || { sakit: 0, izin: 0, tanpaKeterangan: 0 }),
+    raport.statusKenaikanLulus || 'Naik Kelas',
+    raport.tglRapor || new Date().toLocaleDateString('id-ID'),
+    now
+  ];
+
+  if (foundRow > 0) {
+    sheet.getRange(foundRow, 1, 1, rowValues.length).setValues([rowValues]);
+  } else {
+    sheet.appendRow(rowValues);
+  }
+
+  return { success: true, message: "Data Rapor berhasil disimpan ke Database Cloud.", id: id };
+}
+
+function deleteRaportFromDB(id) {
+  const sheet = getRaportSheet();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+      sheet.deleteRow(i + 1);
+      return { success: true, message: "Rapor berhasil dihapus dari Database Cloud." };
+    }
+  }
+  return { success: false, message: "Data raport tidak ditemukan." };
+}
+
+
 
 

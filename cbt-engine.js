@@ -507,6 +507,7 @@ function closeModalPilihCBT() {
   const modal = document.getElementById('modal-pilih-cbt');
   if (modal) modal.classList.add('hidden');
 }
+const closeModalPilihUjianCBT = closeModalPilihCBT;
 
 // ==================== CBT KHUSUS PESERTA LUAR / TAMU ====================
 function bukaModalUjianLuar(presetPaketId) {
@@ -3341,4 +3342,9 @@ window.masukkanSoalTerpilihKePaket = masukkanSoalTerpilihKePaket;
 window.bukaModalGenerateSoalAI = bukaModalGenerateSoalAI;
 window.closeModalGenerateSoalAI = closeModalGenerateSoalAI;
 window.prosesGenerateSoalAI = prosesGenerateSoalAI;
+window.bukaModalPilihUjianCBT = bukaModalPilihUjianCBT;
+window.closeModalPilihUjianCBT = closeModalPilihUjianCBT;
+window.closeModalPilihCBT = closeModalPilihCBT;
+window.prosesMulaiCBT = prosesMulaiCBT;
+
 

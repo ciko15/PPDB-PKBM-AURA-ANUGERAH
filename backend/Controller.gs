@@ -97,6 +97,12 @@ function doPost(e) {
       result = getBankSoalFromDB();
     } else if (action === "saveBankSoalBatch") {
       result = saveBankSoalBatchToDB(params.paketList);
+    } else if (action === "getRaport") {
+      result = getRaportListFromDB();
+    } else if (action === "saveRaport") {
+      result = saveRaportToDB(params.raport);
+    } else if (action === "deleteRaport") {
+      result = deleteRaportFromDB(params.id);
     } else {
       result = { error: "Action not found" };
     }
