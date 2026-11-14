@@ -979,7 +979,7 @@ function handleClientRouting() {
 }
 
 // ======================= PENGATURAN KEAMANAN & CAPTCHA (SUPER ADMIN) =======================
-let isCaptchaEnabled = true;
+let isCaptchaEnabled = false;
 
 function loadCaptchaSetting() {
   try {
@@ -987,12 +987,26 @@ function loadCaptchaSetting() {
     if (saved !== null) {
       isCaptchaEnabled = (saved === 'true');
     } else {
-      isCaptchaEnabled = true;
+      isCaptchaEnabled = false;
     }
   } catch (err) {
-    isCaptchaEnabled = true;
+    isCaptchaEnabled = false;
   }
   applyCaptchaVisibility();
+
+  // Sinkronkan dengan database cloud Google Spreadsheet
+  if (typeof callAPI === 'function') {
+    callAPI({ action: "getAppSetting", key: "pkbm_enable_captcha" }).then(res => {
+      if (res && res.val !== undefined && res.val !== null) {
+        const cloudVal = (res.val === true || res.val === 'true');
+        if (cloudVal !== isCaptchaEnabled) {
+          isCaptchaEnabled = cloudVal;
+          try { localStorage.setItem('pkbm_enable_captcha', isCaptchaEnabled ? 'true' : 'false'); } catch (e) {}
+          applyCaptchaVisibility();
+        }
+      }
+    }).catch(() => {});
+  }
 }
 
 function applyCaptchaVisibility() {
@@ -1064,6 +1078,13 @@ function toggleCaptchaSetting(enabled) {
     localStorage.setItem('pkbm_enable_captcha', isCaptchaEnabled ? 'true' : 'false');
   } catch (err) {
     console.warn('Gagal menyimpan status captcha ke localStorage:', err);
+  }
+
+  // Simpan secara permanen ke Google Spreadsheet Cloud Database
+  if (typeof callAPI === 'function') {
+    callAPI({ action: "saveAppSetting", key: "pkbm_enable_captcha", val: isCaptchaEnabled ? 'true' : 'false' }).catch(err => {
+      console.warn('Gagal simpan status captcha ke cloud:', err);
+    });
   }
 
   applyCaptchaVisibility();
