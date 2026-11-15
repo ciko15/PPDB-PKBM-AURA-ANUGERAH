@@ -657,6 +657,9 @@ function updateSiswa(dataObj) {
       if(dataObj.koreksiAI !== undefined && dataObj.koreksiAI !== '') {
         sheet.getRange(row, 25).setValue(dataObj.koreksiAI);
       }
+      if(dataObj.statusAktif !== undefined && dataObj.statusAktif !== '') {
+        sheet.getRange(row, 29).setValue(dataObj.statusAktif);
+      }
       
       if(dataObj.jk !== undefined) sheet.getRange(row, 31).setValue(dataObj.jk);
       if(dataObj.tahunLulus !== undefined) sheet.getRange(row, 32).setValue(dataObj.tahunLulus);

@@ -6172,7 +6172,7 @@ async function handleAISiswaSubmit() {
       urlIjazah: b64Ijazah || (existingByNik && existingByNik.urlIjazah) || '',
       urlKK: b64Kk || (existingByNik && existingByNik.urlKK) || '',
       urlBayar: (existingByNik && existingByNik.urlBayar) || '',
-      statusAktif: (existingByNik && existingByNik.statusAktif) || 'Aktif',
+      statusAktif: (existingByNik && existingByNik.statusAktif) || 'Tidak Aktif',
       createdBy: currentUser ? currentUser.username : 'AI Quick Reg',
       _pendingCloudSync: true
     };
