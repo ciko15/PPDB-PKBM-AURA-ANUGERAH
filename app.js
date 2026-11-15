@@ -2786,13 +2786,19 @@ function renderSiswaTableRows(data, offset = 0) {
 
     // Tag status persis Rostering Teknik
     const statusTag = isAktif
-      ? `<span class="tag pusat" style="cursor: pointer;" onclick="toggleStatusSiswa('${s.id}', 'Tidak Aktif')" title="Klik untuk ubah status">Aktif</span>`
-      : `<span class="tag ess" style="cursor: pointer;" onclick="toggleStatusSiswa('${s.id}', 'Aktif')" title="Klik untuk ubah status">Tidak Aktif</span>`;
+      ? `<span class="tag pusat" style="cursor: pointer;" onclick="event.stopPropagation(); toggleStatusSiswa('${s.id}', 'Tidak Aktif')" title="Klik untuk ubah status">Aktif</span>`
+      : `<span class="tag ess" style="cursor: pointer;" onclick="event.stopPropagation(); toggleStatusSiswa('${s.id}', 'Aktif')" title="Klik untuk ubah status">Tidak Aktif</span>`;
 
     tr.className = "hoverable-row";
     tr.style.cursor = 'pointer';
     tr.onclick = (e) => {
-      if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.type === 'checkbox') return;
+      if (
+        e.target.tagName === 'BUTTON' || 
+        e.target.closest('button') || 
+        e.target.type === 'checkbox' ||
+        e.target.classList.contains('tag') ||
+        e.target.closest('.tag')
+      ) return;
       showSiswaDetail(s.id);
     };
 
@@ -2805,7 +2811,7 @@ function renderSiswaTableRows(data, offset = 0) {
       <td>${s.program || '-'}</td>
       <td>${aiStatusBadge}</td>
       <td style="font-size: 12px; color: var(--text-muted);">${s.createdBy || 'N/A'}</td>
-      <td>${statusTag}</td>
+      <td onclick="event.stopPropagation();">${statusTag}</td>
       <td style="vertical-align: middle;" onclick="event.stopPropagation();">
         <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
           <button class="btn btn-icon" onclick="runSingleRowAICheck('${s.id}')" title="Periksa AI">
