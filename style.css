@@ -3524,7 +3524,11 @@ textarea:disabled,
   cursor: not-allowed;
 }
 
-/* SweetAlert2 Popup otomatis beradaptasi dengan Dark Mode */
+/* SweetAlert2 Popup otomatis beradaptasi dengan Dark Mode & z-index tertinggi */
+.swal2-container {
+  z-index: 999999 !important;
+}
+
 :root[data-theme="dark"] .swal2-popup {
   background: var(--surface-color) !important;
   color: var(--text-color) !important;
@@ -3534,6 +3538,15 @@ textarea:disabled,
 :root[data-theme="dark"] .swal2-title,
 :root[data-theme="dark"] .swal2-html-container {
   color: var(--text-color) !important;
+}
+
+:root[data-theme="dark"] .swal2-html-container small {
+  color: #94a3b8 !important;
+}
+
+:root[data-theme="dark"] .swal2-icon.swal2-question {
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
 }
 
 :root[data-theme="dark"] .swal2-input,

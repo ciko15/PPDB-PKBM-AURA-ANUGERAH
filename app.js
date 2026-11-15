@@ -3489,12 +3489,14 @@ function showSiswaDetail(id) {
       </div>
       <div style="flex: 1; min-width: 0;">
         <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; color: #0f172a; word-break: break-word;">${s.nama || '-'}</h3>
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
           <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
             Status: ${s.status || 'Pending'}
           </span>
-          <span style="background: ${statusAktifBg}; color: ${statusAktifColor}; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
-            ${s.statusAktif || 'Tidak Aktif'}
+          <span onclick="toggleStatusSiswa('${s.id}', '${(s.statusAktif === 'Aktif') ? 'Tidak Aktif' : 'Aktif'}')"
+            style="background: ${statusAktifBg}; color: ${statusAktifColor}; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: 1px solid ${s.statusAktif === 'Aktif' ? '#86efac' : '#cbd5e1'};"
+            title="Klik untuk ${s.statusAktif === 'Aktif' ? 'Nonaktifkan' : 'Aktifkan'} Akun Siswa">
+            ${s.statusAktif || 'Tidak Aktif'} 🔄
           </span>
           <span style="background: #e0f2fe; color: #0369a1; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600;">
             ${s.program || '-'}
@@ -3785,6 +3787,11 @@ async function toggleStatusSiswa(id, newStatus) {
         const res = await callAPI({ action: "updateStatusAktif", idSiswa: id, statusAktif: newStatus });
         hideLoader();
         loadAllSiswa();
+        // Update tampilan drawer jika sedang terbuka untuk siswa yang bersangkutan
+        const currentDrawerEl = document.getElementById('siswa-detail-drawer');
+        if (currentDrawerEl && !currentDrawerEl.classList.contains('hidden')) {
+          showSiswaDetail(id);
+        }
         if (isActivating && res && res.defaultPasswordCreated) {
           Swal.fire({
             icon: 'success',
