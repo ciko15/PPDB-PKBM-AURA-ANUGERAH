@@ -5348,11 +5348,10 @@ async function handleUploadPdfGabunganAI(inputEl) {
 
       if (btnTukar) btnTukar.style.display = 'inline-flex';
       if (statusEl) {
-        statusEl.innerHTML = `<span style="color:#059669; font-weight:700;">✅ Berhasil memisahkan ${pages.length} halaman PDF! (${infoDeteksi}) — Memulai ekstraksi AI otomatis...</span>`;
+        statusEl.innerHTML = `<span style="color:#059669; font-weight:700;">✅ Berhasil memisahkan ${pages.length} halaman PDF! (${infoDeteksi}). Silakan periksa atau klik tombol hijau "Ekstrak & Isi Otomatis dengan AI" di bawah.</span>`;
       }
       renderAIStep2Previews();
-      // Langsung jalankan ekstraksi AI dan pindah ke form pendaftaran otomatis!
-      setTimeout(() => { handleEkstrakDataAI(); }, 350);
+      // Jangan langsung pindah otomatis; tunggu sampai user siap dan mengklik tombol "Ekstrak & Isi Otomatis dengan AI"
     }
   } catch (err) {
     console.error('Gagal memproses PDF gabungan:', err);
