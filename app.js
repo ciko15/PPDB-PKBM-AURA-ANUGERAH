@@ -5482,6 +5482,22 @@ async function handleEkstrakDataAI() {
   }
 
   isExtractingAI = true;
+  // Langsung ganti tampilan modal ke Form Review (Step 2) sejak awal ekstraksi
+  // sehingga pengguna tidak perlu menutup (close) pop-up secara manual!
+  const step1Card = document.getElementById('ai-step-1-card');
+  if (step1Card) step1Card.style.display = 'none';
+
+  const container = document.getElementById('ai-extracted-container');
+  if (container) {
+    container.style.display = 'block';
+  }
+
+  const modal = document.getElementById('modal-ai-reg');
+  if (modal) {
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
+  }
+
   showLoader('Gemini AI sedang membaca dan mengekstrak data dari dokumen KK & Ijazah...');
 
   try {
@@ -5713,6 +5729,11 @@ async function handleEkstrakDataAI() {
   } catch (err) {
     hideLoader();
     console.error("AI Extraction Error:", err);
+    // Kembalikan ke kartu upload Step 1 jika terjadi error
+    const step1Card = document.getElementById('ai-step-1-card');
+    if (step1Card) step1Card.style.display = 'block';
+    const container = document.getElementById('ai-extracted-container');
+    if (container) container.style.display = 'none';
     Swal.fire('Error', 'Terjadi kesalahan saat memproses dokumen: ' + err.message, 'error');
   } finally {
     isExtractingAI = false;
