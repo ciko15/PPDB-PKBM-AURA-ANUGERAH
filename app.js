@@ -4969,6 +4969,151 @@ if (btnCloseRegister && modalRegister) {
 
 // ======================= PENDAFTARAN CEPAT AI (GEMINI) =======================
 
+// Helper: Konversi halaman PDF menjadi gambar JPEG Base64 menggunakan pdf.js
+async function convertPdfPagesToImages(file) {
+  if (typeof pdfjsLib === 'undefined') {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  if (typeof pdfjsLib !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const numPages = pdf.numPages;
+  const pageResults = [];
+
+  for (let i = 1; i <= Math.min(numPages, 4); i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.8 });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+    pageResults.push({
+      pageNumber: i,
+      width: viewport.width,
+      height: viewport.height,
+      isLandscape: viewport.width >= viewport.height,
+      dataUrl: dataUrl
+    });
+  }
+
+  return pageResults;
+}
+
+function updateAIPreviewBoxStep1(previewId, imgDataUrl, labelText) {
+  const container = document.getElementById(previewId);
+  if (!container) return;
+  if (!imgDataUrl) {
+    container.innerHTML = '';
+    container.style.display = 'none';
+    return;
+  }
+  container.innerHTML = `
+    <img src="${imgDataUrl}" style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1.5px solid #10b981; cursor:pointer;" onclick="openDocViewerModal('${imgDataUrl}', '${labelText}')">
+    <span style="font-size:0.76rem; color:#059669; font-weight:700;">✓ ${labelText} (Klik gambar untuk perbesar)</span>
+  `;
+  container.style.display = 'flex';
+}
+
+// Handler saat pengguna memilih 1 file PDF Gabungan (misal: Syawaluddin PB28.pdf)
+async function handleUploadPdfGabunganAI(inputEl) {
+  if (!inputEl || !inputEl.files || !inputEl.files[0]) return;
+  const file = inputEl.files[0];
+  const statusEl = document.getElementById('ai-pdf-gabungan-status');
+  const btnTukar = document.getElementById('btn-tukar-kk-ijazah');
+
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `<span style="color:#0284c7; font-weight:600;">⏳ Sedang memisahkan halaman PDF "${file.name}" menjadi gambar KK & Ijazah...</span>`;
+  }
+
+  try {
+    const pages = await convertPdfPagesToImages(file);
+    if (!pages || pages.length === 0) {
+      throw new Error('Tidak dapat membaca halaman dari file PDF.');
+    }
+
+    if (pages.length === 1) {
+      aiUploadedFiles.kk = pages[0].dataUrl;
+      updateAIPreviewBoxStep1('ai-preview-kk', aiUploadedFiles.kk, 'Halaman 1 PDF → Kartu Keluarga');
+      if (statusEl) {
+        statusEl.innerHTML = `<span style="color:#059669; font-weight:600;">✅ PDF 1 halaman berhasil dimuat ke kolom KK.</span>`;
+      }
+    } else {
+      // Deteksi cerdas berdasarkan orientasi halaman:
+      // Kartu Keluarga (KK) hampir selalu Landscape (lebar > tinggi), sedangkan Ijazah umumnya Portrait (tinggi > lebar).
+      const p1 = pages[0];
+      const p2 = pages[1];
+
+      let kkPage = p1;
+      let ijazahPage = p2;
+      let infoDeteksi = 'Halaman 1 → KK, Halaman 2 → Ijazah';
+
+      if (!p1.isLandscape && p2.isLandscape) {
+        // Halaman 1 Portrait (Ijazah) & Halaman 2 Landscape (KK) -> seperti file Syawaluddin PB28.pdf
+        ijazahPage = p1;
+        kkPage = p2;
+        infoDeteksi = 'Halaman 1 (Portrait) → Kolom Ijazah, Halaman 2 (Landscape) → Kolom KK';
+      } else if (p1.isLandscape && !p2.isLandscape) {
+        kkPage = p1;
+        ijazahPage = p2;
+        infoDeteksi = 'Halaman 1 (Landscape) → Kolom KK, Halaman 2 (Portrait) → Kolom Ijazah';
+      }
+
+      aiUploadedFiles.kk = kkPage.dataUrl;
+      aiUploadedFiles.ijazah = ijazahPage.dataUrl;
+
+      updateAIPreviewBoxStep1('ai-preview-kk', aiUploadedFiles.kk, `Kolom KK (Hal. ${kkPage.pageNumber})`);
+      updateAIPreviewBoxStep1('ai-preview-ijazah', aiUploadedFiles.ijazah, `Kolom Ijazah (Hal. ${ijazahPage.pageNumber})`);
+
+      if (btnTukar) btnTukar.style.display = 'inline-flex';
+      if (statusEl) {
+        statusEl.innerHTML = `<span style="color:#059669; font-weight:700;">✅ Berhasil memisahkan ${pages.length} halaman PDF! (${infoDeteksi})</span>`;
+      }
+    }
+
+    renderAIStep2Previews();
+  } catch (err) {
+    console.error('Gagal memproses PDF gabungan:', err);
+    if (statusEl) {
+      statusEl.innerHTML = `<span style="color:#dc2626; font-weight:600;">❌ Gagal membaca PDF: ${err.message}</span>`;
+    }
+  }
+}
+
+function tukarPosisiKkDanIjazahAI() {
+  const temp = aiUploadedFiles.kk;
+  aiUploadedFiles.kk = aiUploadedFiles.ijazah;
+  aiUploadedFiles.ijazah = temp;
+
+  updateAIPreviewBoxStep1('ai-preview-kk', aiUploadedFiles.kk, 'Kolom Kartu Keluarga (KK)');
+  updateAIPreviewBoxStep1('ai-preview-ijazah', aiUploadedFiles.ijazah, 'Kolom Ijazah Terakhir');
+  renderAIStep2Previews();
+
+  Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon: 'info',
+    title: 'Posisi gambar KK dan Ijazah telah ditukar!',
+    showConfirmButton: false,
+    timer: 2000
+  });
+}
+
+window.handleUploadPdfGabunganAI = handleUploadPdfGabunganAI;
+window.tukarPosisiKkDanIjazahAI = tukarPosisiKkDanIjazahAI;
+
 async function handleEkstrakDataAI() {
   const nikInput = document.getElementById('ai-reg-nik');
   const fileKkInput = document.getElementById('ai-reg-file-kk');
@@ -4980,11 +5125,11 @@ async function handleEkstrakDataAI() {
   const fileIjazah = fileIjazahInput && fileIjazahInput.files[0] ? fileIjazahInput.files[0] : null;
   const fileFoto = fileFotoInput && fileFotoInput.files[0] ? fileFotoInput.files[0] : null;
 
-  if (!fileKk) {
+  if (!fileKk && !aiUploadedFiles.kk) {
     Swal.fire({
       icon: 'warning',
-      title: 'Berkas KK Diperlukan',
-      text: 'Silakan pilih foto / scan Kartu Keluarga (KK) terlebih dahulu untuk dianalisis oleh AI.'
+      title: 'Berkas Dokumen Diperlukan',
+      text: 'Silakan pilih 1 file PDF Gabungan (KK+Ijazah) atau unggah foto Kartu Keluarga (KK) terlebih dahulu untuk dianalisis oleh AI.'
     });
     return;
   }
@@ -4992,9 +5137,52 @@ async function handleEkstrakDataAI() {
   showLoader('Gemini AI sedang membaca dan mengekstrak data dari dokumen KK & Ijazah...');
 
   try {
-    const kkBase64 = await toBase64(fileKk);
-    const ijazahBase64 = fileIjazah ? await toBase64(fileIjazah) : "";
-    const fotoBase64 = fileFoto ? await toBase64(fileFoto) : "";
+    let kkBase64 = aiUploadedFiles.kk || "";
+    let ijazahBase64 = aiUploadedFiles.ijazah || "";
+    let fotoBase64 = aiUploadedFiles.foto || "";
+
+    // Jika user mengunggah PDF multi-halaman langsung di input KK dan input Ijazah kosong, pisahkan otomatis juga!
+    if (fileKk) {
+      if (fileKk.type === 'application/pdf' || fileKk.name.toLowerCase().endsWith('.pdf')) {
+        const pages = await convertPdfPagesToImages(fileKk);
+        if (pages.length >= 2 && !fileIjazah) {
+          const p1 = pages[0];
+          const p2 = pages[1];
+          if (!p1.isLandscape && p2.isLandscape) {
+            ijazahBase64 = p1.dataUrl;
+            kkBase64 = p2.dataUrl;
+          } else {
+            kkBase64 = p1.dataUrl;
+            ijazahBase64 = p2.dataUrl;
+          }
+          updateAIPreviewBoxStep1('ai-preview-kk', kkBase64, 'Kolom KK (Otomatis dari PDF)');
+          updateAIPreviewBoxStep1('ai-preview-ijazah', ijazahBase64, 'Kolom Ijazah (Otomatis dari PDF)');
+          const btnTukar = document.getElementById('btn-tukar-kk-ijazah');
+          if (btnTukar) btnTukar.style.display = 'inline-flex';
+        } else if (pages.length >= 1) {
+          kkBase64 = pages[0].dataUrl;
+          updateAIPreviewBoxStep1('ai-preview-kk', kkBase64, 'Kolom KK (Dari PDF)');
+        }
+      } else {
+        kkBase64 = await toBase64(fileKk);
+      }
+    }
+
+    if (fileIjazah) {
+      if (fileIjazah.type === 'application/pdf' || fileIjazah.name.toLowerCase().endsWith('.pdf')) {
+        const pages = await convertPdfPagesToImages(fileIjazah);
+        if (pages.length >= 1) {
+          ijazahBase64 = pages[0].dataUrl;
+          updateAIPreviewBoxStep1('ai-preview-ijazah', ijazahBase64, 'Kolom Ijazah (Dari PDF)');
+        }
+      } else {
+        ijazahBase64 = await toBase64(fileIjazah);
+      }
+    }
+
+    if (fileFoto) {
+      fotoBase64 = await toBase64(fileFoto);
+    }
 
     aiUploadedFiles = {
       kk: kkBase64,
@@ -5024,6 +5212,15 @@ async function handleEkstrakDataAI() {
       return;
     }
 
+    // Jika Gemini AI mendeteksi posisi gambar KK dan Ijazah terbalik, otomatis tukar agar masuk ke kolom yang tepat!
+    if (result.isDocSwapped && aiUploadedFiles.kk && aiUploadedFiles.ijazah) {
+      const tmp = aiUploadedFiles.kk;
+      aiUploadedFiles.kk = aiUploadedFiles.ijazah;
+      aiUploadedFiles.ijazah = tmp;
+      updateAIPreviewBoxStep1('ai-preview-kk', aiUploadedFiles.kk, 'Kolom KK (Disesuaikan AI)');
+      updateAIPreviewBoxStep1('ai-preview-ijazah', aiUploadedFiles.ijazah, 'Kolom Ijazah (Disesuaikan AI)');
+    }
+
     const data = result.data;
 
     // Masukkan data hasil ekstraksi ke formulir Step 2
@@ -5040,6 +5237,12 @@ async function handleEkstrakDataAI() {
     setField('ai-out-nik', data.nik || nikTarget || '');
     setField('ai-out-no-kk', data.noKk || '');
     setField('ai-out-urut-kk', data.urutKk || '');
+
+    // Isi otomatis rekomendasi program kesetaraan jika terdeteksi dari ijazah (misal Ijazah SD -> Paket B)
+    const elProg = document.getElementById('ai-out-program');
+    if (elProg && !elProg.value && data.jenjangRekomendasi && ['Paket A', 'Paket B', 'Paket C'].includes(data.jenjangRekomendasi)) {
+      elProg.value = data.jenjangRekomendasi;
+    }
 
     // Normalisasi Jenis Kelamin
     const elJk = document.getElementById('ai-out-jk');
@@ -5216,12 +5419,21 @@ function renderAIStep2Previews() {
       }
       if (b64.startsWith('data:image')) {
         box.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <img src="${b64}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #0284c7;">
-            <span style="font-size: 0.8rem; color: #0284c7; font-weight: 600;">Berkas siap disimpan</span>
+          <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" title="Klik untuk memperbesar pratinjau ${label}">
+            <img src="${b64}" style="width: 52px; height: 52px; object-fit: cover; border-radius: 6px; border: 1.5px solid #0284c7;">
+            <div>
+              <span style="font-size: 0.8rem; color: #0284c7; font-weight: 700; display: block;">Berkas ${label} siap disimpan</span>
+              <span style="font-size: 0.72rem; color: #64748b;">🔍 Klik gambar untuk perbesar</span>
+            </div>
           </div>`;
+        box.onclick = () => {
+          if (typeof openDocViewerModal === 'function') {
+            openDocViewerModal(b64, `Pratinjau Kolom ${label}`);
+          }
+        };
       } else {
         box.innerHTML = `<span style="font-size: 0.8rem; color: #0284c7; font-weight: 600;">📄 Dokumen PDF terlampir</span>`;
+        box.onclick = null;
       }
     } else {
       if (badge) {
@@ -5230,12 +5442,13 @@ function renderAIStep2Previews() {
         badge.style.fontWeight = "normal";
       }
       box.innerHTML = `<span style="font-size: 0.78rem; color: #94a3b8; font-style: italic;">Belum diunggah</span>`;
+      box.onclick = null;
     }
   };
 
-  updateBox('ai-preview-box-kk', 'ai-status-badge-kk', aiUploadedFiles.kk, 'KK');
-  updateBox('ai-preview-box-ijazah', 'ai-status-badge-ijazah', aiUploadedFiles.ijazah, 'Ijazah');
-  updateBox('ai-preview-box-foto', 'ai-status-badge-foto', aiUploadedFiles.foto, 'Foto');
+  updateBox('ai-preview-box-kk', 'ai-status-badge-kk', aiUploadedFiles.kk, 'Kartu Keluarga (KK)');
+  updateBox('ai-preview-box-ijazah', 'ai-status-badge-ijazah', aiUploadedFiles.ijazah, 'Ijazah Terakhir');
+  updateBox('ai-preview-box-foto', 'ai-status-badge-foto', aiUploadedFiles.foto, 'Pas Foto');
 }
 
 async function handleAISiswaSubmit() {
@@ -5386,6 +5599,13 @@ async function handleAISiswaSubmit() {
 function resetAIRegForm() {
   const nikInput = document.getElementById('ai-reg-nik');
   if (nikInput) nikInput.value = '';
+
+  const filePdfGabungan = document.getElementById('ai-reg-file-pdf-gabungan');
+  if (filePdfGabungan) filePdfGabungan.value = '';
+  const statusPdfGabungan = document.getElementById('ai-pdf-gabungan-status');
+  if (statusPdfGabungan) { statusPdfGabungan.innerHTML = ''; statusPdfGabungan.style.display = 'none'; }
+  const btnTukar = document.getElementById('btn-tukar-kk-ijazah');
+  if (btnTukar) btnTukar.style.display = 'none';
 
   const fileKk = document.getElementById('ai-reg-file-kk');
   if (fileKk) fileKk.value = '';

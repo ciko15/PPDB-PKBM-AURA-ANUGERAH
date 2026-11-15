@@ -251,36 +251,42 @@ function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
 
   const parts = [];
 
-  const promptText = `Anda adalah asisten AI cerdas untuk pendaftaran peserta didik baru (PPDB).\n` +
-    (nikTarget ? `NIK Target Siswa: "${nikTarget}"\n` : `NIK Target Siswa: (Cari data siswa utama pada dokumen)\n`) +
+  const promptText = `Anda adalah asisten AI cerdas untuk pendaftaran peserta didik baru (PPDB) di PKBM Aura Anugerah.\n` +
+    (nikTarget ? `NIK Target Siswa: "${nikTarget}"\n` : `NIK Target Siswa: (Cocokkan nama siswa yang tertera pada Ijazah dengan baris anggota keluarga di Kartu Keluarga)\n`) +
     `Instruksi:\n` +
-    `1. Analisis gambar dokumen yang terlampir (Kartu Keluarga dan/atau Ijazah).\n` +
-    `2. Jika ada Kartu Keluarga: Temukan baris anggota keluarga yang memiliki NIK sesuai "NIK Target Siswa" (atau anggota anak jika NIK tidak spesifik).\n` +
-    `3. Ekstrak data berikut secara teliti:\n` +
+    `1. Analisis gambar dokumen yang terlampir (Dokumen 1 dan Dokumen 2 bisa berupa Kartu Keluarga dan Ijazah).\n` +
+    `2. IDENTIFIKASI POSISI DOKUMEN:\n` +
+    `   - Periksa apakah Dokumen 1 adalah Kartu Keluarga (KK) atau Ijazah.\n` +
+    `   - Jika Dokumen 1 sebenarnya adalah IJAZAH dan Dokumen 2 adalah KARTU KELUARGA (terbalik posisinya), isi properti "isDocSwapped": true. Jika sudah benar (Dokumen 1 = KK, Dokumen 2 = Ijazah), isi "isDocSwapped": false.\n` +
+    `3. Temukan baris anggota keluarga di KK yang sesuai dengan "NIK Target Siswa" atau yang namanya cocok dengan nama siswa di Ijazah.\n` +
+    `4. Ekstrak data berikut secara teliti:\n` +
     `   - nama: Nama lengkap calon siswa\n` +
-    `   - nik: NIK calon siswa (16 digit)\n` +
+    `   - nik: NIK calon siswa (16 digit dari KK)\n` +
     `   - noKk: Nomor Kartu Keluarga (16 digit di bagian atas KK)\n` +
-    `   - urutKk: Nomor urut siswa di dalam tabel Kartu Keluarga (misal: 1, 2, 3, dst)\n` +
+    `   - urutKk: Nomor urut siswa di dalam tabel Kartu Keluarga (misal: 1, 2, 3, 4, dst)\n` +
     `   - jk: Jenis Kelamin ('Laki-laki' atau 'Perempuan')\n` +
     `   - tempatLahir: Tempat lahir siswa\n` +
     `   - tglLahir: Tanggal lahir format YYYY-MM-DD\n` +
-    `   - namaAyah: Nama ayah kandung\n` +
-    `   - nikAyah: NIK ayah kandung jika terbaca\n` +
-    `   - tahunLahirAyah: Tahun lahir ayah jika ada\n` +
-    `   - namaIbu: Nama ibu kandung\n` +
-    `   - nikIbu: NIK ibu kandung jika terbaca\n` +
-    `   - tahunLahirIbu: Tahun lahir ibu jika ada\n` +
+    `   - namaAyah: Nama ayah kandung (dari tabel bawah KK kolom Ayah)\n` +
+    `   - nikAyah: NIK ayah kandung jika ayah terdaftar di tabel atas KK\n` +
+    `   - tahunLahirAyah: Tahun lahir ayah jika terbaca\n` +
+    `   - namaIbu: Nama ibu kandung (dari tabel bawah KK kolom Ibu)\n` +
+    `   - nikIbu: NIK ibu kandung jika ibu terdaftar di tabel atas KK\n` +
+    `   - tahunLahirIbu: Tahun lahir ibu jika terbaca\n` +
     `   - kabKota: Kabupaten / Kota domisili di KK\n` +
     `   - kecamatan: Kecamatan di KK\n` +
     `   - desaKelurahan: Desa / Kelurahan di KK\n` +
-    `4. Jika terlampir Ijazah: Ekstrak NISN (10 digit nomor induk siswa nasional) dan tahun kelulusan asal (tahunLulus).\n` +
+    `   - nisn: NISN (10 digit Nomor Induk Siswa Nasional dari Ijazah)\n` +
+    `   - tahunLulus: Tahun kelulusan dari Ijazah (misal: 2023)\n` +
+    `   - jenjangRekomendasi: Rekomendasi program kesetaraan lanjutan berdasarkan ijazah terakhir ('Paket B' jika ijazah SD, 'Paket C' jika ijazah SMP/MTs/Paket B, atau 'Paket A' jika belum punya ijazah)\n` +
     `5. PERIKSA KESESUAIAN ANTARA KK DAN IJAZAH (Jika kedua dokumen terlampir):\n` +
     `   - Bandingkan Nama Lengkap, Tempat Lahir, dan Tanggal Lahir antara yang tertulis di Kartu Keluarga dan Ijazah.\n` +
-    `   - Jika sama persis (atau hanya ada 1 dokumen tanpa konflik): tetapkan validationStatus = "Sesuai", dan WAJIB buatkan validationDetails dalam bentuk poin-poin bernomor (1. ..., 2. ...) sebagai bukti pencocokan (evidence audit), contoh: 1. Nama Lengkap: Cocok antara KK dan Ijazah. 2. Tempat & Tanggal Lahir: Cocok antara KK dan Ijazah. 3. Identitas siswa terverifikasi sah.\n` +
-    `   - Jika ada perbedaan (misal nama di Ijazah berbeda ejaan dengan nama di KK, atau tanggal lahir berbeda): tetapkan validationStatus = "Tidak Sesuai", dan buatkan validationDetails dalam bentuk poin bernomor (1. ..., 2. ...) yang merinci letak perbedaannya.\n` +
+    `   - Jika sama persis (atau hanya ada 1 dokumen tanpa konflik): tetapkan validationStatus = "Sesuai", dan WAJIB buatkan validationDetails dalam bentuk poin-poin bernomor (1. ..., 2. ...) sebagai bukti pencocokan.\n` +
+    `   - Jika ada perbedaan: tetapkan validationStatus = "Tidak Sesuai", dan buatkan validationDetails dalam bentuk poin bernomor (1. ..., 2. ...) yang merinci letak perbedaannya.\n` +
     `Kembalikan respon murni JSON (tanpa markdown), contoh format:\n` +
     `{\n` +
     `  "status": "SUCCESS",\n` +
+    `  "isDocSwapped": false,\n` +
     `  "validationStatus": "Sesuai" | "Tidak Sesuai",\n` +
     `  "validationDetails": "Poin-poin bernomor 1. 2. 3. berisi rincian bukti verifikasi jika Sesuai, atau rincian perbedaan jika Tidak Sesuai",\n` +
     `  "data": {\n` +
@@ -301,7 +307,8 @@ function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
     `    "kecamatan": "...",\n` +
     `    "desaKelurahan": "...",\n` +
     `    "nisn": "...",\n` +
-    `    "tahunLulus": "..."\n` +
+    `    "tahunLulus": "...",\n` +
+    `    "jenjangRekomendasi": "Paket B"\n` +
     `  }\n` +
     `}`;
 

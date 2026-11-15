@@ -2988,11 +2988,31 @@
       <!-- Step 1: Upload & Ekstraksi Dokumen -->
       <div class="card" style="margin-top: 16px; margin-bottom: 16px; border: 1px solid var(--border-color);">
         <h3 style="font-size: 1rem; margin-top: 0; margin-bottom: 4px;">1. Masukkan NIK & Dokumen Pendukung</h3>
-        <p class="sub" style="margin-bottom: 12px;">AI akan mendeteksi baris data keluarga calon siswa dari KK secara
-          otomatis.</p>
+        <p class="sub" style="margin-bottom: 12px;">AI akan mendeteksi baris data keluarga calon siswa dari KK & Ijazah secara otomatis.</p>
+
+        <!-- Opsi Cepat: Upload 1 File PDF Gabungan (KK + Ijazah Sekaligus) -->
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1.5px dashed #10b981; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px;">
+            <strong style="font-size: 13px; color: #059669; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="file-stack" style="width: 16px; height: 16px;"></i> Punya 1 File PDF Gabungan (Ijazah + KK)? Upload Sekali di Sini!
+            </strong>
+            <span class="tag pusat" style="font-size: 10.5px;">Otomatis Pisah Halaman ke Kolom KK & Ijazah</span>
+          </div>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin: 0 0 8px 0; line-height: 1.4;">
+            Contoh: File PDF 2 halaman hasil scan CamScanner (Halaman 1 Ijazah & Halaman 2 KK, atau sebaliknya). Sistem otomatis mengekstrak tiap halaman menjadi gambar dan memasukkannya ke kolom <b>KK</b> dan <b>Ijazah</b> masing-masing.
+          </p>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <input type="file" id="ai-reg-file-pdf-gabungan" accept="application/pdf" style="flex: 1; font-size: 12px;" onchange="handleUploadPdfGabunganAI(this)">
+            <button type="button" id="btn-tukar-kk-ijazah" class="btn btn-sm btn-outline" onclick="tukarPosisiKkDanIjazahAI()" style="display: none; font-size: 11.5px; border-color: #0284c7; color: #0284c7; padding: 4px 10px;">
+              🔄 Tukar Posisi KK ↔ Ijazah
+            </button>
+          </div>
+          <div id="ai-pdf-gabungan-status" style="margin-top: 8px; display: none; font-size: 12px;"></div>
+        </div>
+
         <div class="form">
-          <label>NIK Calon Siswa (16 Digit) *
-            <input type="text" id="ai-reg-nik" placeholder="Contoh: 3201..." maxlength="16"
+          <label>NIK Calon Siswa (16 Digit - Opsional bila pakai PDF Gabungan)
+            <input type="text" id="ai-reg-nik" placeholder="Contoh: 9103... (Kosongkan agar AI cari otomatis dari Ijazah/KK)" maxlength="16"
               style="font-weight: 600; letter-spacing: 0.5px;">
           </label>
           <label>Foto / Scan Kartu Keluarga (KK) *
@@ -3130,10 +3150,15 @@
           <!-- Berkas Dokumen yang akan Disimpan -->
           <div class="card"
             style="margin-top: 16px; background: var(--surface-2); border: 1px solid var(--border-color); padding: 16px;">
-            <h4 style="font-size: 0.95rem; margin-top: 0; margin-bottom: 4px;">📁 Berkas Dokumen Calon Siswa (Siap
-              Disimpan)</h4>
-            <p class="sub" style="margin-bottom: 12px;">Berkas dari langkah 1 otomatis terpasang. Anda dapat
-              meninjau pratinjau berkas sebelum simpan.</p>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+              <div>
+                <h4 style="font-size: 0.95rem; margin-top: 0; margin-bottom: 2px;">📁 Berkas Dokumen Calon Siswa (Siap Disimpan ke Kolom Masing-Masing)</h4>
+                <p class="sub" style="margin-bottom: 0;">Setiap halaman dokumen otomatis ditempatkan ke kolom KK & Ijazah. Jika terbalik, klik tombol Tukar Posisi.</p>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline" onclick="tukarPosisiKkDanIjazahAI()" style="font-size: 11.5px; border-color: #0284c7; color: #0284c7; display: inline-flex; align-items: center; gap: 5px;">
+                <i data-lucide="arrow-left-right" style="width: 13px; height: 13px;"></i> Tukar Gambar KK ↔ Ijazah
+              </button>
+            </div>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
               <!-- KK -->
