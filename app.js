@@ -6181,12 +6181,22 @@ async function handleAISiswaSubmit() {
         }
 
         // Pastikan status AI ("Sesuai") & koreksiAI juga tertulis permanen ke kolom 24 & 25 Google Sheets
+        // Kirimkan baik targetId maupun NIK agar pencocokan di backend selalu berhasil
         await callAPI({
           action: "updateStatus",
-          idSiswa: targetId,
+          idSiswa: targetId || nik,
           status: finalAiStatus,
           koreksiAI: finalAiDetails
         });
+        if (targetId && nik && String(targetId) !== String(nik)) {
+          // Double safeguard untuk siswa yang sudah terdaftar dengan ID sheet berbeda
+          callAPI({
+            action: "updateStatus",
+            idSiswa: nik,
+            status: finalAiStatus,
+            koreksiAI: finalAiDetails
+          }).catch(() => {});
+        }
       })();
 
       await Promise.race([

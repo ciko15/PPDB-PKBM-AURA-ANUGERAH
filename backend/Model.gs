@@ -650,6 +650,14 @@ function updateSiswa(dataObj) {
       if(dataObj.dokBerkas !== undefined) sheet.getRange(row, 21).setValue(dataObj.dokBerkas);
       if(dataObj.kelas !== undefined) sheet.getRange(row, 22).setValue(dataObj.kelas);
       
+      // Update Status AI (kolom 24) & Catatan Koreksi AI (kolom 25) jika dikirimkan
+      if(dataObj.status !== undefined && dataObj.status !== '') {
+        sheet.getRange(row, 24).setValue(dataObj.status);
+      }
+      if(dataObj.koreksiAI !== undefined && dataObj.koreksiAI !== '') {
+        sheet.getRange(row, 25).setValue(dataObj.koreksiAI);
+      }
+      
       if(dataObj.jk !== undefined) sheet.getRange(row, 31).setValue(dataObj.jk);
       if(dataObj.tahunLulus !== undefined) sheet.getRange(row, 32).setValue(dataObj.tahunLulus);
       if(dataObj.namaWali !== undefined) sheet.getRange(row, 33).setValue(dataObj.namaWali);
@@ -761,8 +769,11 @@ function updateStatusSiswa(idSiswa, status, koreksiAI) {
   if (!sheet) throw new Error("Database belum disetup.");
 
   const data = sheet.getDataRange().getValues();
+  const target = String(idSiswa || '').trim();
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] == idSiswa) {
+    const rowId = String(data[i][0] || '').trim();
+    const rowNik = String(data[i][3] || '').trim();
+    if (rowId === target || (rowNik && rowNik === target)) {
       sheet.getRange(i + 1, 24).setValue(status);
       if (koreksiAI) {
         sheet.getRange(i + 1, 25).setValue(koreksiAI);
