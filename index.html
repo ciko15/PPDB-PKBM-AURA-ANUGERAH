@@ -540,7 +540,7 @@
             <div class="form-group-row" style="margin-top: 1rem;">
               <div class="form-group half">
                 <label>File Ijazah Asal (JPG / PNG / PDF)</label>
-                <div style="display: flex; gap: 8px; align-items: stretch;">
+                <div class="upload-action-box" style="display: flex; gap: 8px; align-items: stretch;">
                   <input type="file" id="reg-file-ijazah" accept="image/*,application/pdf" style="flex: 1;">
                   <button type="button" class="btn-camera-trigger"
                     onclick="openCameraCapture('reg-file-ijazah', 'environment', 'Foto Ijazah Asal', 'reg-cam-ijazah')"
@@ -554,7 +554,7 @@
               </div>
               <div class="form-group half">
                 <label>File Kartu Keluarga (JPG / PNG / PDF)</label>
-                <div style="display: flex; gap: 8px; align-items: stretch;">
+                <div class="upload-action-box" style="display: flex; gap: 8px; align-items: stretch;">
                   <input type="file" id="reg-file-kk" accept="image/*,application/pdf" style="flex: 1;">
                   <button type="button" class="btn-camera-trigger"
                     onclick="openCameraCapture('reg-file-kk', 'environment', 'Foto Kartu Keluarga', 'reg-cam-kk')"
@@ -571,7 +571,7 @@
             <div class="form-group-row" style="margin-top: 1rem;">
               <div class="form-group half">
                 <label>Bukti Pembayaran (Opsional)</label>
-                <div style="display: flex; gap: 8px; align-items: stretch;">
+                <div class="upload-action-box" style="display: flex; gap: 8px; align-items: stretch;">
                   <input type="file" id="reg-file-bayar" accept="image/*" style="flex: 1;">
                   <button type="button" class="btn-camera-trigger"
                     onclick="openCameraCapture('reg-file-bayar', 'environment', 'Foto Bukti Pembayaran', 'reg-cam-bayar')"
@@ -585,7 +585,7 @@
               </div>
               <div class="form-group half">
                 <label>Pas Foto Siswa (Opsional)</label>
-                <div style="display: flex; gap: 8px; align-items: stretch;">
+                <div class="upload-action-box" style="display: flex; gap: 8px; align-items: stretch;">
                   <input type="file" id="reg-file-foto" accept="image/*" style="flex: 1;">
                   <button type="button" class="btn-camera-trigger"
                     onclick="openCameraCapture('reg-file-foto', 'user', 'Pas Foto Siswa', 'reg-cam-foto')"
@@ -3060,7 +3060,7 @@
           <p style="font-size: 11.5px; color: var(--text-muted); margin: 0 0 8px 0; line-height: 1.4;">
             Contoh: File PDF 2 halaman hasil scan CamScanner (Halaman 1 Ijazah & Halaman 2 KK, atau sebaliknya). Sistem otomatis mengekstrak tiap halaman menjadi gambar dan memasukkannya ke kolom <b>KK</b> dan <b>Ijazah</b> masing-masing.
           </p>
-          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <div class="upload-action-box" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <input type="file" id="ai-reg-file-pdf-gabungan" accept="application/pdf" style="flex: 1; font-size: 12px;" onchange="handleUploadPdfGabunganAI(this)">
             <button type="button" id="btn-tukar-kk-ijazah" class="btn btn-sm btn-outline" onclick="tukarPosisiKkDanIjazahAI()" style="display: none; font-size: 11.5px; border-color: #0284c7; color: #0284c7; padding: 4px 10px;">
               🔄 Tukar Posisi KK ↔ Ijazah
@@ -3075,7 +3075,7 @@
               style="font-weight: 600; letter-spacing: 0.5px;">
           </label>
           <label>Foto / Scan Kartu Keluarga (KK) *
-            <div style="display: flex; gap: 8px; align-items: stretch;">
+            <div class="upload-action-box" style="display: flex; gap: 8px; align-items: stretch;">
               <input type="file" id="ai-reg-file-kk" accept="image/*,application/pdf" style="flex: 1;">
               <button type="button" class="btn-camera-trigger"
                 onclick="openCameraCapture('ai-reg-file-kk', 'environment', 'Foto Kartu Keluarga (KK)', 'ai-reg-cam-kk')"
@@ -3088,7 +3088,7 @@
             <div id="ai-preview-kk" style="margin-top: 4px; display: none; align-items: center; gap: 8px;"></div>
           </label>
           <label>Foto / Scan Ijazah Terakhir (Opsional)
-            <div style="display: flex; gap: 8px; align-items: stretch;">
+            <div class="upload-action-box" style="display: flex; gap: 8px; align-items: stretch;">
               <input type="file" id="ai-reg-file-ijazah" accept="image/*,application/pdf" style="flex: 1;">
               <button type="button" class="btn-camera-trigger"
                 onclick="openCameraCapture('ai-reg-file-ijazah', 'environment', 'Foto Ijazah Terakhir', 'ai-reg-cam-ijazah')"
@@ -3102,7 +3102,7 @@
             </div>
           </label>
           <label>Pas Foto Siswa (Opsional)
-            <div style="display: flex; gap: 8px; align-items: stretch;">
+            <div class="upload-action-box" style="display: flex; gap: 8px; align-items: stretch;">
               <input type="file" id="ai-reg-file-foto" accept="image/*" style="flex: 1;">
               <button type="button" class="btn-camera-trigger"
                 onclick="openCameraCapture('ai-reg-file-foto', 'user', 'Pas Foto Siswa', 'ai-reg-cam-foto')"
@@ -5437,9 +5437,9 @@
   <!-- SheetJS Library for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="transkrip-assets.js"></script>
-  <script src="app.js?v=20261115_mobile_enhancement_v7"></script>
-  <script src="cbt-engine.js?v=20261115_mobile_enhancement_v7"></script>
-  <script src="raport-engine.js?v=20261115_mobile_enhancement_v7"></script>
+  <script src="app.js?v=20261115_mobile_fullscreen_v8"></script>
+  <script src="cbt-engine.js?v=20261115_mobile_fullscreen_v8"></script>
+  <script src="raport-engine.js?v=20261115_mobile_fullscreen_v8"></script>
 </body>
 
 </html>

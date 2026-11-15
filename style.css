@@ -3717,4 +3717,118 @@ textarea:disabled,
   color: #ffffff;
 }
 
+/* ==================== FORM & MODAL FULLSCREEN DI HP (RESPONSIF MOBILE) ==================== */
+@media (max-width: 768px) {
+  /* Ubah form modal dari floating popup menjadi tampilan penuh seluruh layar */
+  .login-modal {
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    overflow-y: hidden !important;
+  }
+
+  /* Konten modal di HP menjadi 100vw x 100dvh dengan scroll mandiri */
+  .login-modal:not(#modal-notifikasi-popup) .modal-content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 24px) 16px !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header modal di HP agar tombol close (X) mudah dijangkau dan rapi */
+  .login-modal .btn-close-modal {
+    top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
+    right: 12px !important;
+    width: 38px !important;
+    height: 38px !important;
+    background: var(--surface-2, rgba(255, 255, 255, 0.08)) !important;
+    border: 1px solid var(--border-color, #e2e8f0) !important;
+    border-radius: 50% !important;
+  }
+
+  /* Form container card di dalam modal dibuat pas dengan layar HP */
+  .login-modal #ai-step-1-card,
+  .login-modal #ai-extracted-container,
+  .login-modal #section-input {
+    border-radius: 12px !important;
+    padding: 14px 12px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Penataan Rapi Aksi Upload Dokumen di Layar HP */
+  .upload-action-box,
+  .form-group .upload-action-box,
+  .form label > div[style*="display: flex; gap: 8px;"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+
+  /* Tombol kamera trigger & file selector di HP menjadi lebar penuh dan nyaman ditekan */
+  .btn-camera-trigger {
+    width: 100% !important;
+    height: 42px !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    border-radius: 10px !important;
+    background: rgba(14, 165, 233, 0.08) !important;
+    border: 1.5px solid rgba(14, 165, 233, 0.35) !important;
+    color: #0284c7 !important;
+  }
+
+  /* Input file styling di HP */
+  input[type="file"] {
+    width: 100% !important;
+    font-size: 12px !important;
+    padding: 8px !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Penyesuaian grid input di form AI Step 2 */
+  #ai-extracted-container div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Tombol submit / aksi di bagian bawah formulir HP */
+  #ai-extracted-container div[style*="margin-top: 20px;"] {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  #ai-extracted-container div[style*="margin-top: 20px;"] button,
+  #ai-extracted-container div[style*="margin-top: 20px;"] div {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
+
+  #btn-proses-ai-reg {
+    width: 100% !important;
+    height: 44px !important;
+    font-size: 14px !important;
+    justify-content: center !important;
+  }
+}
+
+
 
