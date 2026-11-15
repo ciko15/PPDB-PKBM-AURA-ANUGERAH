@@ -3717,6 +3717,55 @@ textarea:disabled,
   color: #ffffff;
 }
 
+/* ==================== GLOBAL FILE INPUT & PREVIEW CARDS ==================== */
+input[type="file"] {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.ai-doc-preview-card {
+  min-width: 0 !important; /* Mencegah flex/grid child overflow */
+  word-break: break-word !important;
+}
+
+.ai-doc-preview-card .file-input-wrapper {
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.ai-doc-preview-card input[type="file"] {
+  width: 100% !important;
+  display: block !important;
+  background: var(--surface-2, #f8fafc);
+  border: 1px dashed var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 11px !important;
+  cursor: pointer;
+}
+
+.ai-doc-preview-card input[type="file"]::file-selector-button {
+  background: var(--surface-color, #ffffff);
+  color: var(--text-color, #1e293b);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 6px;
+  padding: 3px 8px;
+  margin-right: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.ai-doc-preview-card input[type="file"]::file-selector-button:hover {
+  background: var(--primary-light, #e0f2fe);
+  border-color: var(--primary, #0284c7);
+  color: var(--primary, #0284c7);
+}
+
 /* ==================== FORM & MODAL FULLSCREEN DI HP (RESPONSIF MOBILE) ==================== */
 @media (max-width: 768px) {
   /* Ubah form modal dari floating popup menjadi tampilan penuh seluruh layar */
