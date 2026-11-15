@@ -19,12 +19,65 @@ function doLogin(username, password) {
     return { username: "super", nama: "Super Admin", role: "Super Admin" };
   }
 
-  // 1. Cek dari sheet Users (Guru, Admin)
+  // 1. Cek dari sheet Users (Guru, Admin, maupun Siswa yang sudah aktif/punya sandi)
   const sheet = getDB('Users');
   if (sheet) {
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]).trim() === cleanUser && String(data[i][1]).trim() === cleanPass) {
+        const uRole = String(data[i][3] || '').trim();
+        if (uRole === 'Siswa') {
+          let siswaDetail = {
+            id: '',
+            nik: cleanUser,
+            nisn: '',
+            nama: data[i][2],
+            program: 'Paket C',
+            tempatLahir: '',
+            tglLahir: '',
+            namaIbu: '',
+            statusValidasi: 'Sesuai',
+            catatanAI: '',
+            statusAktif: 'Aktif'
+          };
+          try {
+            const sSheet = getDB('Data_Siswa');
+            if (sSheet) {
+              const sData = sSheet.getDataRange().getValues();
+              for (let j = 1; j < sData.length; j++) {
+                const row = sData[j];
+                const sNik = String(row[3] || '').trim();
+                const sNisn = String(row[2] || '').trim();
+                if (cleanUser === sNik || (sNisn && cleanUser === sNisn) || String(row[0]) === cleanUser) {
+                  let sTgl = '';
+                  if (row[11] instanceof Date) {
+                    sTgl = Utilities.formatDate(row[11], "GMT+7", "yyyy-MM-dd");
+                  } else {
+                    sTgl = String(row[11] || '').trim().split('T')[0];
+                  }
+                  siswaDetail = {
+                    id: row[0] || '',
+                    nik: sNik,
+                    nisn: sNisn,
+                    nama: row[9] || data[i][2],
+                    program: row[18] || '',
+                    tempatLahir: row[10] || '',
+                    tglLahir: sTgl,
+                    namaIbu: row[15] || '',
+                    statusValidasi: row[23] || 'Pending',
+                    catatanAI: row[24] || '',
+                    statusAktif: row[28] || 'Aktif',
+                    foto: row[22] || '',
+                    noHp: row[33] || row[34] || '',
+                    alamat: `${row[8] || ''}, ${row[7] || ''}, ${row[6] || ''}`.replace(/^,\s*|,\s*$/g, '')
+                  };
+                  break;
+                }
+              }
+            }
+          } catch (err) {}
+          return { username: data[i][0], nama: data[i][2], role: 'Siswa', dataSiswa: siswaDetail };
+        }
         return { username: data[i][0], nama: data[i][2], role: data[i][3] };
       }
     }
@@ -72,6 +125,7 @@ function doLogin(username, password) {
           matchPass = (cleanPass === customPass);
         } else {
           matchPass = (
+            cleanPass === 'pkbm123456' ||
             cleanPass === sTgl ||
             (ddmmyyyy && cleanPass === ddmmyyyy) ||
             (yyyymmdd && cleanPass === yyyymmdd) ||
@@ -105,12 +159,12 @@ function doLogin(username, password) {
     Logger.log("doLogin siswa check error: " + err.toString());
   }
 
-  throw new Error("Username atau password salah. Untuk Siswa, gunakan NIK/NISN dan Password: Tanggal Lahir.");
+  throw new Error("Username atau password salah. Untuk Siswa baru yang sudah diaktifkan, gunakan NIK/NISN dan Password default: pkbm123456.");
 }
 
 function getUsers() {
   const users = [];
-  const registeredUsernames = {};
+  const registeredUserMap = {};
 
   // 1. Ambil dari sheet Users
   const userSheet = getDB('Users');
@@ -120,18 +174,19 @@ function getUsers() {
       if (String(data[i][0]).toLowerCase() === "super") continue;
       const uname = String(data[i][0] || '').trim();
       if (uname) {
-        registeredUsernames[uname] = true;
-        users.push({
+        const userObj = {
           username: uname,
           nama: data[i][2],
           role: data[i][3],
           source: 'Users'
-        });
+        };
+        registeredUserMap[uname] = userObj;
+        users.push(userObj);
       }
     }
   }
 
-  // 2. Ambil dari sheet Data_Siswa
+  // 2. Ambil dari sheet Data_Siswa dan lengkapi metadata siswa
   try {
     const siswaSheet = getDB('Data_Siswa');
     if (siswaSheet) {
@@ -143,20 +198,24 @@ function getUsers() {
         const sNama = row[9] || 'Peserta Didik';
         const uname = sNik || sNisn || `siswa_${row[0]}`;
 
-        if (uname && !registeredUsernames[uname]) {
-          registeredUsernames[uname] = true;
-          users.push({
-            username: uname,
-            nama: sNama,
-            role: 'Siswa',
-            program: row[18] || 'Kesetaraan',
-            noHp: row[33] || row[34] || '',
-            alamat: `${row[8] || ''}, ${row[7] || ''}, ${row[6] || ''}`.replace(/^,\s*|,\s*$/g, ''),
-            foto: row[22] || '',
-            statusAktif: row[28] || 'Aktif',
-            idSiswa: row[0] || '',
-            source: 'Data_Siswa'
-          });
+        const siswaMeta = {
+          username: uname,
+          nama: sNama,
+          role: 'Siswa',
+          program: row[18] || 'Kesetaraan',
+          noHp: row[33] || row[34] || '',
+          alamat: `${row[8] || ''}, ${row[7] || ''}, ${row[6] || ''}`.replace(/^,\s*|,\s*$/g, ''),
+          foto: row[22] || '',
+          statusAktif: row[28] || 'Aktif',
+          idSiswa: row[0] || ''
+        };
+
+        if (uname && registeredUserMap[uname]) {
+          // Perkaya data siswa yang sudah punya entry password di sheet Users
+          Object.assign(registeredUserMap[uname], siswaMeta, { source: 'Users+Data_Siswa' });
+        } else if (uname) {
+          registeredUserMap[uname] = siswaMeta;
+          users.push({ ...siswaMeta, source: 'Data_Siswa' });
         }
       }
     }
@@ -716,9 +775,47 @@ function updateStatusAktif(idSiswa, statusAktif) {
 
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] == idSiswa) {
+    const rowId = String(data[i][0] || '').trim();
+    const rowNisn = String(data[i][2] || '').trim();
+    const rowNik = String(data[i][3] || '').trim();
+    const rowNama = String(data[i][9] || 'Peserta Didik').trim();
+
+    if (rowId == idSiswa || (rowNik && rowNik == idSiswa) || (rowNisn && rowNisn == idSiswa)) {
       sheet.getRange(i + 1, 29).setValue(statusAktif);
-      return { success: true, message: "Status Aktif berhasil diupdate!" };
+
+      // Jika akun pertama kali diaktifkan, buat kredensial default pkbm123456 di sheet Users
+      // (Jika sudah pernah diatur/diubah sebelumnya, password lama tetap dipertahankan)
+      let defaultPasswordCreated = false;
+      const loginUser = rowNik || rowNisn || rowId;
+      if (String(statusAktif).toLowerCase() === 'aktif' && loginUser) {
+        try {
+          const uSheet = getDB('Users');
+          if (uSheet) {
+            const uData = uSheet.getDataRange().getValues();
+            let existsInUsers = false;
+            for (let u = 1; u < uData.length; u++) {
+              if (String(uData[u][0] || '').trim() === loginUser) {
+                existsInUsers = true;
+                break;
+              }
+            }
+            if (!existsInUsers) {
+              uSheet.appendRow([loginUser, 'pkbm123456', rowNama, 'Siswa']);
+              defaultPasswordCreated = true;
+            }
+          }
+        } catch (err) {
+          Logger.log("Auto-set default password siswa error: " + err.toString());
+        }
+      }
+
+      return {
+        success: true,
+        username: loginUser,
+        defaultPasswordCreated: defaultPasswordCreated,
+        defaultPassword: 'pkbm123456',
+        message: "Status Aktif berhasil diupdate!"
+      };
     }
   }
   throw new Error("Data siswa tidak ditemukan.");

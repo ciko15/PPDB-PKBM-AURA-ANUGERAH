@@ -3498,30 +3498,51 @@ function closeSiswaDetailDrawer() {
 }
 
 async function toggleStatusSiswa(id, newStatus) {
+  const isActivating = String(newStatus).toLowerCase() === 'aktif';
   Swal.fire({
-    title: 'Konfirmasi Perubahan Status',
-    html: `Apakah Anda yakin ingin mengubah status siswa menjadi <b>${newStatus}</b>?`,
+    title: isActivating ? 'Aktifkan Akun Siswa?' : 'Nonaktifkan Akun Siswa?',
+    html: isActivating
+      ? `Apakah Anda yakin ingin mengaktifkan akun siswa ini?<br><small style="color:var(--text-muted);">Saat pertama kali diaktifkan, password login akun otomatis diatur ke default: <b style="color:#059669;">pkbm123456</b> (tetap dapat diubah ke depannya).</small>`
+      : `Apakah Anda yakin ingin mengubah status siswa menjadi <b>${newStatus}</b>?`,
     icon: 'question',
     showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Ya, Ubah Status',
+    confirmButtonColor: isActivating ? '#10b981' : '#d33',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: isActivating ? 'Ya, Aktifkan Akun' : 'Ya, Ubah Status',
     cancelButtonText: 'Batal'
   }).then(async (result) => {
     if (result.isConfirmed) {
       showLoader("Menyimpan...");
       try {
-        await callAPI({ action: "updateStatusAktif", idSiswa: id, statusAktif: newStatus });
+        const res = await callAPI({ action: "updateStatusAktif", idSiswa: id, statusAktif: newStatus });
         hideLoader();
         loadAllSiswa();
-        Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'success',
-          title: `Status berhasil diubah menjadi ${newStatus}`,
-          showConfirmButton: false,
-          timer: 3000
-        });
+        if (isActivating && res && res.defaultPasswordCreated) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Akun Siswa Diaktifkan!',
+            html: `
+              <div style="text-align: left; font-size: 13px; line-height: 1.5;">
+                <p>Akun peserta didik telah aktif dan siap digunakan login ke Portal Siswa:</p>
+                <div style="background: var(--surface-2); border: 1px dashed var(--border-color); padding: 10px 14px; border-radius: 8px; margin: 10px 0;">
+                  <div>Username (NIK/NISN): <code style="font-weight: 700;">${res.username || id}</code></div>
+                  <div style="margin-top: 4px;">Password Default: <code style="font-size: 15px; font-weight: 800; color: #059669;">pkbm123456</code></div>
+                </div>
+                <small style="color: var(--text-muted);">Siswa maupun Admin tetap dapat mengganti password ini kapan saja melalui menu Profil / Kelola Pengguna.</small>
+              </div>
+            `,
+            confirmButtonColor: '#10b981'
+          });
+        } else {
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: `Status berhasil diubah menjadi ${newStatus}`,
+            showConfirmButton: false,
+            timer: 3000
+          });
+        }
       } catch (err) {
         hideLoader(); Swal.fire('Error', err.message, 'error');
       }
@@ -3616,7 +3637,7 @@ function showUserProfileModal() {
             <span style="font-size: 11px; color: var(--text-muted);">Opsional</span>
           </div>
           <p style="margin: 0 0 10px 0; font-size: 11.5px; color: var(--text-muted); line-height: 1.45;">
-            ${isSiswa ? 'Bagi Peserta Didik: Anda bebas mengganti password dari tanggal lahir ke kata sandi rahasia pribadi yang mudah diingat.' : 'Ketik password baru jika ingin memperbarui kredensial masuk akun Anda.'}
+            ${isSiswa ? 'Bagi Peserta Didik: Anda bebas mengganti password default (pkbm123456) ke kata sandi rahasia pribadi yang mudah diingat.' : 'Ketik password baru jika ingin memperbarui kredensial masuk akun Anda.'}
           </p>
 
           <div style="position: relative; display: flex; align-items: center;">
@@ -3950,20 +3971,24 @@ async function toggleStatusSiswaFromUsers(idOrUsername, newStatus) {
     targetId = found.id;
   }
 
+  const isActivating = String(newStatus).toLowerCase() === 'aktif';
+
   Swal.fire({
-    title: 'Konfirmasi Status Siswa',
-    html: `Apakah Anda yakin ingin mengubah status akun siswa menjadi <b>${newStatus}</b>?`,
+    title: isActivating ? 'Aktifkan Akun Siswa?' : 'Konfirmasi Status Siswa',
+    html: isActivating
+      ? `Apakah Anda yakin ingin mengaktifkan akun siswa ini?<br><small style="color:var(--text-muted);">Jika akun baru pertama kali diaktifkan, password otomatis diset ke default: <b style="color:#059669;">pkbm123456</b> (dan tetap bisa diubah ke depannya).</small>`
+      : `Apakah Anda yakin ingin mengubah status akun siswa menjadi <b>${newStatus}</b>?`,
     icon: 'question',
     showCancelButton: true,
-    confirmButtonColor: newStatus === 'Aktif' ? '#10b981' : '#d33',
+    confirmButtonColor: isActivating ? '#10b981' : '#d33',
     cancelButtonColor: '#6b7280',
-    confirmButtonText: `Ya, ${newStatus === 'Aktif' ? 'Aktifkan Akun' : 'Nonaktifkan Akun'}`,
+    confirmButtonText: `Ya, ${isActivating ? 'Aktifkan Akun' : 'Nonaktifkan Akun'}`,
     cancelButtonText: 'Batal'
   }).then(async (result) => {
     if (result.isConfirmed) {
       showLoader("Menyimpan Status...");
       try {
-        await callAPI({ action: "updateStatusAktif", idSiswa: targetId, statusAktif: newStatus });
+        const res = await callAPI({ action: "updateStatusAktif", idSiswa: targetId, statusAktif: newStatus });
         
         // Update di cache lokal
         if (Array.isArray(siswaDataList)) {
@@ -3978,14 +4003,32 @@ async function toggleStatusSiswaFromUsers(idOrUsername, newStatus) {
         loadAllUsers();
         if (typeof loadAllSiswa === 'function') loadAllSiswa();
         
-        Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'success',
-          title: `Akun siswa berhasil diubah menjadi ${newStatus}`,
-          showConfirmButton: false,
-          timer: 2500
-        });
+        if (isActivating && res && res.defaultPasswordCreated) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Akun Siswa Berhasil Diaktifkan!',
+            html: `
+              <div style="text-align: left; font-size: 13px; line-height: 1.5;">
+                <p>Akun siswa telah aktif dengan kredensial awal:</p>
+                <div style="background: var(--surface-2); border: 1px dashed var(--border-color); padding: 10px 14px; border-radius: 8px; margin: 10px 0;">
+                  <div>Username (NIK/NISN): <code style="font-weight: 700;">${res.username || (found ? (found.nik || found.nisn) : idOrUsername)}</code></div>
+                  <div style="margin-top: 4px;">Password Default: <code style="font-size: 15px; font-weight: 800; color: #059669;">pkbm123456</code></div>
+                </div>
+                <small style="color: var(--text-muted);">Password ini dapat diubah kapan saja oleh siswa maupun Admin.</small>
+              </div>
+            `,
+            confirmButtonColor: '#10b981'
+          });
+        } else {
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: `Akun siswa berhasil diubah menjadi ${newStatus}`,
+            showConfirmButton: false,
+            timer: 2500
+          });
+        }
       } catch (err) {
         hideLoader();
         Swal.fire('Gagal Mengubah Status', err.message, 'error');
@@ -4046,7 +4089,7 @@ async function showAdminEditSiswaModal(encodedObj) {
           </label>
           <input type="password" id="admin-siswa-pass" placeholder="Kosongkan jika tetap menggunakan sandi saat ini" class="form-control" style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px;">
           <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;">
-            Siswa tidak lagi terkunci hanya dengan tanggal lahir jika password baru ini disimpan.
+            Password default awal saat diaktifkan adalah <b>pkbm123456</b>. Anda dapat mengubahnya kapan saja di sini.
           </small>
         </div>
       </div>
@@ -4168,7 +4211,7 @@ async function showEditProfilSiswaModal() {
 
         <div class="form-group" style="margin-bottom: 4px; background: var(--surface-2); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
           <label style="font-weight: 600; font-size: 12px; display: block; margin-bottom: 4px; color: var(--text-color);">
-            🔒 Ubah Password Pribadi (Bebas, Tidak Harus Tanggal Lahir)
+            🔒 Ubah Password Pribadi (Mengganti Password Default pkbm123456)
           </label>
           <input type="password" id="mandiri-siswa-pass" placeholder="Ketik kata sandi baru (minimal 6 karakter)" class="form-control" style="width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px;">
           <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 4px;">
@@ -4260,7 +4303,7 @@ async function showEditProfilSiswaModal() {
 // Dialog Admin untuk Reset Password Pengguna (Bisa Custom atau Default Sistem)
 async function resetUserPassword(username, encodedNama, isSiswa = false) {
   const nama = decodeURIComponent(encodedNama || username);
-  const defaultPass = isSiswa ? 'siswa123456' : 'pkbm123456';
+  const defaultPass = 'pkbm123456';
 
   const { value: formValues } = await Swal.fire({
     title: 'Reset Password Pengguna',
