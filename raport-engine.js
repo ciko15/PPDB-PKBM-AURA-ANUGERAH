@@ -437,20 +437,14 @@ function tarikNilaiCBTKeRaport() {
     const capaianInput = row.querySelector('.mapel-capaian');
     if (!namaInput || !nilaiInput) return;
 
-    const nMapel = namaInput.value.toLowerCase();
-    // Cari kecocokan di hasil CBT
-    const cbtMatch = hasilSiswa.find(h => {
-      const bJudul = (h.bukuJudul || '').toLowerCase();
-      return bJudul.includes(nMapel) || nMapel.includes(bJudul);
-    });
-
-    if (cbtMatch) {
-      nilaiInput.value = cbtMatch.nilai;
+    const cbtScore = cariNilaiCBTSesuaiMapel(hasilSiswa, namaInput.value);
+    if (cbtScore !== null) {
+      nilaiInput.value = cbtScore;
       matchedCount++;
       if (capaianInput) {
-        if (cbtMatch.nilai >= 85) {
+        if (cbtScore >= 85) {
           capaianInput.value = 'Mencapai penguasaan kompetensi sangat memuaskan pada asesmen CBT.';
-        } else if (cbtMatch.nilai >= 75) {
+        } else if (cbtScore >= 75) {
           capaianInput.value = 'Mencapai ketuntasan kompetensi dengan baik pada ujian sumatif modul.';
         } else {
           capaianInput.value = 'Perlu bimbingan lebih lanjut dalam pemahaman materi modul tertentu.';
@@ -2541,7 +2535,127 @@ function resetKKMToDefault() {
   });
 }
 
-// ==================== FITUR IMPORT DATA TRANSKRIP DARI EXCEL ====================
+// ==================== HELPER PINTAR: PENCOCOKAN MATA PELAJARAN DENGAN DATA UJIAN CBT ====================
+function cariNilaiCBTSesuaiMapel(hasilCbtSiswa, namaMapel) {
+  if (!Array.isArray(hasilCbtSiswa) || hasilCbtSiswa.length === 0 || !namaMapel) return null;
+  const mapelLow = String(namaMapel).toLowerCase().trim();
+
+  // Kata kunci khusus agar pencocokan dengan judul modul/buku CBT lebih akurat
+  const stopWords = ['pendidikan', 'ilmu', 'pengetahuan', 'dan', 'budi', 'pekerti', 'berbasis', 'fungsional', 'lokal', 'pilihan', 'umum', 'khusus'];
+  const mapelTokens = mapelLow
+    .replace(/[()\/,-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length >= 3 && !stopWords.includes(w));
+
+  let bestScore = null;
+  hasilCbtSiswa.forEach(h => {
+    const judul = String(h.bukuJudul || h.mapel || '').toLowerCase();
+    if (!judul) return;
+
+    let isMatch = false;
+    if (judul.includes(mapelLow) || mapelLow.includes(judul)) {
+      isMatch = true;
+    } else if (mapelLow.includes('agama') && judul.includes('agama')) {
+      isMatch = true;
+    } else if (mapelLow.includes('pancasila') && (judul.includes('pancasila') || judul.includes('ppkn') || judul.includes('pkn'))) {
+      isMatch = true;
+    } else if (mapelLow.includes('indonesia') && judul.includes('indonesia')) {
+      isMatch = true;
+    } else if (mapelLow.includes('inggris') && judul.includes('inggris')) {
+      isMatch = true;
+    } else if (mapelLow.includes('matematika') && judul.includes('matematika')) {
+      isMatch = true;
+    } else if ((mapelLow.includes('ipas') || (mapelLow.includes('alam') && mapelLow.includes('sosial'))) && judul.includes('ipas')) {
+      isMatch = true;
+    } else if ((mapelLow.includes('(ipa)') || mapelLow.includes('alam (ipa)')) && (judul.includes('ipa') || judul.includes('pengetahuan alam'))) {
+      isMatch = true;
+    } else if ((mapelLow.includes('(ips)') || mapelLow.includes('sosial (ips)')) && (judul.includes('ips') || judul.includes('pengetahuan sosial'))) {
+      isMatch = true;
+    } else if (mapelTokens.length > 0 && mapelTokens.some(tok => tok.length >= 4 && judul.includes(tok))) {
+      isMatch = true;
+    }
+
+    if (isMatch) {
+      const val = Number(h.nilai);
+      if (!isNaN(val)) {
+        // Ambil nilai tertinggi jika siswa pernah mengulang ujian (remedial) pada mapel tersebut
+        if (bestScore === null || val > bestScore) {
+          bestScore = val;
+        }
+      }
+    }
+  });
+
+  return bestScore;
+}
+
+// ==================== EKSPOR & IMPORT TEMPLATE KONFIGURASI MAPEL & KKM ====================
+function eksporTemplateKKMExcel() {
+  if (typeof XLSX === 'undefined') {
+    Swal.fire('Error', 'Library SheetJS Excel belum siap.', 'error');
+    return;
+  }
+  syncCurrentKKMTabFromDOM();
+  const jenjang = currentSelectedKKMJenjang || 'Paket C';
+  const mapels = defaultMapelKurikulum[jenjang] || defaultKKMPreset[jenjang] || [];
+
+  const headers = ['No', 'Mata Pelajaran', 'Kelompok', 'Batas KKM'];
+  const rows = mapels.map((m, i) => [
+    i + 1,
+    m.nama || '',
+    m.kelompok || 'Umum',
+    Number(m.kkm) || 70
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = [{ wch: 6 }, { wch: 42 }, { wch: 18 }, { wch: 12 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `KKM ${jenjang}`);
+  XLSX.writeFile(wb, `Template_Mapel_KKM_${jenjang.replace(/\s+/g, '_')}.xlsx`);
+}
+
+function prosesImportKKMExcel(inputEl) {
+  if (!inputEl || !inputEl.files || inputEl.files.length === 0) return;
+  const file = inputEl.files[0];
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      const importedMapels = [];
+      json.forEach(row => {
+        const norm = {};
+        Object.keys(row).forEach(k => norm[k.trim().toLowerCase()] = row[k]);
+        const nama = String(norm['mata pelajaran'] || norm['nama mata pelajaran'] || norm['mapel'] || norm['nama'] || '').trim();
+        if (!nama) return;
+        const kelompokRaw = String(norm['kelompok'] || 'Umum').trim();
+        const validKelompok = ['Umum', 'Pilihan MIPA', 'Pilihan IPS', 'Khusus'].includes(kelompokRaw) ? kelompokRaw : 'Umum';
+        const kkm = Number(norm['batas kkm'] || norm['kkm'] || 70) || 70;
+        importedMapels.push({ nama, kelompok: validKelompok, kkm });
+      });
+
+      if (importedMapels.length === 0) {
+        Swal.fire('Format Tidak Sesuai', 'Pastikan file memiliki kolom "Mata Pelajaran", "Kelompok", dan "Batas KKM".', 'warning');
+        return;
+      }
+
+      defaultMapelKurikulum[currentSelectedKKMJenjang] = importedMapels;
+      switchKKMTab(currentSelectedKKMJenjang, true);
+      Swal.fire('Berhasil Diimport', `${importedMapels.length} mata pelajaran untuk ${currentSelectedKKMJenjang} telah dimuat ke tabel. Klik "Simpan Nilai KKM" untuk menyimpan permanen.`, 'success');
+    } catch (err) {
+      Swal.fire('Gagal Membaca File', err.message, 'error');
+    } finally {
+      inputEl.value = '';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ==================== FITUR IMPORT DATA NILAI & TRANSKRIP DARI EXCEL ====================
 function bukaModalImportTranskripExcel() {
   const modal = document.getElementById('modal-import-transkrip-excel');
   if (!modal) return;
@@ -2566,9 +2680,10 @@ function unduhTemplateTranskripExcel() {
   }
 
   const jenjang = document.getElementById('import-template-jenjang')?.value || 'Paket C';
+  const prefillCBT = document.getElementById('chk-template-prefill-cbt') ? document.getElementById('chk-template-prefill-cbt').checked : true;
   const mapels = defaultMapelKurikulum[jenjang] || defaultKKMPreset[jenjang];
 
-  // Susun Header Kolom Excel
+  // Susun Header Kolom Excel sesuai daftar mapel KKM saat ini
   const headers = [
     'Nama Siswa',
     'NISN',
@@ -2584,38 +2699,98 @@ function unduhTemplateTranskripExcel() {
     headers.push(m.nama);
   });
 
-  // Contoh baris dummy panduan khusus PKBM Aura Anugerah
-  const sampleRow1 = [
-    'Contoh Siswa 1',
-    '0061234567',
-    '9103010101010001',
-    'Sentani',
-    '15 Mei 2005',
-    jenjang,
-    '2026',
-    'PKBM-AA/TR/2026/001'
-  ];
-  mapels.forEach(m => sampleRow1.push(m.kkm || 75));
+  const wsData = [headers];
 
-  const sampleRow2 = [
-    'Contoh Siswa 2',
-    '0067654321',
-    '9103010202020002',
-    'Jayapura',
-    '20 Agustus 2004',
-    jenjang,
-    '2026',
-    'PKBM-AA/TR/2026/002'
-  ];
-  mapels.forEach(m => sampleRow2.push(80));
+  // Ambil daftar siswa aktif pada jenjang yang dipilih jika opsi prefill aktif
+  const allSiswa = (typeof siswaDataList !== 'undefined' && Array.isArray(siswaDataList)) ? siswaDataList : [];
+  const siswaJenjang = prefillCBT
+    ? allSiswa.filter(s => normalisasiJenjang(s.program || 'Paket C') === jenjang && s.statusAktif !== 'Tidak Aktif')
+    : [];
 
-  const wsData = [headers, sampleRow1, sampleRow2];
+  if (siswaJenjang.length > 0) {
+    const thnSekarang = String(new Date().getFullYear());
+    const kodeJenjang = jenjang === 'Paket A' ? 'PKT-A' : (jenjang === 'Paket B' ? 'PKT-B' : 'PKT-C');
+
+    siswaJenjang.forEach((s, idx) => {
+      const hasilCbtSiswa = (typeof ujianHasilList !== 'undefined' && Array.isArray(ujianHasilList))
+        ? ujianHasilList.filter(u => String(u.siswaId) === String(s.id) || (u.namaSiswa && s.nama && u.namaSiswa.toLowerCase() === s.nama.toLowerCase()))
+        : [];
+
+      const rapSiswa = (typeof raportDataList !== 'undefined' && Array.isArray(raportDataList))
+        ? raportDataList.find(r => String(r.siswaId) === String(s.id) || (r.namaSiswa && s.nama && r.namaSiswa.toLowerCase() === s.nama.toLowerCase()))
+        : null;
+
+      const noUrut = String(idx + 1).padStart(3, '0');
+      const rowData = [
+        s.nama || '',
+        s.nisn || '',
+        s.nik || '',
+        s.tempatLahir || 'Sentani',
+        s.tglLahir || '-',
+        jenjang,
+        thnSekarang,
+        `PKBM-AA/TR/${thnSekarang}/${kodeJenjang}/${noUrut}`
+      ];
+
+      mapels.forEach(m => {
+        // Prioritas 1: Nilai dari Ujian CBT sesuai mata pelajaran
+        let nilaiMapel = cariNilaiCBTSesuaiMapel(hasilCbtSiswa, m.nama);
+        // Prioritas 2: Nilai dari Buku Raport jika sudah ada
+        if (nilaiMapel === null && rapSiswa && Array.isArray(rapSiswa.nilaiMapel)) {
+          const foundRap = rapSiswa.nilaiMapel.find(nm => nm.mapel && nm.mapel.toLowerCase() === m.nama.toLowerCase());
+          if (foundRap && foundRap.nilai !== undefined) nilaiMapel = Number(foundRap.nilai);
+        }
+        // Prioritas 3: Nilai standar KKM sebagai contoh awal
+        rowData.push(nilaiMapel !== null ? nilaiMapel : (m.kkm || 75));
+      });
+
+      wsData.push(rowData);
+    });
+  } else {
+    // Contoh baris dummy panduan jika belum ada siswa terdaftar di jenjang tersebut
+    const sampleRow1 = [
+      'Contoh Siswa 1',
+      '0061234567',
+      '9103010101010001',
+      'Sentani',
+      '15 Mei 2005',
+      jenjang,
+      '2026',
+      'PKBM-AA/TR/2026/001'
+    ];
+    mapels.forEach(m => sampleRow1.push(m.kkm || 75));
+
+    const sampleRow2 = [
+      'Contoh Siswa 2',
+      '0067654321',
+      '9103010202020002',
+      'Jayapura',
+      '20 Agustus 2004',
+      jenjang,
+      '2026',
+      'PKBM-AA/TR/2026/002'
+    ];
+    mapels.forEach(m => sampleRow2.push(80));
+    wsData.push(sampleRow1, sampleRow2);
+  }
+
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Format Transkrip");
+  XLSX.utils.book_append_sheet(wb, ws, "Format Nilai " + jenjang);
 
-  const fileName = `Template_Transkrip_Nilai_${jenjang.replace(' ', '_')}.xlsx`;
+  const fileName = `Template_Nilai_${jenjang.replace(' ', '_')}_PKBM_Aura_Anugerah.xlsx`;
   XLSX.writeFile(wb, fileName);
+}
+
+function sinkronNilaiUjianKeRaporTranskrip() {
+  const jenjang = document.getElementById('import-template-jenjang')?.value || 'Paket C';
+  closeModalImportTranskripExcel();
+  eksekusiGenerateRaportMassal({
+    jenjang,
+    ta: '2026/2027',
+    smt: 'Genap',
+    defNilai: 78
+  });
 }
 
 function eksekusiImportTranskripExcel() {
@@ -2625,6 +2800,7 @@ function eksekusiImportTranskripExcel() {
     return;
   }
 
+  const targetSimpan = document.getElementById('import-target-simpan')?.value || 'keduanya';
   const file = fileInput.files[0];
   const reader = new FileReader();
 
@@ -2643,6 +2819,7 @@ function eksekusiImportTranskripExcel() {
 
       let countImported = 0;
       let countUpdated = 0;
+      let countRaportSynced = 0;
 
       jsonData.forEach((row, idx) => {
         // Normalisasi key object (case-insensitive & trim)
@@ -2651,26 +2828,36 @@ function eksekusiImportTranskripExcel() {
           rowNorm[k.trim().toLowerCase()] = row[k];
         });
 
-        const nama = rowNorm['nama siswa'] || rowNorm['nama'] || rowNorm['nama lengkap'] || '';
+        const nama = String(rowNorm['nama siswa'] || rowNorm['nama'] || rowNorm['nama lengkap'] || '').trim();
         if (!nama) return;
 
         const nisn = String(rowNorm['nisn'] || '').trim();
         const nik = String(rowNorm['nik'] || '').trim();
         const tempatLahir = rowNorm['tempat lahir'] || 'Sentani';
         const tglLahir = rowNorm['tanggal lahir'] || rowNorm['tgl lahir'] || '-';
-        const programRaw = rowNorm['program kesetaraan'] || rowNorm['program'] || 'Paket C';
+        const programRaw = rowNorm['program kesetaraan'] || rowNorm['program'] || document.getElementById('import-template-jenjang')?.value || 'Paket C';
         const program = normalisasiJenjang(programRaw);
         const asalSekolah = rowNorm['asal sekolah / lembaga'] || rowNorm['asal sekolah'] || rowNorm['nama sekolah'] || 'PKBM Aura Anugerah';
         const tahunLulus = String(rowNorm['tahun kelulusan'] || rowNorm['tahun'] || new Date().getFullYear()).trim();
         const nomorTranskrip = rowNorm['nomor transkrip'] || rowNorm['no transkrip'] || '';
 
-        // Ambil mata pelajaran kurikulum untuk jenjang ini
+        // Cari apakah siswa ini terdaftar di siswaDataList internal
+        const matchedSiswa = (typeof siswaDataList !== 'undefined' && Array.isArray(siswaDataList))
+          ? siswaDataList.find(s => (nisn && String(s.nisn) === nisn) || (s.nama && s.nama.toLowerCase() === nama.toLowerCase()))
+          : null;
+
+        // Ambil riwayat CBT siswa jika ada kolom mapel yang dikosongkan di Excel
+        const hasilCbtSiswa = (typeof ujianHasilList !== 'undefined' && Array.isArray(ujianHasilList))
+          ? ujianHasilList.filter(u => (matchedSiswa && String(u.siswaId) === String(matchedSiswa.id)) || (u.namaSiswa && u.namaSiswa.toLowerCase() === nama.toLowerCase()))
+          : [];
+
+        // Ambil mata pelajaran kurikulum untuk jenjang ini dari Standar KKM
         const listKurikulum = defaultMapelKurikulum[program] || defaultKKMPreset[program];
         const nilaiMapel = [];
 
         listKurikulum.forEach(m => {
           let nilaiFound = null;
-          // Cari kolom di row yang namanya mirip nama mapel
+          // Cari kolom di row Excel yang namanya cocok dengan nama mapel KKM
           Object.keys(row).forEach(origKey => {
             const kLow = origKey.trim().toLowerCase();
             const mLow = m.nama.toLowerCase();
@@ -2682,55 +2869,113 @@ function eksekusiImportTranskripExcel() {
             }
           });
 
+          // Jika di Excel kosong, coba ambil otomatis dari nilai Ujian CBT
+          if (nilaiFound === null) {
+            nilaiFound = cariNilaiCBTSesuaiMapel(hasilCbtSiswa, m.nama);
+          }
+
+          const finalScore = nilaiFound !== null ? nilaiFound : (Number(m.kkm) || 70);
+          const kkmVal = Number(m.kkm) || 70;
+          const capaianStr = finalScore >= 85
+            ? `Sangat menguasai kompetensi ${m.nama} secara mandiri dan melampaui standar KKM (${kkmVal}).`
+            : (finalScore >= kkmVal
+              ? `Mencapai ketuntasan kompetensi dengan baik dalam evaluasi pembelajaran ${m.nama}.`
+              : `Perlu pendampingan pengayaan pada beberapa topik ${m.nama} untuk mencapai KKM (${kkmVal}).`);
+
           nilaiMapel.push({
             mapel: m.nama,
             nama: m.nama,
             kelompok: m.kelompok,
-            kkm: m.kkm,
-            nilai: nilaiFound !== null ? nilaiFound : m.kkm
+            kkm: kkmVal,
+            nilai: finalScore,
+            capaian: capaianStr
           });
         });
 
-        // Tentukan apakah masuk ke transkripLuarList atau siswa internal
-        const transkripItem = {
-          id: 'TR-IMP-' + (nisn || (Date.now() + '-' + idx)),
-          isLuar: true,
-          sekolahId: 'import',
-          namaSekolah: asalSekolah,
-          nama,
-          nisn,
-          nik,
-          tempatLahir,
-          tglLahir,
-          tahunLulus,
-          nomorTranskrip,
-          program,
-          nilaiMapel,
-          updatedAt: new Date().toISOString()
-        };
+        // 1. Simpan ke Buku Raport Siswa jika dipilih ('raport' atau 'keduanya')
+        if (targetSimpan === 'raport' || targetSimpan === 'keduanya') {
+          const tingkatDefault = program === 'Paket A' ? 'Kelas VI (Fase C)' : (program === 'Paket B' ? 'Kelas IX (Fase D)' : 'Kelas XII (Fase F)');
+          const faseDefault = program === 'Paket A' ? 'Fase C' : (program === 'Paket B' ? 'Fase D' : 'Fase F');
+          const siswaIdVal = matchedSiswa ? matchedSiswa.id : ('IMP-' + (nisn || (Date.now() + '-' + idx)));
 
-        const existIdx = transkripLuarList.findIndex(t => 
-          (nisn && String(t.nisn) === String(nisn)) || 
-          (t.nama && t.nama.toLowerCase() === nama.toLowerCase() && normalisasiJenjang(t.program) === program)
-        );
+          const existRapIdx = raportDataList.findIndex(r =>
+            (matchedSiswa && String(r.siswaId) === String(matchedSiswa.id)) ||
+            (r.namaSiswa && r.namaSiswa.toLowerCase() === nama.toLowerCase() && normalisasiJenjang(r.program) === program)
+          );
 
-        if (existIdx >= 0) {
-          transkripLuarList[existIdx] = { ...transkripLuarList[existIdx], ...transkripItem };
-          countUpdated++;
-        } else {
-          transkripLuarList.unshift(transkripItem);
-          countImported++;
+          const raportObj = {
+            id: existRapIdx >= 0 ? raportDataList[existRapIdx].id : ('RAP-IMP-' + Date.now() + '-' + idx),
+            sekolahId: 'utama',
+            siswaId: siswaIdVal,
+            namaSiswa: nama,
+            nisn: nisn || (matchedSiswa ? matchedSiswa.nisn : '-'),
+            program,
+            tingkatKelas: (matchedSiswa && matchedSiswa.kelas) ? matchedSiswa.kelas : tingkatDefault,
+            tahunAjaran: '2026/2027',
+            semester: 'Genap',
+            fase: faseDefault,
+            tglRapor: new Date().toLocaleDateString('id-ID'),
+            statusKenaikanLulus: 'Lulus / Tuntas Pembelajaran',
+            catatanAkademik: 'Data nilai diimport dan diselaraskan dengan standar KKM PKBM Aura Anugerah.',
+            ekskul: [{ kegiatan: 'Pemberdayaan & Keterampilan Mandiri PKBM', predikat: 'Baik', keterangan: 'Aktif dalam kegiatan keterampilan warga belajar.' }],
+            kehadiran: { sakit: 0, izin: 0, tanpaKeterangan: 0 },
+            nilaiMapel
+          };
+
+          if (existRapIdx >= 0) {
+            raportDataList[existRapIdx] = raportObj;
+          } else {
+            raportDataList.unshift(raportObj);
+          }
+          saveRaportToStorage(raportObj);
+          countRaportSynced++;
+        }
+
+        // 2. Simpan ke Transkrip Nilai jika dipilih ('transkrip' atau 'keduanya')
+        if (targetSimpan === 'transkrip' || targetSimpan === 'keduanya') {
+          const transkripItem = {
+            id: 'TR-IMP-' + (nisn || (Date.now() + '-' + idx)),
+            isLuar: !matchedSiswa,
+            sekolahId: 'utama',
+            namaSekolah: asalSekolah,
+            nama,
+            nisn,
+            nik,
+            tempatLahir,
+            tglLahir,
+            tahunLulus,
+            nomorTranskrip,
+            program,
+            nilaiMapel,
+            updatedAt: new Date().toISOString()
+          };
+
+          const existIdx = transkripLuarList.findIndex(t => 
+            (nisn && String(t.nisn) === String(nisn)) || 
+            (t.nama && t.nama.toLowerCase() === nama.toLowerCase() && normalisasiJenjang(t.program) === program)
+          );
+
+          if (existIdx >= 0) {
+            transkripLuarList[existIdx] = { ...transkripLuarList[existIdx], ...transkripItem };
+            countUpdated++;
+          } else {
+            transkripLuarList.unshift(transkripItem);
+            countImported++;
+          }
         }
       });
 
-      saveTranskripLuarData(transkripLuarList, true);
+      if (targetSimpan === 'transkrip' || targetSimpan === 'keduanya') {
+        saveTranskripLuarData(transkripLuarList, true);
+      }
+      renderRaportTable();
       renderTranskripTable();
       closeModalImportTranskripExcel();
 
       Swal.fire({
         icon: 'success',
-        title: 'Import Transkrip Berhasil!',
-        html: `Berhasil menambahkan <b>${countImported}</b> transkrip baru dan memperbarui <b>${countUpdated}</b> data transkrip yang sudah ada.`,
+        title: 'Import Nilai Excel Berhasil!',
+        html: `Berhasil memproses <b>${countImported + countUpdated} data transkrip</b> dan menyinkronkan <b>${countRaportSynced} buku raport</b> ke database Google Sheets sesuai mata pelajaran KKM.`,
         confirmButtonColor: '#10b981'
       });
     } catch (err) {
@@ -2824,13 +3069,8 @@ function eksekusiGenerateRaportMassal({ jenjang, ta, smt, defNilai }) {
       : [];
 
     const nilaiMapel = kurikulum.map(m => {
-      const cbtMatch = hasilCbtSiswa.find(h => {
-        const judul = (h.bukuJudul || '').toLowerCase();
-        const mapelLow = m.nama.toLowerCase();
-        return judul.includes(mapelLow) || mapelLow.includes(judul);
-      });
-
-      const nilaiAkhir = cbtMatch ? Number(cbtMatch.nilai) : Math.max(defNilai, Number(m.kkm) || 70);
+      const cbtScore = cariNilaiCBTSesuaiMapel(hasilCbtSiswa, m.nama);
+      const nilaiAkhir = cbtScore !== null ? Number(cbtScore) : Math.max(defNilai, Number(m.kkm) || 70);
       const kkmMapel = Number(m.kkm) || 70;
       let capaian = 'Mencapai ketuntasan kompetensi dengan baik dalam evaluasi pembelajaran modul.';
       if (nilaiAkhir >= 85) {
@@ -2900,12 +3140,17 @@ window.bukaModalGenerateRaportMassal = bukaModalGenerateRaportMassal;
 window.bukaModalSettingKKM = bukaModalSettingKKM;
 window.closeModalSettingKKM = closeModalSettingKKM;
 window.switchKKMTab = switchKKMTab;
+window.tambahBarisItemKKM = tambahBarisItemKKM;
+window.hapusBarisItemKKM = hapusBarisItemKKM;
+window.eksporTemplateKKMExcel = eksporTemplateKKMExcel;
+window.prosesImportKKMExcel = prosesImportKKMExcel;
 window.simpanPengaturanKKM = simpanPengaturanKKM;
 window.resetKKMToDefault = resetKKMToDefault;
 
 window.bukaModalImportTranskripExcel = bukaModalImportTranskripExcel;
 window.closeModalImportTranskripExcel = closeModalImportTranskripExcel;
 window.unduhTemplateTranskripExcel = unduhTemplateTranskripExcel;
+window.sinkronNilaiUjianKeRaporTranskrip = sinkronNilaiUjianKeRaporTranskrip;
 window.eksekusiImportTranskripExcel = eksekusiImportTranskripExcel;
 
 

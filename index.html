@@ -2310,13 +2310,19 @@
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button class="btn btn-primary" onclick="bukaModalGenerateRaportMassal()" id="btn-generate-raport-massal" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #0284c7, #0369a1); border: none;">
-                <i data-lucide="wand-2" style="width: 16px; height: 16px;"></i> Generate Rapor Otomatis (1 Kelas)
+                <i data-lucide="wand-2" style="width: 16px; height: 16px;"></i> Ambil Nilai dari Data Ujian (CBT)
+              </button>
+              <button class="btn btn-primary" onclick="bukaModalImportTranskripExcel()" id="btn-import-raport-excel" style="display: inline-flex; align-items: center; gap: 6px; background: #10b981; border: none;">
+                <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px;"></i> Template & Import Excel
+              </button>
+              <button class="btn btn-outline" onclick="bukaModalSettingKKM()" style="display: inline-flex; align-items: center; gap: 6px; border-color: #d97706; color: #d97706; font-weight: 600;">
+                <i data-lucide="award" style="width: 15px; height: 15px;"></i> Standar Mapel & KKM
               </button>
               <button class="btn btn-primary" onclick="bukaModalInputRaport()" id="btn-tambah-raport" style="display: inline-flex; align-items: center; gap: 6px;">
                 <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i> Input / Buat Raport
               </button>
               <button class="btn btn-outline" onclick="bukaModalExportGlobalRaport()" id="btn-export-raport-global" style="display: inline-flex; align-items: center; gap: 6px; border-color: var(--primary-color); color: var(--primary-color);">
-                <i data-lucide="printer" style="width: 15px; height: 15px;"></i> Cetak Global Raport (Per TA / Kelas)
+                <i data-lucide="printer" style="width: 15px; height: 15px;"></i> Cetak Global Raport
               </button>
             </div>
           </div>
@@ -4266,11 +4272,20 @@
           </small>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
           <span id="label-kkm-active-jenjang" style="font-size: 12.5px; font-weight: 700; color: var(--text-color);">Daftar Mata Pelajaran (Paket C)</span>
-          <button type="button" class="btn btn-sm" onclick="tambahBarisItemKKM()" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
-            <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i> Tambah Mata Pelajaran
-          </button>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm" onclick="eksporTemplateKKMExcel()" title="Unduh Template Konfigurasi Mapel & KKM (.xlsx)" style="background: rgba(2, 132, 199, 0.1); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3); font-size: 11px; font-weight: 600; padding: 5px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+              <i data-lucide="download" style="width: 13px; height: 13px;"></i> Template Mapel
+            </button>
+            <button type="button" class="btn btn-sm" onclick="document.getElementById('input-import-kkm-excel').click()" title="Import Daftar Mapel & KKM dari Excel" style="background: rgba(139, 92, 246, 0.1); color: #7c3aed; border: 1px solid rgba(139, 92, 246, 0.3); font-size: 11px; font-weight: 600; padding: 5px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+              <i data-lucide="upload" style="width: 13px; height: 13px;"></i> Import Mapel
+            </button>
+            <input type="file" id="input-import-kkm-excel" accept=".xlsx, .xls, .csv" style="display: none;" onchange="prosesImportKKMExcel(this)">
+            <button type="button" class="btn btn-sm" onclick="tambahBarisItemKKM()" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
+              <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i> Tambah Mapel
+            </button>
+          </div>
         </div>
 
         <table style="width: 100%; font-size: 12.5px; border-collapse: collapse;">
@@ -4322,28 +4337,44 @@
 
       <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
         <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: 700; color: var(--text-color); display: flex; align-items: center; gap: 6px;">
-          <i data-lucide="info" style="width: 16px; height: 16px; color: #0284c7;"></i> Panduan Format File Excel
+          <i data-lucide="info" style="width: 16px; height: 16px; color: #0284c7;"></i> 1. Unduh Template & Isi Otomatis dari Nilai Ujian (CBT)
         </h4>
         <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 10px 0; line-height: 1.5;">
-          Gunakan template resmi agar nama kolom sesuai. Anda dapat memilih jenjang untuk mengunduh template spesifik yang memuat daftar mata pelajaran yang relevan.
+          Template Excel otomatis menyesuaikan daftar mata pelajaran dari <b>Pengaturan KKM</b>. Jika opsi di bawah dicentang, sistem akan langsung mengisi daftar siswa aktif beserta nilai dari hasil <b>Ujian Modul (CBT)</b> sesuai mata pelajarannya!
         </p>
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text-color); margin-bottom: 10px; cursor: pointer;">
+          <input type="checkbox" id="chk-template-prefill-cbt" checked style="width: 15px; height: 15px; accent-color: #10b981;">
+          Sertakan daftar siswa aktif & isi nilai otomatis dari hasil Ujian CBT sesuai mata pelajaran
+        </label>
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
           <select id="import-template-jenjang" class="form-control" style="width: 180px; height: 36px; font-size: 12px;">
             <option value="Paket C">Paket C (Setara SMA)</option>
             <option value="Paket B">Paket B (Setara SMP)</option>
             <option value="Paket A">Paket A (Setara SD)</option>
           </select>
-          <button type="button" class="btn btn-outline" onclick="unduhTemplateTranskripExcel()" style="height: 36px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; border-color: #10b981; color: #10b981;">
-            <i data-lucide="download" style="width: 14px; height: 14px;"></i> Unduh Template Excel (.xlsx)
+          <button type="button" class="btn btn-outline" onclick="unduhTemplateTranskripExcel()" style="height: 36px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; border-color: #10b981; color: #10b981; font-weight: 600;">
+            <i data-lucide="download" style="width: 14px; height: 14px;"></i> Unduh Template Nilai (.xlsx)
+          </button>
+          <button type="button" class="btn btn-outline" onclick="sinkronNilaiUjianKeRaporTranskrip()" style="height: 36px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; border-color: #0284c7; color: #0284c7; font-weight: 600;">
+            <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Tarik Langsung dari Data Ujian (CBT)
           </button>
         </div>
       </div>
 
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label style="font-size: 12.5px; font-weight: 700;">2. Target Penyimpanan Saat Import Excel</label>
+        <select id="import-target-simpan" class="form-control" style="height: 36px; font-size: 12px; margin-top: 4px;">
+          <option value="keduanya">Simpan ke Buku Raport Siswa & Transkrip Nilai Akademik (Rekomendasi)</option>
+          <option value="raport">Simpan ke Buku Raport Siswa Saja</option>
+          <option value="transkrip">Simpan ke Transkrip Nilai Saja</option>
+        </select>
+      </div>
+
       <div class="form-group" style="margin-bottom: 14px;">
-        <label style="font-size: 12.5px; font-weight: 700;">Pilih Berkas Excel (.xlsx / .xls / .csv)</label>
+        <label style="font-size: 12.5px; font-weight: 700;">3. Pilih Berkas Excel (.xlsx / .xls / .csv)</label>
         <input type="file" id="input-file-excel-transkrip" class="form-control" accept=".xlsx, .xls, .csv" style="padding: 6px 10px;">
         <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
-          Kolom wajib: <code>Nama Siswa</code>, <code>NISN</code>, <code>NIK</code>, <code>Program Kesetaraan</code>, <code>Nama Sekolah</code>, disusul kolom nilai tiap mapel.
+          Kolom pada Excel otomatis dicocokkan dengan nama mata pelajaran di <b>Standar KKM</b>.
         </small>
       </div>
 
