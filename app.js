@@ -1816,10 +1816,10 @@ async function handleRegistrationOrEdit(e) {
     const fileBayar = document.getElementById('reg-file-bayar').files[0];
     const fileFoto = document.getElementById('reg-file-foto').files[0];
 
-    const b64Ijazah = fileIjazah ? await toBase64(fileIjazah) : null;
-    const b64Kk = fileKk ? await toBase64(fileKk) : null;
+    const b64Ijazah = fileIjazah ? await toBase64(fileIjazah) : (aiUploadedFiles && aiUploadedFiles.ijazah ? aiUploadedFiles.ijazah : null);
+    const b64Kk = fileKk ? await toBase64(fileKk) : (aiUploadedFiles && aiUploadedFiles.kk ? aiUploadedFiles.kk : null);
     const b64Bayar = fileBayar ? await toBase64(fileBayar) : null;
-    const b64Foto = fileFoto ? await toBase64(fileFoto) : null;
+    const b64Foto = fileFoto ? await toBase64(fileFoto) : (aiUploadedFiles && aiUploadedFiles.foto ? aiUploadedFiles.foto : null);
 
     const siswaId = document.getElementById('reg-id').value;
     const actionStr = siswaId ? "updateSiswa" : "registerSiswa";
@@ -5117,8 +5117,10 @@ async function handleUploadPdfGabunganAI(inputEl) {
       aiUploadedFiles.kk = pages[0].dataUrl;
       updateAIPreviewBoxStep1('ai-preview-kk', aiUploadedFiles.kk, 'Halaman 1 PDF → Kartu Keluarga');
       if (statusEl) {
-        statusEl.innerHTML = `<span style="color:#059669; font-weight:600;">✅ PDF 1 halaman berhasil dimuat ke kolom KK.</span>`;
+        statusEl.innerHTML = `<span style="color:#059669; font-weight:600;">✅ PDF 1 halaman berhasil dimuat ke kolom KK. Memulai ekstraksi otomatis AI...</span>`;
       }
+      renderAIStep2Previews();
+      setTimeout(() => { handleEkstrakDataAI(); }, 350);
     } else {
       // Deteksi cerdas berdasarkan orientasi halaman:
       // Kartu Keluarga (KK) hampir selalu Landscape (lebar > tinggi), sedangkan Ijazah umumnya Portrait (tinggi > lebar).
@@ -5148,11 +5150,12 @@ async function handleUploadPdfGabunganAI(inputEl) {
 
       if (btnTukar) btnTukar.style.display = 'inline-flex';
       if (statusEl) {
-        statusEl.innerHTML = `<span style="color:#059669; font-weight:700;">✅ Berhasil memisahkan ${pages.length} halaman PDF! (${infoDeteksi})</span>`;
+        statusEl.innerHTML = `<span style="color:#059669; font-weight:700;">✅ Berhasil memisahkan ${pages.length} halaman PDF! (${infoDeteksi}) — Memulai ekstraksi AI otomatis...</span>`;
       }
+      renderAIStep2Previews();
+      // Langsung jalankan ekstraksi AI dan pindah ke form pendaftaran otomatis!
+      setTimeout(() => { handleEkstrakDataAI(); }, 350);
     }
-
-    renderAIStep2Previews();
   } catch (err) {
     console.error('Gagal memproses PDF gabungan:', err);
     if (statusEl) {
@@ -5180,8 +5183,21 @@ function tukarPosisiKkDanIjazahAI() {
   });
 }
 
+function showAIStep1Upload() {
+  const step1 = document.getElementById('ai-step-1-card');
+  const step2 = document.getElementById('ai-extracted-container');
+  if (step1) step1.style.display = 'block';
+  if (step2) step2.style.display = 'none';
+  const modal = document.getElementById('modal-ai-reg');
+  if (modal) {
+    const content = modal.querySelector('.modal-content');
+    if (content) content.scrollTop = 0;
+  }
+}
+
 window.handleUploadPdfGabunganAI = handleUploadPdfGabunganAI;
 window.tukarPosisiKkDanIjazahAI = tukarPosisiKkDanIjazahAI;
+window.showAIStep1Upload = showAIStep1Upload;
 
 async function handleEkstrakDataAI() {
   const nikInput = document.getElementById('ai-reg-nik');
@@ -5341,11 +5357,19 @@ async function handleEkstrakDataAI() {
       details: result.validationDetails || (result.validationStatus === 'Tidak Sesuai' ? 'Terdapat ketidakcocokan antara KK dan Ijazah.' : 'Semua data sesuai dengan dokumen resmi.')
     };
 
-    // Tampilkan formulir review hasil ekstraksi
+    // Tampilkan formulir review hasil ekstraksi dan sembunyikan Step 1 agar langsung berpindah ke form pendaftaran!
+    const step1Card = document.getElementById('ai-step-1-card');
+    if (step1Card) step1Card.style.display = 'none';
+
     const container = document.getElementById('ai-extracted-container');
     if (container) {
       container.style.display = 'block';
-      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    const modal = document.getElementById('modal-ai-reg');
+    if (modal) {
+      const modalContent = modal.querySelector('.modal-content');
+      if (modalContent) modalContent.scrollTop = 0;
     }
 
     // Tampilkan banner hasil pemeriksaan dokumen (Sesuai / Tidak Sesuai)
@@ -5699,6 +5723,9 @@ function resetAIRegForm() {
   const s2Foto = document.getElementById('ai-step2-file-foto');
   if (s2Foto) s2Foto.value = '';
 
+  const step1Card = document.getElementById('ai-step-1-card');
+  if (step1Card) step1Card.style.display = 'block';
+
   const container = document.getElementById('ai-extracted-container');
   if (container) container.style.display = 'none';
 
@@ -5728,9 +5755,64 @@ function closeAIRegModal() {
   }
 }
 
+function transferAIToMainRegisterForm() {
+  const getVal = (id) => {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  };
+
+  resetAndOpenRegisterForm();
+
+  const setReg = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || '';
+  };
+
+  setReg('reg-tgl-daftar', getVal('ai-out-tgl-daftar') || new Date().toISOString().split('T')[0]);
+  setReg('reg-program', getVal('ai-out-program'));
+  setReg('reg-nama', getVal('ai-out-nama'));
+  setReg('reg-jk', getVal('ai-out-jk') || 'Laki-laki');
+  setReg('reg-nik', getVal('ai-out-nik'));
+  setReg('reg-nisn', getVal('ai-out-nisn'));
+  setReg('reg-no-kk', getVal('ai-out-no-kk'));
+  setReg('reg-urut-kk', getVal('ai-out-urut-kk'));
+  setReg('reg-tempat-lahir', getVal('ai-out-tempat-lahir'));
+  setReg('reg-tgl-lahir', getVal('ai-out-tgl-lahir'));
+  setReg('reg-kab-kota', getVal('ai-out-kab-kota'));
+  setReg('reg-kecamatan', getVal('ai-out-kecamatan'));
+  setReg('reg-desa-kelurahan', getVal('ai-out-desa-kelurahan'));
+  setReg('reg-kelas', getVal('ai-out-program'));
+
+  setReg('reg-ayah', getVal('ai-out-ayah'));
+  setReg('reg-nik-ayah', getVal('ai-out-nik-ayah'));
+  setReg('reg-ibu', getVal('ai-out-ibu'));
+  setReg('reg-nik-ibu', getVal('ai-out-nik-ibu'));
+  setReg('reg-tahun-lulus', getVal('ai-out-tahun-lulus'));
+
+  setReg('reg-syarat', 'Lengkap');
+  setReg('reg-dok-berkas', 'KK' + (aiUploadedFiles.ijazah ? ', Ijazah' : '') + (aiUploadedFiles.foto ? ', Foto' : ''));
+
+  // Tampilkan pratinjau berkas yang sudah dipisah ke kolom masing-masing di Step 3 Formulir Utama
+  const showRegPrev = (boxId, b64, label) => {
+    const box = document.getElementById(boxId);
+    if (!box) return;
+    if (b64) {
+      box.innerHTML = `<img src="${b64}" style="width:44px; height:44px; object-fit:cover; border-radius:6px; border:1px solid #16a34a; cursor:pointer;" onclick="openDocViewerModal('${b64}', '${label}')"><span style="font-size:0.75rem; color:#16a34a; font-weight:600;">✓ ${label} dari AI siap disimpan</span>`;
+      box.style.display = 'flex';
+    }
+  };
+  showRegPrev('preview-reg-kk', aiUploadedFiles.kk, 'Berkas KK');
+  showRegPrev('preview-reg-ijazah', aiUploadedFiles.ijazah, 'Berkas Ijazah');
+  showRegPrev('preview-reg-foto', aiUploadedFiles.foto, 'Pas Foto');
+
+  closeAIRegModal();
+}
+
 window.openAIRegModal = openAIRegModal;
 window.closeAIRegModal = closeAIRegModal;
 window.resetAIRegForm = resetAIRegForm;
+window.handleEkstrakDataAI = handleEkstrakDataAI;
+window.transferAIToMainRegisterForm = transferAIToMainRegisterForm;
 
 // ======================= FITUR PORTAL SISWA & AKADEMIK (MYAURA) =======================
 function renderPortalSiswaData(siswa) {
