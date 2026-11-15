@@ -3471,6 +3471,68 @@ function previewDocModal(type, siswaId, namaSiswa) {
   if (modal) modal.classList.remove('hidden');
 }
 
+function openDocViewerModal(url, customTitle) {
+  if (!url) {
+    Swal.fire('Informasi', 'Berkas belum tersedia atau belum diunggah.', 'info');
+    return;
+  }
+
+  currentDocUrl = url;
+  currentDocTitle = customTitle || 'Berkas_Dokumen';
+
+  const modal = document.getElementById('modal-doc-viewer');
+  const titleEl = document.getElementById('doc-modal-title');
+  const imgEl = document.getElementById('doc-modal-img');
+  const iframeEl = document.getElementById('doc-modal-iframe');
+
+  if (titleEl) titleEl.textContent = customTitle || 'Pratinjau Dokumen';
+
+  const isDrive = url.includes('drive.google.com');
+  const isPdf = url.toLowerCase().includes('.pdf') || url.includes('application/pdf');
+
+  if (isDrive) {
+    let previewUrl = url;
+    if (url.includes('/view')) {
+      previewUrl = url.replace('/view', '/preview');
+    } else if (url.includes('uc?id=')) {
+      try {
+        const id = new URL(url).searchParams.get('id');
+        if (id) previewUrl = `https://drive.google.com/file/d/${id}/preview`;
+      } catch (e) { }
+    }
+    if (imgEl) {
+      imgEl.style.display = 'none';
+      imgEl.removeAttribute('src');
+    }
+    if (iframeEl) {
+      iframeEl.style.display = 'block';
+      iframeEl.src = previewUrl;
+    }
+  } else if (isPdf) {
+    if (imgEl) {
+      imgEl.style.display = 'none';
+      imgEl.removeAttribute('src');
+    }
+    if (iframeEl) {
+      iframeEl.style.display = 'block';
+      iframeEl.src = url;
+    }
+  } else {
+    if (iframeEl) {
+      iframeEl.style.display = 'none';
+      iframeEl.removeAttribute('src');
+    }
+    if (imgEl) {
+      imgEl.style.display = 'block';
+      imgEl.src = url;
+    }
+  }
+
+  if (modal) modal.classList.remove('hidden');
+}
+
+window.openDocViewerModal = openDocViewerModal;
+
 function closeDocViewerModal() {
   const modal = document.getElementById('modal-doc-viewer');
   const imgEl = document.getElementById('doc-modal-img');
@@ -5017,13 +5079,20 @@ function updateAIPreviewBoxStep1(previewId, imgDataUrl, labelText) {
   if (!imgDataUrl) {
     container.innerHTML = '';
     container.style.display = 'none';
+    container.onclick = null;
     return;
   }
   container.innerHTML = `
-    <img src="${imgDataUrl}" style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1.5px solid #10b981; cursor:pointer;" onclick="openDocViewerModal('${imgDataUrl}', '${labelText}')">
-    <span style="font-size:0.76rem; color:#059669; font-weight:700;">✓ ${labelText} (Klik gambar untuk perbesar)</span>
+    <img src="${imgDataUrl}" style="width:48px; height:48px; object-fit:cover; border-radius:6px; border:1.5px solid #10b981; cursor:pointer;" title="Klik untuk memperbesar pratinjau ${labelText}">
+    <span style="font-size:0.76rem; color:#059669; font-weight:700; cursor:pointer;">✓ ${labelText} (Klik gambar untuk perbesar)</span>
   `;
   container.style.display = 'flex';
+  container.style.cursor = 'pointer';
+  container.onclick = () => {
+    if (typeof openDocViewerModal === 'function') {
+      openDocViewerModal(imgDataUrl, `Pratinjau ${labelText}`);
+    }
+  };
 }
 
 // Handler saat pengguna memilih 1 file PDF Gabungan (misal: Syawaluddin PB28.pdf)
