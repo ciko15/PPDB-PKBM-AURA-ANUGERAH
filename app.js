@@ -2980,6 +2980,69 @@ function isSiswaAlreadyChecked(s) {
   return (!isPending || hasHistory) && (rawStatus === 'sesuai' || rawStatus === 'cocok' || rawStatus === 'tidak sesuai' || rawStatus === 'tidak_cocok' || rawStatus === 'perlu perbaikan' || hasHistory);
 }
 
+// Helper fallback pengecekan kesesuaian berkas AI langsung dari browser apabila model GAS lawas (404)
+async function runDirectClientGeminiCheck(dataSiswa, jenisDokumen, clientApiKey) {
+  const urlGambar = jenisDokumen === 'kk' ? dataSiswa.urlKK : dataSiswa.urlIjazah;
+  if (!urlGambar || !urlGambar.startsWith('data:')) return null;
+
+  let keys = [];
+  if (clientApiKey && clientApiKey.trim()) {
+    keys.push(...clientApiKey.split(',').map(k => k.trim()).filter(k => k.length > 10));
+  }
+  try {
+    const dbKeys = await callAPI({ action: "getApiKeys" });
+    if (Array.isArray(dbKeys)) {
+      dbKeys.forEach(item => {
+        if (item.apiKey && item.apiKey.length > 10 && item.status !== 'Nonaktif' && !keys.includes(item.apiKey)) {
+          keys.push(item.apiKey);
+        }
+      });
+    }
+  } catch (e) { }
+
+  if (keys.length === 0) return null;
+
+  const sp = urlGambar.split(";base64,");
+  if (sp.length < 2) return null;
+  const mimeMatch = sp[0].match(/data:(.*)/);
+  const mimeType = (mimeMatch && mimeMatch[1]) ? mimeMatch[1] : "image/jpeg";
+  const imageBase64 = sp[1];
+
+  const promptText = `Berikut adalah data pendaftaran calon siswa Kejar Paket:\n` +
+    `- NIK: ${dataSiswa.nik || '-'}\n` +
+    `- Nama Lengkap: ${dataSiswa.nama || '-'}\n` +
+    `- Tempat Lahir: ${dataSiswa.tempatLahir || '-'}\n` +
+    `- Tanggal Lahir: ${dataSiswa.tglLahir || '-'}\n` +
+    `- Nama Ibu Kandung: ${dataSiswa.namaIbu || '-'}\n\n` +
+    `Periksa kelima data di atas terhadap gambar dokumen yang terlampir. Kembalikan JSON murni:\n` +
+    `{"status":"Sesuai"|"Tidak Sesuai","koreksi":"1. ...","tipeMasalah":"KOREKSI_DATA"|"REKOMENDASI_RESMI"|null,"rekomendasiResmi":"","suggestedFix":{"nama":null,"nik":null,"tempatLahir":null,"tglLahir":null,"namaIbu":null}}`;
+
+  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash"];
+
+  for (const key of keys) {
+    for (const model of candidateModels) {
+      try {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptText }, { inline_data: { mime_type: mimeType, data: imageBase64 } }] }],
+            generationConfig: { responseMimeType: "application/json" }
+          })
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          const txt = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (txt) {
+            return JSON.parse(txt.replace(/```json/g, '').replace(/```/g, '').trim());
+          }
+        }
+      } catch (e) { }
+    }
+  }
+  return null;
+}
+
 async function runSingleRowAICheck(siswaId) {
   const s = siswaDataList.find(x => String(x.id) === String(siswaId));
   if (!s) return;
@@ -3051,12 +3114,17 @@ async function runSingleRowAICheck(siswaId) {
       urlFoto: (s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:'))) ? s.urlFoto : (getFileLocal(s.id, 'foto') || "")
     };
 
-    const result = await callAPI({
+    let result = await callAPI({
       action: "runAICheck",
       dataSiswa: enrichedDataSiswa,
       jenisDokumen: targetDoc,
       apiKey: userApiKey
     });
+
+    if (!result || String(result.status || '').toUpperCase() === 'ERROR') {
+      const directRes = await runDirectClientGeminiCheck(enrichedDataSiswa, targetDoc, userApiKey);
+      if (directRes) result = directRes;
+    }
 
     hideLoader();
 
@@ -5199,6 +5267,108 @@ window.handleUploadPdfGabunganAI = handleUploadPdfGabunganAI;
 window.tukarPosisiKkDanIjazahAI = tukarPosisiKkDanIjazahAI;
 window.showAIStep1Upload = showAIStep1Upload;
 
+// Helper fallback ekstraksi Gemini AI langsung dari browser apabila model di GAS lawas (404 gemini-1.5-pro)
+async function runDirectClientGeminiExtract(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
+  let keys = [];
+  if (clientApiKey && clientApiKey.trim()) {
+    keys.push(...clientApiKey.split(',').map(k => k.trim()).filter(k => k.length > 10));
+  }
+  try {
+    const dbKeys = await callAPI({ action: "getApiKeys" });
+    if (Array.isArray(dbKeys)) {
+      dbKeys.forEach(item => {
+        if (item.apiKey && item.apiKey.length > 10 && item.status !== 'Nonaktif' && !keys.includes(item.apiKey)) {
+          keys.push(item.apiKey);
+        }
+      });
+    }
+  } catch (e) { }
+
+  if (keys.length === 0) return null;
+
+  const promptText = `Anda adalah asisten AI cerdas untuk pendaftaran peserta didik baru (PPDB) di PKBM Aura Anugerah.\n` +
+    (nikTarget ? `NIK Target Siswa: "${nikTarget}"\n` : `NIK Target Siswa: (Cocokkan nama siswa yang tertera pada Ijazah dengan baris anggota keluarga di Kartu Keluarga)\n`) +
+    `Instruksi:\n` +
+    `1. Analisis gambar dokumen yang terlampir (Dokumen 1 dan Dokumen 2 bisa berupa Kartu Keluarga dan Ijazah).\n` +
+    `2. IDENTIFIKASI POSISI DOKUMEN:\n` +
+    `   - Periksa apakah Dokumen 1 adalah Kartu Keluarga (KK) atau Ijazah.\n` +
+    `   - Jika Dokumen 1 sebenarnya adalah IJAZAH dan Dokumen 2 adalah KARTU KELUARGA (terbalik posisinya), isi properti "isDocSwapped": true. Jika sudah benar (Dokumen 1 = KK, Dokumen 2 = Ijazah), isi "isDocSwapped": false.\n` +
+    `3. Temukan baris anggota keluarga di KK yang sesuai dengan "NIK Target Siswa" atau yang namanya cocok dengan nama siswa di Ijazah.\n` +
+    `4. Ekstrak data berikut secara teliti:\n` +
+    `   - nama: Nama lengkap calon siswa\n` +
+    `   - nik: NIK calon siswa (16 digit dari KK)\n` +
+    `   - noKk: Nomor Kartu Keluarga (16 digit di bagian atas KK)\n` +
+    `   - urutKk: Nomor urut siswa di dalam tabel Kartu Keluarga (misal: 1, 2, 3, 4, dst)\n` +
+    `   - jk: Jenis Kelamin ('Laki-laki' atau 'Perempuan')\n` +
+    `   - tempatLahir: Tempat lahir siswa\n` +
+    `   - tglLahir: Tanggal lahir format YYYY-MM-DD\n` +
+    `   - namaAyah: Nama ayah kandung (dari tabel bawah KK kolom Ayah)\n` +
+    `   - nikAyah: NIK ayah kandung jika ayah terdaftar di tabel atas KK\n` +
+    `   - namaIbu: Nama ibu kandung (dari tabel bawah KK kolom Ibu)\n` +
+    `   - nikIbu: NIK ibu kandung jika ibu terdaftar di tabel atas KK\n` +
+    `   - kabKota: Kabupaten / Kota domisili di KK\n` +
+    `   - kecamatan: Kecamatan di KK\n` +
+    `   - desaKelurahan: Desa / Kelurahan di KK\n` +
+    `   - nisn: NISN (10 digit Nomor Induk Siswa Nasional dari Ijazah)\n` +
+    `   - tahunLulus: Tahun kelulusan dari Ijazah (misal: 2023)\n` +
+    `   - jenjangRekomendasi: Rekomendasi program kesetaraan lanjutan berdasarkan ijazah terakhir ('Paket B' jika ijazah SD, 'Paket C' jika ijazah SMP/MTs/Paket B, atau 'Paket A' jika belum punya ijazah)\n` +
+    `5. PERIKSA KESESUAIAN ANTARA KK DAN IJAZAH (Jika kedua dokumen terlampir):\n` +
+    `   - Bandingkan Nama Lengkap, Tempat Lahir, dan Tanggal Lahir antara yang tertulis di Kartu Keluarga dan Ijazah.\n` +
+    `   - Jika sama persis: tetapkan validationStatus = "Sesuai", dan WAJIB buatkan validationDetails dalam bentuk poin-poin bernomor (1. ..., 2. ...) sebagai bukti pencocokan.\n` +
+    `   - Jika ada perbedaan: tetapkan validationStatus = "Tidak Sesuai", dan buatkan validationDetails dalam bentuk poin bernomor (1. ..., 2. ...) yang merinci letak perbedaannya.\n` +
+    `Kembalikan respon murni JSON (tanpa markdown) dengan struktur:\n` +
+    `{"status":"SUCCESS","isDocSwapped":false,"validationStatus":"Sesuai","validationDetails":"1. ...","data":{"nama":"","nik":"","noKk":"","urutKk":"","jk":"","tempatLahir":"","tglLahir":"YYYY-MM-DD","namaAyah":"","nikAyah":"","namaIbu":"","nikIbu":"","kabKota":"","kecamatan":"","desaKelurahan":"","nisn":"","tahunLulus":"","jenjangRekomendasi":"Paket B"}}`;
+
+  const parts = [{ text: promptText }];
+  const parseB64 = (raw) => {
+    if (!raw) return null;
+    let mime = "image/jpeg";
+    let data = raw;
+    if (raw.includes(";base64,")) {
+      const sp = raw.split(";base64,");
+      const m = sp[0].match(/data:(.*)/);
+      if (m && m[1]) mime = m[1];
+      data = sp[1];
+    }
+    return { mime_type: mime, data: data };
+  };
+
+  if (kkBase64) {
+    const c = parseB64(kkBase64);
+    if (c) parts.push({ inline_data: c });
+  }
+  if (ijazahBase64) {
+    const c = parseB64(ijazahBase64);
+    if (c) parts.push({ inline_data: c });
+  }
+
+  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash"];
+
+  for (const key of keys) {
+    for (const model of candidateModels) {
+      try {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: { responseMimeType: "application/json" }
+          })
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          const txt = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (txt) {
+            const cleaned = txt.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(cleaned);
+          }
+        }
+      } catch (e) { }
+    }
+  }
+  return null;
+}
+
 async function handleEkstrakDataAI() {
   const nikInput = document.getElementById('ai-reg-nik');
   const fileKkInput = document.getElementById('ai-reg-file-kk');
@@ -5277,13 +5447,26 @@ async function handleEkstrakDataAI() {
 
     const userApiKey = localStorage.getItem('gemini_api_key') || '';
 
-    const result = await callAPI({
-      action: "ekstrakDataAI",
-      nikTarget: nikTarget,
-      kkBase64: kkBase64,
-      ijazahBase64: ijazahBase64,
-      apiKey: userApiKey
-    });
+    let result = null;
+    try {
+      result = await callAPI({
+        action: "ekstrakDataAI",
+        nikTarget: nikTarget,
+        kkBase64: kkBase64,
+        ijazahBase64: ijazahBase64,
+        apiKey: userApiKey
+      });
+    } catch (apiErr) {
+      console.warn("GAS ekstrakDataAI error, mencoba direct Gemini fallback:", apiErr);
+    }
+
+    // Jika backend Google Apps Script masih menggunakan model lama (misal 404 gemini-1.5-pro), otomatis gunakan direct Gemini API (gemini-2.5-flash / gemini-2.0-flash)!
+    if (!result || result.status !== "SUCCESS" || !result.data) {
+      const directResult = await runDirectClientGeminiExtract(nikTarget, kkBase64, ijazahBase64, userApiKey);
+      if (directResult && directResult.status === "SUCCESS" && directResult.data) {
+        result = directResult;
+      }
+    }
 
     hideLoader();
 

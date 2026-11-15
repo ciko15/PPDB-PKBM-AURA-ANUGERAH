@@ -180,8 +180,8 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
     muteHttpExceptions: true
   };
 
-  // Daftar model resmi aktif yang didukung
-  const candidateModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+  // Daftar model resmi aktif yang didukung (termasuk generasi terbaru)
+  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash"];
 
   let lastError = "";
 
@@ -345,7 +345,7 @@ function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
     }
   };
 
-  const candidateModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash"];
 
   const options = {
     method: "post",
@@ -412,7 +412,7 @@ function generateSoalCBTDenganAI(topikMateri, jenjang, kelas, mataPelajaran, jum
   }
 
   const jml = Math.min(25, Math.max(3, parseInt(jumlahSoal, 10) || 5));
-  const candidateModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash"];
 
   const promptText = `Anda adalah seorang guru/tutor profesional di PKBM (Pendidikan Kesetaraan).
 Tugas Anda: Buatlah ${jml} butir soal ujian pilihan ganda (4 opsi: A, B, C, D) yang berkualitas, kontekstual, dan menguji pemahaman literasi/konsep, berdasarkan materi berikut:
