@@ -492,7 +492,16 @@ function switchMobileTab(targetId, btnEl, recordHistory = true) {
     muatLogNotifikasiDashboard();
   }
   if (targetId === 'section-list') loadAllSiswa();
+  if (targetId === 'section-absensi') {
+    if (typeof loadAbsensiData === 'function') loadAbsensiData();
+  }
+  if (targetId === 'section-bayar') {
+    if (typeof loadBayarData === 'function') loadBayarData();
+  }
   if (targetId === 'section-materi') loadBukuData();
+  if (targetId === 'section-riwayat-baca') {
+    if (typeof loadRiwayatBacaData === 'function') loadRiwayatBacaData();
+  }
   if (targetId === 'section-ujian') loadUjianData();
   if (targetId === 'section-raport') loadRaportData();
   if (targetId === 'section-transkrip') loadTranskripData();
