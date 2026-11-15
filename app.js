@@ -5468,6 +5468,67 @@ async function runDirectClientGeminiExtract(nikTarget, kkBase64, ijazahBase64, c
 
 let isExtractingAI = false;
 
+// Fungsi helper untuk memberi animasi efek shimmer / scanning pada input form saat AI bekerja
+function setAIFormLoadingState(isLoading) {
+  const fieldIds = [
+    'ai-out-nama', 'ai-out-nik', 'ai-out-no-kk', 'ai-out-urut-kk',
+    'ai-out-jk', 'ai-out-tempat-lahir', 'ai-out-tgl-lahir',
+    'ai-out-ibu', 'ai-out-nik-ibu', 'ai-out-ayah', 'ai-out-nik-ayah',
+    'ai-out-kab-kota', 'ai-out-kecamatan', 'ai-out-desa-kelurahan',
+    'ai-out-nisn', 'ai-out-tahun-lulus', 'ai-out-program'
+  ];
+
+  const headerBadge = document.getElementById('ai-extract-header-badge');
+  const banner = document.getElementById('ai-cross-check-banner');
+
+  if (isLoading) {
+    if (headerBadge) {
+      headerBadge.innerHTML = `<span style="display:inline-flex; align-items:center; gap:6px;"><span class="spinner" style="width:12px; height:12px; border-width:2px; margin:0;"></span> AI Sedang Membaca Dokumen...</span>`;
+      headerBadge.style.background = '#e0f2fe';
+      headerBadge.style.color = '#0369a1';
+    }
+
+    if (banner) {
+      banner.style.display = 'block';
+      banner.innerHTML = `
+        <div class="ai-extracting-pulse">
+          <div class="spinner" style="width: 22px; height: 22px; border-width: 2.5px; border-top-color: #0284c7; flex-shrink: 0; margin: 0;"></div>
+          <div style="flex: 1; text-align: left;">
+            <div style="font-weight: 700; color: #0284c7; font-size: 0.92rem;">
+              Sedang Memindai & Mengekstrak Data dari KK & Ijazah...
+            </div>
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">
+              Gemini AI sedang membaca teks nama, NIK, tanggal lahir, nama orang tua, dan memeriksa kesesuaian dokumen. Kolom form di bawah akan terisi otomatis.
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('ai-loading-field');
+        if (el.tagName === 'INPUT') el.placeholder = 'AI sedang mengekstrak...';
+      }
+    });
+  } else {
+    fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('ai-loading-field');
+        if (el.tagName === 'INPUT' && el.id === 'ai-out-nisn') {
+          el.placeholder = 'Kosong jika belum ada';
+        } else if (el.tagName === 'INPUT' && el.id === 'ai-out-tahun-lulus') {
+          el.placeholder = 'Contoh: 2023';
+        } else if (el.tagName === 'INPUT') {
+          el.placeholder = '';
+        }
+      }
+    });
+  }
+}
+
 async function handleEkstrakDataAI() {
   if (isExtractingAI) return;
   const nikInput = document.getElementById('ai-reg-nik');
@@ -5499,6 +5560,9 @@ async function handleEkstrakDataAI() {
   if (container) {
     container.style.display = 'block';
   }
+
+  // Tampilkan efek animasi proses pembacaan data AI pada seluruh input form Step 2
+  setAIFormLoadingState(true);
 
   const modal = document.getElementById('modal-ai-reg');
   if (modal) {
@@ -5590,6 +5654,7 @@ async function handleEkstrakDataAI() {
     hideLoader();
 
     if (!result || result.status !== "SUCCESS" || !result.data) {
+      setAIFormLoadingState(false);
       const errMsg = result && (result.message || result.koreksi) ? (result.message || result.koreksi) : "Gagal mengekstrak data dari dokumen.";
       Swal.fire({
         icon: 'error',
@@ -5732,6 +5797,9 @@ async function handleEkstrakDataAI() {
       }
     }
 
+    // Hilangkan animasi loading/shimmer setelah seluruh data selesai dimasukkan
+    setAIFormLoadingState(false);
+
     // Tampilkan pratinjau berkas yang berhasil diunggah di Step 2
     renderAIStep2Previews();
 
@@ -5749,6 +5817,7 @@ async function handleEkstrakDataAI() {
 
   } catch (err) {
     hideLoader();
+    setAIFormLoadingState(false);
     console.error("AI Extraction Error:", err);
     // Kembalikan ke kartu upload Step 1 jika terjadi error
     const step1Card = document.getElementById('ai-step-1-card');

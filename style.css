@@ -3766,6 +3766,50 @@ input[type="file"] {
   color: var(--primary, #0284c7);
 }
 
+/* ==================== ANIMASI SKELETON / SHIMMER PROSES AI ==================== */
+@keyframes aiScanPulse {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.ai-loading-field {
+  position: relative !important;
+  color: transparent !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  background: linear-gradient(90deg, var(--surface-2, #f1f5f9) 25%, rgba(14, 165, 233, 0.22) 50%, var(--surface-2, #f1f5f9) 75%) !important;
+  background-size: 200% 100% !important;
+  animation: aiScanPulse 1.4s ease-in-out infinite !important;
+  border-color: rgba(14, 165, 233, 0.45) !important;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.12) !important;
+}
+
+.ai-loading-field::placeholder {
+  color: transparent !important;
+}
+
+.ai-extracting-pulse {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(16, 185, 129, 0.12));
+  border: 1.5px dashed #0ea5e9;
+  border-radius: 10px;
+  padding: 10px 14px;
+  width: 100%;
+  box-sizing: border-box;
+  animation: pulseCard 1.8s ease-in-out infinite;
+}
+
+@keyframes pulseCard {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.88; transform: scale(0.995); }
+}
+
 /* ==================== FORM & MODAL FULLSCREEN DI HP (RESPONSIF MOBILE) ==================== */
 @media (max-width: 768px) {
   /* Ubah form modal dari floating popup menjadi tampilan penuh seluruh layar */
