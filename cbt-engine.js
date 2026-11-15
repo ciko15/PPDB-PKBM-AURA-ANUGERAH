@@ -14,11 +14,18 @@ function makeSearchableSelect(selectEl, config = {}) {
     return;
   }
 
+  // Deteksi apakah merupakan filter-select di toolbar agar ukurannya proporsional
+  const isFilterToolbar = selectEl.classList.contains('filter-select');
+
   // Sembunyikan elemen select asli tapi tetap simpan di DOM untuk form submit
   selectEl.style.display = 'none';
 
   wrap = document.createElement('div');
-  wrap.className = 'searchable-select-wrap';
+  wrap.className = 'searchable-select-wrap' + (isFilterToolbar ? ' searchable-filter-toolbar' : '');
+  if (isFilterToolbar) {
+    wrap.style.minWidth = '195px';
+    wrap.style.width = 'auto';
+  }
 
   wrap.innerHTML = `
     <div class="searchable-select-trigger" tabindex="0">
@@ -27,7 +34,7 @@ function makeSearchableSelect(selectEl, config = {}) {
     </div>
     <div class="searchable-select-dropdown">
       <div class="searchable-select-search-box">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted); flex-shrink:0;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input type="text" placeholder="${placeholder}" autocomplete="off">
       </div>
       <ul class="searchable-select-options"></ul>
@@ -42,6 +49,9 @@ function makeSearchableSelect(selectEl, config = {}) {
   const optionsList = wrap.querySelector('.searchable-select-options');
 
   function openDropdown() {
+    // Sinkronkan ulang opsi terbaru sebelum membuka
+    updateSearchableSelectInstance(selectEl, wrap, placeholder);
+
     // Tutup dropdown lain
     document.querySelectorAll('.searchable-select-dropdown.open').forEach(d => {
       if (d !== dropdown) {
@@ -53,7 +63,7 @@ function makeSearchableSelect(selectEl, config = {}) {
     trigger.classList.add('active');
     searchInput.value = '';
     filterOptions('');
-    setTimeout(() => searchInput.focus(), 50);
+    setTimeout(() => searchInput.focus(), 40);
   }
 
   function closeDropdown() {
@@ -70,8 +80,31 @@ function makeSearchableSelect(selectEl, config = {}) {
     }
   });
 
+  trigger.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openDropdown();
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+    }
+  });
+
   searchInput.addEventListener('input', (e) => {
     filterOptions(e.target.value.toLowerCase().trim());
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeDropdown();
+      trigger.focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      // Pilih item pertama yang tampil saat tekan Enter
+      const visibleItems = Array.from(optionsList.querySelectorAll('.searchable-select-option')).filter(el => el.style.display !== 'none');
+      if (visibleItems.length > 0) {
+        visibleItems[0].click();
+      }
+    }
   });
 
   searchInput.addEventListener('click', (e) => {
@@ -96,7 +129,7 @@ function makeSearchableSelect(selectEl, config = {}) {
       if (!emptyEl) {
         emptyEl = document.createElement('li');
         emptyEl.className = 'searchable-select-empty';
-        emptyEl.textContent = 'Tidak ada pilihan yang cocok';
+        emptyEl.textContent = 'Tidak ada data yang cocok';
         optionsList.appendChild(emptyEl);
       }
       emptyEl.style.display = '';
@@ -111,6 +144,15 @@ function makeSearchableSelect(selectEl, config = {}) {
     }
   });
 
+  // Pasang MutationObserver agar jika innerHTML select diubah dinamis, list otomatis ter-update
+  if (typeof MutationObserver !== 'undefined' && !selectEl._searchableObserverAttached) {
+    const observer = new MutationObserver(() => {
+      updateSearchableSelectInstance(selectEl, wrap, placeholder);
+    });
+    observer.observe(selectEl, { childList: true, subtree: true, attributes: true });
+    selectEl._searchableObserverAttached = true;
+  }
+
   updateSearchableSelectInstance(selectEl, wrap, placeholder);
 }
 
@@ -122,7 +164,7 @@ function updateSearchableSelectInstance(selectEl, wrap, placeholder) {
   optionsList.innerHTML = '';
 
   const allOptions = Array.from(selectEl.querySelectorAll('option'));
-  let selectedOption = allOptions.find(o => o.selected) || allOptions[0];
+  let selectedOption = allOptions.find(o => o.value === selectEl.value) || allOptions.find(o => o.selected) || allOptions[0];
 
   triggerText.textContent = selectedOption ? selectedOption.textContent : (selectEl.getAttribute('placeholder') || '-- Pilih --');
 
@@ -152,6 +194,34 @@ function updateSearchableSelectInstance(selectEl, wrap, placeholder) {
     optionsList.appendChild(li);
   });
 }
+
+function initAllSearchableDropdowns() {
+  const configs = [
+    { id: 'cbt-pilih-siswa', placeholder: 'Ketik nama atau NISN peserta ujian...' },
+    { id: 'cbt-pilih-buku', placeholder: 'Ketik judul paket ujian / modul CBT...' },
+    { id: 'paket-buku-id', placeholder: 'Ketik judul buku / modul pelajaran...' },
+    { id: 'ujian-siswa-id', placeholder: 'Ketik nama peserta didik atau program...' },
+    { id: 'ujian-buku-id', placeholder: 'Ketik judul materi / modul pelajaran...' },
+    { id: 'raport-select-siswa', placeholder: 'Ketik nama siswa atau NISN...' },
+    { id: 'raport-select-kelas', placeholder: 'Cari tingkat kelas / fase...' },
+    { id: 'cetak-kartu-pilih-paket', placeholder: 'Ketik kode atau nama paket ujian...' },
+    { id: 'cetak-kartu-pilih-siswa', placeholder: 'Ketik nama siswa atau NISN...' },
+    { id: 'buku-kategori', placeholder: 'Ketik nama mata pelajaran...' },
+    { id: 'filter-buku-mapel', placeholder: 'Cari mata pelajaran...' },
+    { id: 'filter-buku-kelas', placeholder: 'Cari tingkat kelas...' },
+    { id: 'export-raport-kelas', placeholder: 'Cari jenjang atau kelas...' }
+  ];
+
+  configs.forEach(cfg => {
+    const el = document.getElementById(cfg.id);
+    if (el) {
+      makeSearchableSelect(el, { searchPlaceholder: cfg.placeholder });
+    }
+  });
+}
+
+window.makeSearchableSelect = makeSearchableSelect;
+window.initAllSearchableDropdowns = initAllSearchableDropdowns;
 
 
 const INSTITUSI_CONFIG = {
@@ -2990,6 +3060,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     initBankSoalData();
     renderBankSoalTable();
+    initAllSearchableDropdowns();
     // Pulihkan sesi ujian jika reload halaman
     restoreActiveCbtSessionIfAny();
   }, 600);
@@ -3031,6 +3102,11 @@ function bukaModalPilihCetakKartuUjian(defaultPaketId) {
   } else {
     selPaket.value = paketResmi[0].id;
     onPaketKartuUjianChange(paketResmi[0].id);
+  }
+
+  if (typeof makeSearchableSelect === 'function') {
+    makeSearchableSelect(selPaket, { searchPlaceholder: 'Ketik kode atau nama paket ujian...' });
+    if (selSiswa) makeSearchableSelect(selSiswa, { searchPlaceholder: 'Ketik nama siswa atau NISN...' });
   }
 
   modal.classList.remove('hidden');
@@ -3081,6 +3157,9 @@ function onPaketKartuUjianChange(paketId) {
   });
 
   selSiswa.innerHTML = opts;
+  if (typeof makeSearchableSelect === 'function') {
+    makeSearchableSelect(selSiswa, { searchPlaceholder: 'Ketik nama siswa atau NISN...' });
+  }
 }
 
 /**

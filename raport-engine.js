@@ -303,6 +303,13 @@ function bukaModalInputRaport() {
   if (selectSiswa && Array.isArray(siswaDataList)) {
     selectSiswa.innerHTML = '<option value="">-- Pilih Siswa PKBM --</option>' + 
       siswaDataList.map(s => `<option value="${s.id}">${s.nama} (${s.program || 'Paket'}) - NISN: ${s.nisn || '-'}</option>`).join('');
+    if (typeof makeSearchableSelect === 'function') {
+      makeSearchableSelect(selectSiswa, { searchPlaceholder: 'Ketik nama siswa atau NISN...' });
+    }
+  }
+  const selectKelas = document.getElementById('raport-select-kelas');
+  if (selectKelas && typeof makeSearchableSelect === 'function') {
+    makeSearchableSelect(selectKelas, { searchPlaceholder: 'Cari tingkat kelas / fase...' });
   }
 
   // Load default mapel Paket C
@@ -338,6 +345,9 @@ function onRaportSiswaChange() {
     } else {
       if (selectKelas) selectKelas.value = 'Kelas X (Fase E)';
       muatMapelDefaultKeForm('Paket C');
+    }
+    if (selectKelas && typeof makeSearchableSelect === 'function') {
+      makeSearchableSelect(selectKelas, { searchPlaceholder: 'Cari tingkat kelas / fase...' });
     }
   }
 }
@@ -540,9 +550,17 @@ function editDataRaport(id) {
   document.getElementById('raport-edit-id').value = r.id;
   const selectSekolah = document.getElementById('raport-select-sekolah');
   if (selectSekolah) selectSekolah.value = r.sekolahId || 'utama';
-  document.getElementById('raport-select-siswa').value = r.siswaId || '';
+  const selSiswa = document.getElementById('raport-select-siswa');
+  if (selSiswa) {
+    selSiswa.value = r.siswaId || '';
+    if (typeof makeSearchableSelect === 'function') makeSearchableSelect(selSiswa);
+  }
   document.getElementById('raport-input-program').value = r.program || 'Paket C';
-  document.getElementById('raport-select-kelas').value = r.tingkatKelas || 'Kelas X (Fase E)';
+  const selKelas = document.getElementById('raport-select-kelas');
+  if (selKelas) {
+    selKelas.value = r.tingkatKelas || 'Kelas X (Fase E)';
+    if (typeof makeSearchableSelect === 'function') makeSearchableSelect(selKelas);
+  }
   document.getElementById('raport-input-thn').value = r.tahunAjaran || '2026/2027';
   document.getElementById('raport-select-smt').value = r.semester || 'Ganjil';
   document.getElementById('raport-input-catatan').value = r.catatanAkademik || '';

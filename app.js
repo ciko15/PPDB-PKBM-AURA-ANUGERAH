@@ -8247,6 +8247,10 @@ function showAddBukuModal() {
   if (elMinWaktu) elMinWaktu.value = '5';
   document.getElementById('buku-keterangan').value = '';
   document.getElementById('buku-file-url').value = '';
+  const selKat = document.getElementById('buku-kategori');
+  if (selKat && typeof makeSearchableSelect === 'function') {
+    makeSearchableSelect(selKat, { searchPlaceholder: 'Ketik nama mata pelajaran...' });
+  }
   document.getElementById('modal-form-buku').classList.remove('hidden');
 }
 
@@ -8259,7 +8263,13 @@ function showEditBukuModal(id) {
   document.getElementById('buku-nama').value = b.nama;
   document.getElementById('buku-jenjang').value = b.jenjang || 'Paket C';
   onBukuFormJenjangChange(b.jenjang || 'Paket C', b.kelas || 'Kelas X');
-  document.getElementById('buku-kategori').value = b.kategori || b.mapel || 'Bahasa Indonesia';
+  const selKat = document.getElementById('buku-kategori');
+  if (selKat) {
+    selKat.value = b.kategori || b.mapel || 'Bahasa Indonesia';
+    if (typeof makeSearchableSelect === 'function') {
+      makeSearchableSelect(selKat, { searchPlaceholder: 'Ketik nama mata pelajaran...' });
+    }
+  }
   document.getElementById('buku-total-hal').value = b.totalHal || 30;
   const elMinProgress = document.getElementById('buku-min-progress');
   if (elMinProgress) elMinProgress.value = (b.minProgress !== undefined && b.minProgress !== null) ? b.minProgress : 50;
@@ -8374,6 +8384,9 @@ function populateUjianSelectOptions() {
   if (selectSiswa) {
     selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>' +
       siswaDataList.map(s => `<option value="${s.id}">${s.nama} (${s.program || 'Paket C'}${s.kelas ? ' · ' + s.kelas : ''})</option>`).join('');
+    if (typeof makeSearchableSelect === 'function') {
+      makeSearchableSelect(selectSiswa, { searchPlaceholder: 'Ketik nama peserta didik atau program...' });
+    }
   }
   populateUjianBukuOptions();
 }
@@ -8419,6 +8432,9 @@ function populateUjianBukuOptions(selectedBukuId = '') {
 
   selectBuku.innerHTML = '<option value="">-- Pilih Buku / Modul (' + filtered.length + ' Tersedia) --</option>' +
     filtered.map(b => `<option value="${b.id}" ${String(b.id) === String(selectedBukuId) ? 'selected' : ''}>${b.nama} [${b.jenjang} · ${b.kelas || 'Semua Kelas'}]</option>`).join('');
+  if (typeof makeSearchableSelect === 'function') {
+    makeSearchableSelect(selectBuku, { searchPlaceholder: 'Ketik judul materi / modul pelajaran...' });
+  }
 }
 
 window.onUjianSiswaSelectChange = onUjianSiswaSelectChange;
@@ -8441,10 +8457,16 @@ function showInputNilaiModal(presetBukuId = null, presetNamaSiswa = null) {
   const selectSiswa = document.getElementById('ujian-siswa-id');
   const selectBuku = document.getElementById('ujian-buku-id');
 
-  if (presetBukuId && selectBuku) selectBuku.value = presetBukuId;
+  if (presetBukuId && selectBuku) {
+    selectBuku.value = presetBukuId;
+    if (typeof makeSearchableSelect === 'function') makeSearchableSelect(selectBuku);
+  }
   if (presetNamaSiswa && selectSiswa) {
     const matchingSiswa = siswaDataList.find(s => s.nama.toLowerCase() === presetNamaSiswa.toLowerCase());
-    if (matchingSiswa) selectSiswa.value = matchingSiswa.id;
+    if (matchingSiswa) {
+      selectSiswa.value = matchingSiswa.id;
+      if (typeof makeSearchableSelect === 'function') makeSearchableSelect(selectSiswa);
+    }
   }
 
   document.getElementById('ujian-angka').value = '';
