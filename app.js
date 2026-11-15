@@ -5990,28 +5990,28 @@ function showFinalRegistrationSummaryModal(siswaObj, isUpdated = false) {
 
         <!-- Kolom Berkas KK & Ijazah yang Tersimpan -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div style="background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px;">
-            ${kkImg && kkImg.startsWith('data:image')
+          <div style="background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: ${kkImg ? 'pointer' : 'default'};" ${kkImg ? `onclick="previewDocModal('kk', '${s.id}', '${(s.nama || '').replace(/'/g, "\\'")}')" title="Klik untuk melihat berkas KK"` : ''}>
+            ${kkImg && (kkImg.startsWith('data:image') || kkImg.startsWith('http'))
               ? `<img src="${kkImg}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1.5px solid #10b981; flex-shrink: 0;">`
               : `<div style="width: 44px; height: 44px; border-radius: 6px; background: rgba(16,185,129,0.12); color: #059669; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; flex-shrink: 0;">KK</div>`
             }
             <div style="min-width: 0;">
               <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-color, #0f172a);">Kolom KK</div>
               <div style="font-size: 0.74rem; color: ${kkImg ? '#059669' : '#94a3b8'}; font-weight: 600;">
-                ${kkImg ? '✓ Tersimpan' : 'Belum ada'}
+                ${kkImg ? '🔍 Lihat Berkas' : 'Belum ada'}
               </div>
             </div>
           </div>
 
-          <div style="background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px;">
-            ${ijazahImg && ijazahImg.startsWith('data:image')
+          <div style="background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: ${ijazahImg ? 'pointer' : 'default'};" ${ijazahImg ? `onclick="previewDocModal('ijazah', '${s.id}', '${(s.nama || '').replace(/'/g, "\\'")}')" title="Klik untuk melihat berkas Ijazah"` : ''}>
+            ${ijazahImg && (ijazahImg.startsWith('data:image') || ijazahImg.startsWith('http'))
               ? `<img src="${ijazahImg}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1.5px solid #0284c7; flex-shrink: 0;">`
               : `<div style="width: 44px; height: 44px; border-radius: 6px; background: rgba(2,132,199,0.12); color: #0284c7; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; flex-shrink: 0;">IJZ</div>`
             }
             <div style="min-width: 0;">
               <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-color, #0f172a);">Kolom Ijazah</div>
               <div style="font-size: 0.74rem; color: ${ijazahImg ? '#0284c7' : '#94a3b8'}; font-weight: 600;">
-                ${ijazahImg ? '✓ Tersimpan' : 'Belum ada'}
+                ${ijazahImg ? '🔍 Lihat Berkas' : 'Belum ada'}
               </div>
             </div>
           </div>
