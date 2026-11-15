@@ -4262,17 +4262,25 @@
       <div style="flex: 1; overflow-y: auto; padding-right: 4px; margin-bottom: 14px;">
         <div style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.2); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;">
           <small style="color: var(--text-color); font-size: 11.5px; line-height: 1.4; display: block;">
-            ℹ️ Nilai KKM ini akan otomatis diterapkan ke seluruh <b>Rapor Siswa</b>, <b>Transkrip Nilai Akademik</b>, dan <b>Kalkulasi Predikat</b> (A, B, C) untuk jenjang yang bersangkutan.
+            ℹ️ Nilai KKM dan daftar mata pelajaran ini akan otomatis diterapkan ke seluruh <b>Rapor Siswa</b>, <b>Transkrip Nilai Akademik</b>, dan <b>Kalkulasi Predikat</b> (A, B, C) untuk jenjang yang bersangkutan. Anda dapat menambah atau menghapus mata pelajaran sesuai kurikulum PKBM.
           </small>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <span id="label-kkm-active-jenjang" style="font-size: 12.5px; font-weight: 700; color: var(--text-color);">Daftar Mata Pelajaran (Paket C)</span>
+          <button type="button" class="btn btn-sm" onclick="tambahBarisItemKKM()" style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
+            <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i> Tambah Mata Pelajaran
+          </button>
         </div>
 
         <table style="width: 100%; font-size: 12.5px; border-collapse: collapse;">
           <thead>
             <tr style="border-bottom: 2px solid var(--border-color); background: var(--surface-2);">
-              <th style="padding: 8px; text-align: center; width: 40px;">No</th>
+              <th style="padding: 8px; text-align: center; width: 38px;">No</th>
               <th style="padding: 8px;">Mata Pelajaran</th>
-              <th style="padding: 8px; text-align: center; width: 110px;">Kelompok</th>
-              <th style="padding: 8px; text-align: center; width: 90px;">Batas KKM</th>
+              <th style="padding: 8px; text-align: center; width: 125px;">Kelompok</th>
+              <th style="padding: 8px; text-align: center; width: 85px;">Batas KKM</th>
+              <th style="padding: 8px; text-align: center; width: 48px;">Aksi</th>
             </tr>
           </thead>
           <tbody id="tbody-setting-kkm">

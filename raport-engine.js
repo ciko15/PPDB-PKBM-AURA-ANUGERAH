@@ -2337,7 +2337,7 @@ const defaultKKMPreset = {
 function bukaModalSettingKKM() {
   const modal = document.getElementById('modal-setting-kkm');
   if (!modal) return;
-  switchKKMTab('Paket C');
+  switchKKMTab('Paket C', true);
   modal.classList.remove('hidden');
   if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
@@ -2347,7 +2347,107 @@ function closeModalSettingKKM() {
   if (modal) modal.classList.add('hidden');
 }
 
-function switchKKMTab(jenjang) {
+function syncCurrentKKMTabFromDOM() {
+  const jenjang = currentSelectedKKMJenjang;
+  if (!jenjang) return true;
+  const rows = document.querySelectorAll('#tbody-setting-kkm .row-kkm-item');
+  if (!rows || rows.length === 0) return true;
+
+  const updatedMapel = [];
+  rows.forEach(r => {
+    const nama = r.querySelector('.kkm-mapel-nama')?.value.trim();
+    const kelompok = r.querySelector('.kkm-mapel-kelompok')?.value || 'Umum';
+    const kkm = Number(r.querySelector('.kkm-mapel-nilai')?.value) || 70;
+    if (nama) {
+      updatedMapel.push({ nama, kelompok, kkm });
+    }
+  });
+
+  if (updatedMapel.length > 0) {
+    defaultMapelKurikulum[jenjang] = updatedMapel;
+    return true;
+  }
+  return false;
+}
+
+function renderBarisItemKKMHTML(m, idx) {
+  const safeNama = String(m.nama || '').replace(/"/g, '&quot;');
+  const kel = m.kelompok || 'Umum';
+  const kkmVal = m.kkm || 70;
+  return `
+    <tr class="row-kkm-item" style="border-bottom: 1px solid var(--border-color);">
+      <td class="col-kkm-no" style="padding: 8px; text-align: center; font-weight: 600; color: var(--text-muted);">${idx + 1}</td>
+      <td style="padding: 8px;">
+        <input type="text" class="form-control kkm-mapel-nama" value="${safeNama}" placeholder="Ketik nama mata pelajaran..." style="font-size: 12px; height: 32px;" required>
+      </td>
+      <td style="padding: 8px; text-align: center;">
+        <select class="form-control kkm-mapel-kelompok" style="font-size: 11.5px; height: 32px;">
+          <option value="Umum" ${kel === 'Umum' ? 'selected' : ''}>Umum</option>
+          <option value="Pilihan MIPA" ${kel === 'Pilihan MIPA' ? 'selected' : ''}>Pilihan MIPA</option>
+          <option value="Pilihan IPS" ${kel === 'Pilihan IPS' ? 'selected' : ''}>Pilihan IPS</option>
+          <option value="Khusus" ${kel === 'Khusus' ? 'selected' : ''}>Khusus/Keterampilan</option>
+        </select>
+      </td>
+      <td style="padding: 8px; text-align: center;">
+        <input type="number" class="form-control kkm-mapel-nilai" min="0" max="100" value="${kkmVal}" style="font-size: 13px; font-weight: 700; height: 32px; text-align: center; color: #d97706;">
+      </td>
+      <td style="padding: 8px; text-align: center;">
+        <button type="button" onclick="hapusBarisItemKKM(this)" title="Hapus mata pelajaran ini" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 6px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+          <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+        </button>
+      </td>
+    </tr>
+  `;
+}
+
+function reindexBarisKKM() {
+  const rows = document.querySelectorAll('#tbody-setting-kkm .row-kkm-item');
+  rows.forEach((row, idx) => {
+    const noCell = row.querySelector('.col-kkm-no');
+    if (noCell) noCell.textContent = idx + 1;
+  });
+  const labelEl = document.getElementById('label-kkm-active-jenjang');
+  if (labelEl) {
+    labelEl.textContent = `Daftar Mata Pelajaran (${currentSelectedKKMJenjang} — ${rows.length} Mapel)`;
+  }
+}
+
+function tambahBarisItemKKM() {
+  const tbody = document.getElementById('tbody-setting-kkm');
+  if (!tbody) return;
+  const currentCount = tbody.querySelectorAll('.row-kkm-item').length;
+  const newRowHtml = renderBarisItemKKMHTML({ nama: '', kelompok: 'Umum', kkm: 70 }, currentCount);
+  tbody.insertAdjacentHTML('beforeend', newRowHtml);
+  reindexBarisKKM();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+
+  const allInputs = tbody.querySelectorAll('.kkm-mapel-nama');
+  const lastInput = allInputs[allInputs.length - 1];
+  if (lastInput) {
+    lastInput.focus();
+    lastInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function hapusBarisItemKKM(btnEl) {
+  const tbody = document.getElementById('tbody-setting-kkm');
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll('.row-kkm-item');
+  if (rows.length <= 1) {
+    Swal.fire('Peringatan', 'Minimal harus tersisa 1 mata pelajaran pada setiap jenjang!', 'warning');
+    return;
+  }
+  const tr = btnEl.closest('.row-kkm-item');
+  if (tr) {
+    tr.remove();
+    reindexBarisKKM();
+  }
+}
+
+function switchKKMTab(jenjang, skipSync = false) {
+  if (!skipSync) {
+    syncCurrentKKMTabFromDOM();
+  }
   currentSelectedKKMJenjang = jenjang;
   ['Paket A', 'Paket B', 'Paket C'].forEach(j => {
     const btn = document.getElementById('tab-kkm-' + j.toLowerCase().replace(' ', '-'));
@@ -2367,31 +2467,15 @@ function switchKKMTab(jenjang) {
   const tbody = document.getElementById('tbody-setting-kkm');
   if (!tbody) return;
 
-  const mapels = defaultMapelKurikulum[jenjang] || defaultKKMPreset[jenjang];
-  tbody.innerHTML = mapels.map((m, idx) => `
-    <tr class="row-kkm-item" style="border-bottom: 1px solid var(--border-color);">
-      <td style="padding: 8px; text-align: center;">${idx + 1}</td>
-      <td style="padding: 8px;">
-        <input type="text" class="form-control kkm-mapel-nama" value="${m.nama}" style="font-size: 12px; height: 32px;" required>
-      </td>
-      <td style="padding: 8px; text-align: center;">
-        <select class="form-control kkm-mapel-kelompok" style="font-size: 11.5px; height: 32px;">
-          <option value="Umum" ${m.kelompok === 'Umum' ? 'selected' : ''}>Umum</option>
-          <option value="Pilihan MIPA" ${m.kelompok === 'Pilihan MIPA' ? 'selected' : ''}>Pilihan MIPA</option>
-          <option value="Pilihan IPS" ${m.kelompok === 'Pilihan IPS' ? 'selected' : ''}>Pilihan IPS</option>
-          <option value="Khusus" ${m.kelompok === 'Khusus' ? 'selected' : ''}>Khusus/Keterampilan</option>
-        </select>
-      </td>
-      <td style="padding: 8px; text-align: center;">
-        <input type="number" class="form-control kkm-mapel-nilai" min="0" max="100" value="${m.kkm || 70}" style="font-size: 13px; font-weight: 700; height: 32px; text-align: center; color: #d97706;">
-      </td>
-    </tr>
-  `).join('');
+  const mapels = defaultMapelKurikulum[jenjang] || defaultKKMPreset[jenjang] || [];
+  tbody.innerHTML = mapels.map((m, idx) => renderBarisItemKKMHTML(m, idx)).join('');
+  reindexBarisKKM();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 function simpanPengaturanKKM() {
   const jenjang = currentSelectedKKMJenjang;
-  const rows = document.querySelectorAll('.row-kkm-item');
+  const rows = document.querySelectorAll('#tbody-setting-kkm .row-kkm-item');
   const updatedMapel = [];
 
   rows.forEach(r => {
@@ -2404,7 +2488,7 @@ function simpanPengaturanKKM() {
   });
 
   if (updatedMapel.length === 0) {
-    Swal.fire('Peringatan', 'Minimal harus ada 1 mata pelajaran!', 'warning');
+    Swal.fire('Peringatan', 'Minimal harus ada 1 mata pelajaran yang memiliki nama!', 'warning');
     return;
   }
 
@@ -2421,20 +2505,21 @@ function simpanPengaturanKKM() {
   }
 
   closeModalSettingKKM();
-  renderTranskripTable();
+  if (typeof renderTranskripTable === 'function') renderTranskripTable();
+  if (typeof renderRaportTable === 'function') renderRaportTable();
 
   Swal.fire({
     icon: 'success',
-    title: 'Standar KKM Berhasil Disimpan',
-    text: `KKM untuk ${jenjang} telah diperbarui dan langsung diterapkan ke seluruh dokumen nilai.`,
+    title: 'Standar KKM & Mapel Disimpan',
+    text: `Daftar mata pelajaran (${updatedMapel.length} mapel) dan batas KKM untuk ${jenjang} telah diperbarui ke Cloud Database.`,
     confirmButtonColor: '#d97706'
   });
 }
 
 function resetKKMToDefault() {
   Swal.fire({
-    title: 'Reset KKM ke Standar?',
-    text: `Nilai KKM untuk ${currentSelectedKKMJenjang} akan dikembalikan ke standar kurikulum kementerian.`,
+    title: 'Reset KKM & Mapel ke Standar?',
+    text: `Daftar mata pelajaran dan nilai KKM untuk ${currentSelectedKKMJenjang} akan dikembalikan ke standar kurikulum default.`,
     icon: 'question',
     showCancelButton: true,
     confirmButtonColor: '#d97706',
@@ -2447,8 +2532,11 @@ function resetKKMToDefault() {
       try {
         localStorage.setItem('ppdb_kkm_config', JSON.stringify(defaultMapelKurikulum));
       } catch (e) {}
-      switchKKMTab(currentSelectedKKMJenjang);
-      Swal.fire('Berhasil', 'KKM telah direset ke nilai acuan default.', 'success');
+      if (typeof callAPI === 'function') {
+        callAPI({ action: "saveAppSetting", key: "ppdb_kkm_config", val: defaultMapelKurikulum }).catch(() => {});
+      }
+      switchKKMTab(currentSelectedKKMJenjang, true);
+      Swal.fire('Berhasil', 'Daftar mata pelajaran & KKM telah direset ke nilai acuan default.', 'success');
     }
   });
 }
