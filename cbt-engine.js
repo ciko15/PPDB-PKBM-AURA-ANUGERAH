@@ -2933,15 +2933,49 @@ async function prosesGenerateSoalAI() {
 
   try {
     const userApiKey = localStorage.getItem('gemini_api_key') || '';
-    const res = await callAPI({
-      action: "generateSoalAI",
-      topikMateri: topikMateri,
-      jenjang: jenjang,
-      kelas: kelas,
-      mataPelajaran: mataPelajaran,
-      jumlahSoal: jumlahSoal,
-      apiKey: userApiKey
-    });
+    let res = null;
+    try {
+      res = await callAPI({
+        action: "generateSoalAI",
+        topikMateri: topikMateri,
+        jenjang: jenjang,
+        kelas: kelas,
+        mataPelajaran: mataPelajaran,
+        jumlahSoal: jumlahSoal,
+        apiKey: userApiKey
+      });
+    } catch (apiErr) {
+      console.warn('GAS generateSoalAI error, mencoba direct Gemini fallback:', apiErr);
+    }
+
+    // Fallback langsung ke Vertex AI Express / Gemini API jika backend GAS belum di-redeploy
+    if (!res || res.status !== 'SUCCESS' || !Array.isArray(res.data) || res.data.length === 0) {
+      if (typeof window.callClientGeminiSmart === 'function') {
+        const jml = Math.min(25, Math.max(3, parseInt(jumlahSoal, 10) || 5));
+        const promptText = `Anda adalah seorang guru/tutor profesional di PKBM (Pendidikan Kesetaraan).
+Tugas Anda: Buatlah ${jml} butir soal ujian pilihan ganda (4 opsi: A, B, C, D) yang berkualitas, kontekstual, dan menguji pemahaman literasi/konsep, berdasarkan materi berikut:
+- Topik / Judul Modul: "${topikMateri || 'Materi Pembelajaran Umum'}"
+- Jenjang: ${jenjang || 'Paket C'}
+- Kelas / Tingkat: ${kelas || 'Kelas X'}
+- Mata Pelajaran: ${mataPelajaran || 'Umum'}
+
+ATURAN WAJIB:
+1. Buat tepat ${jml} butir pertanyaan.
+2. Setiap soal memiliki 4 pilihan opsi (A, B, C, D).
+3. Tentukan satu kunci jawaban yang benar (huruf A, B, C, atau D).
+4. Berikan penjelasan/pembahasan ringkas (1-2 kalimat) mengapa jawaban tersebut benar.
+5. Balas HANYA dalam format JSON valid berupa Array of Objects:
+[{"id":1,"pertanyaan":"...","opsi":[{"k":"A","t":"..."},{"k":"B","t":"..."},{"k":"C","t":"..."},{"k":"D","t":"..."}],"kunci":"A","pembahasan":"..."}]`;
+
+        const directArr = await window.callClientGeminiSmart([{ text: promptText }], userApiKey, {
+          temperature: 0.4,
+          responseMimeType: "application/json"
+        });
+        if (Array.isArray(directArr) && directArr.length > 0) {
+          res = { status: 'SUCCESS', data: directArr };
+        }
+      }
+    }
 
     if (res && res.status === 'SUCCESS' && Array.isArray(res.data) && res.data.length > 0) {
       const startIndex = editingButirList.length;

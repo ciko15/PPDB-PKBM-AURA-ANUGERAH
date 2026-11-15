@@ -40,6 +40,94 @@ function getApiKeysList(clientApiKey) {
 }
 
 /**
+ * Helper terpadu untuk memanggil Gemini / Vertex AI Express API.
+ * Mendukung otomatis kedua jenis API Key:
+ * 1. Kunci Vertex AI Express Mode ('AQ.Ab8RN6...') -> https://aiplatform.googleapis.com/v1/publishers/google/models/{model}:generateContent
+ * 2. Kunci Google AI Studio standar ('AIzaSy...') -> https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent
+ */
+function executeGeminiRequestWithRotation(apiKeys, payloadObj) {
+  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  let lastError = "";
+
+  // Pastikan setiap objek di contents memiliki property role: "user" (wajib untuk endpoint Vertex AI Express aiplatform.googleapis.com)
+  const normalizedContents = (payloadObj.contents || []).map(c => ({
+    role: c.role || "user",
+    parts: c.parts || []
+  }));
+
+  const finalPayload = {
+    contents: normalizedContents,
+    generationConfig: payloadObj.generationConfig || { responseMimeType: "application/json" }
+  };
+
+  for (let k = 0; k < apiKeys.length; k++) {
+    const currentApiKey = String(apiKeys[k] || '').trim();
+    if (!currentApiKey) continue;
+
+    const isVertexExpressKey = currentApiKey.startsWith("AQ.");
+
+    for (let m = 0; m < candidateModels.length; m++) {
+      const modelName = candidateModels[m];
+
+      // Susun daftar URL endpoint dengan prioritas sesuai jenis kunci
+      const endpoints = isVertexExpressKey
+        ? [
+            `https://aiplatform.googleapis.com/v1/publishers/google/models/${modelName}:generateContent?key=${encodeURIComponent(currentApiKey)}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(currentApiKey)}`
+          ]
+        : [
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(currentApiKey)}`,
+            `https://aiplatform.googleapis.com/v1/publishers/google/models/${modelName}:generateContent?key=${encodeURIComponent(currentApiKey)}`
+          ];
+
+      for (let eIdx = 0; eIdx < endpoints.length; eIdx++) {
+        const url = endpoints[eIdx];
+        const options = {
+          method: "post",
+          contentType: "application/json",
+          headers: {
+            "x-goog-api-key": currentApiKey
+          },
+          payload: JSON.stringify(finalPayload),
+          muteHttpExceptions: true
+        };
+
+        try {
+          const response = UrlFetchApp.fetch(url, options);
+          const statusCode = response.getResponseCode();
+          const responseText = response.getContentText();
+
+          if (statusCode === 200) {
+            const resultJson = JSON.parse(responseText);
+            if (resultJson.candidates && resultJson.candidates.length > 0) {
+              if (typeof incrementKeyUsageInDB === "function") {
+                incrementKeyUsageInDB(currentApiKey);
+              }
+              const aiContent = resultJson.candidates[0].content.parts[0].text;
+              const cleaned = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
+              return { ok: true, data: JSON.parse(cleaned) };
+            }
+          } else if (statusCode === 503 || statusCode === 429) {
+            lastError = `Google Gemini (${modelName}) limit/sibuk (HTTP ${statusCode}).`;
+            Utilities.sleep(600);
+            continue;
+          } else if (statusCode === 401 || statusCode === 403) {
+            lastError = `Kunci API ke-${k + 1} tidak diizinkan pada endpoint ini (HTTP ${statusCode}).`;
+            continue;
+          } else {
+            lastError = `Google Gemini (${modelName}) HTTP ${statusCode}: ${responseText.substring(0, 150)}`;
+          }
+        } catch (err) {
+          lastError = err.toString();
+        }
+      }
+    }
+  }
+
+  return { ok: false, error: lastError || "Gagal menghubungi layanan Gemini AI." };
+}
+
+/**
  * Pengecekan data menggunakan Gemini AI
  */
 function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
@@ -157,6 +245,7 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
   const payload = {
     contents: [
       {
+        role: "user",
         parts: [
           { text: promptText },
           {
@@ -173,60 +262,11 @@ function cekKesesuaianDenganAI(dataSiswa, urlGambar, clientApiKey) {
     }
   };
 
-  const options = {
-    method: "post",
-    contentType: "application/json",
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  };
-
-  // Daftar model resmi aktif yang didukung (termasuk generasi terbaru)
-  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash"];
-
-  let lastError = "";
-
-  // Rotasi multi-key dan candidate model
-  for (let k = 0; k < apiKeys.length; k++) {
-    const currentApiKey = apiKeys[k];
-
-    for (let m = 0; m < candidateModels.length; m++) {
-      const modelName = candidateModels[m];
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${currentApiKey}`;
-
-      try {
-        const response = UrlFetchApp.fetch(url, options);
-        const statusCode = response.getResponseCode();
-        const responseText = response.getContentText();
-
-        if (statusCode === 200) {
-          const resultJson = JSON.parse(responseText);
-          if (resultJson.candidates && resultJson.candidates.length > 0) {
-            // Catat pemakaian key ke database
-            if (typeof incrementKeyUsageInDB === "function") {
-              incrementKeyUsageInDB(currentApiKey);
-            }
-            const aiContent = resultJson.candidates[0].content.parts[0].text;
-            const cleaned = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(cleaned);
-          }
-        } else if (statusCode === 503 || statusCode === 429) {
-          // Jika limit per menit tercapai atau server sibuk, coba model/key berikutnya
-          lastError = `Google Gemini (${modelName}) limit/sibuk (HTTP ${statusCode}).`;
-          Utilities.sleep(800);
-          continue;
-        } else if (statusCode === 401) {
-          lastError = `Kunci API ke-${k+1} tidak valid (HTTP 401).`;
-          break; // Pindah ke API key berikutnya
-        } else {
-          lastError = `Google Gemini (${modelName}) HTTP ${statusCode}: ${responseText.substring(0, 150)}`;
-        }
-      } catch (e) {
-        lastError = e.toString();
-      }
-    }
+  const execRes = executeGeminiRequestWithRotation(apiKeys, payload);
+  if (execRes.ok && execRes.data) {
+    return execRes.data;
   }
-
-  return { status: "ERROR", koreksi: lastError || "Gagal menghubungi layanan AI." };
+  return { status: "ERROR", koreksi: execRes.error || "Gagal menghubungi layanan AI." };
 }
 
 /**
@@ -339,63 +379,17 @@ function ekstrakDataDenganAI(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
   }
 
   const payload = {
-    contents: [{ parts: parts }],
+    contents: [{ role: "user", parts: parts }],
     generationConfig: {
       responseMimeType: "application/json"
     }
   };
 
-  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash"];
-
-  const options = {
-    method: "post",
-    contentType: "application/json",
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  };
-
-  let lastError = "";
-
-  for (let k = 0; k < apiKeys.length; k++) {
-    const currentApiKey = apiKeys[k];
-
-    for (let m = 0; m < candidateModels.length; m++) {
-      const modelName = candidateModels[m];
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${currentApiKey}`;
-
-      try {
-        const response = UrlFetchApp.fetch(url, options);
-        const statusCode = response.getResponseCode();
-        const responseText = response.getContentText();
-
-        if (statusCode === 200) {
-          const resultJson = JSON.parse(responseText);
-          if (resultJson.candidates && resultJson.candidates.length > 0) {
-            // Catat pemakaian key ke database
-            if (typeof incrementKeyUsageInDB === "function") {
-              incrementKeyUsageInDB(currentApiKey);
-            }
-            const aiContent = resultJson.candidates[0].content.parts[0].text;
-            const cleaned = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(cleaned);
-          }
-        } else if (statusCode === 503 || statusCode === 429) {
-          lastError = `Google Gemini (${modelName}) limit/sibuk (HTTP ${statusCode}).`;
-          Utilities.sleep(800);
-          continue;
-        } else if (statusCode === 401) {
-          lastError = `Kunci API ke-${k+1} tidak valid (HTTP 401).`;
-          break;
-        } else {
-          lastError = `Google Gemini (${modelName}) Error (${statusCode}): ${responseText.substring(0, 150)}`;
-        }
-      } catch (err) {
-        lastError = err.toString();
-      }
-    }
+  const execRes = executeGeminiRequestWithRotation(apiKeys, payload);
+  if (execRes.ok && execRes.data) {
+    return execRes.data;
   }
-
-  return { status: "ERROR", message: lastError || "Gagal memproses AI." };
+  return { status: "ERROR", message: execRes.error || "Gagal memproses AI." };
 }
 
 /**
@@ -412,7 +406,6 @@ function generateSoalCBTDenganAI(topikMateri, jenjang, kelas, mataPelajaran, jum
   }
 
   const jml = Math.min(25, Math.max(3, parseInt(jumlahSoal, 10) || 5));
-  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash"];
 
   const promptText = `Anda adalah seorang guru/tutor profesional di PKBM (Pendidikan Kesetaraan).
 Tugas Anda: Buatlah ${jml} butir soal ujian pilihan ganda (4 opsi: A, B, C, D) yang berkualitas, kontekstual, dan menguji pemahaman literasi/konsep, berdasarkan materi berikut:
@@ -445,6 +438,7 @@ ATURAN WAJIB:
   const payload = {
     contents: [
       {
+        role: "user",
         parts: [
           { text: promptText }
         ]
@@ -453,57 +447,15 @@ ATURAN WAJIB:
     generationConfig: {
       temperature: 0.4,
       topK: 32,
-      topP: 0.95
+      topP: 0.95,
+      responseMimeType: "application/json"
     }
   };
 
-  const options = {
-    method: "post",
-    contentType: "application/json",
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  };
-
-  let lastError = "";
-
-  for (let k = 0; k < apiKeys.length; k++) {
-    const currentApiKey = apiKeys[k];
-
-    for (let m = 0; m < candidateModels.length; m++) {
-      const modelName = candidateModels[m];
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${currentApiKey}`;
-
-      try {
-        const response = UrlFetchApp.fetch(url, options);
-        const statusCode = response.getResponseCode();
-        const responseText = response.getContentText();
-
-        if (statusCode === 200) {
-          const resultJson = JSON.parse(responseText);
-          if (resultJson.candidates && resultJson.candidates.length > 0) {
-            if (typeof incrementKeyUsageInDB === "function") {
-              incrementKeyUsageInDB(currentApiKey);
-            }
-            const aiContent = resultJson.candidates[0].content.parts[0].text;
-            const cleaned = aiContent.replace(/```json/g, '').replace(/```/g, '').trim();
-            const parsedArray = JSON.parse(cleaned);
-            return { status: "SUCCESS", data: parsedArray };
-          }
-        } else if (statusCode === 503 || statusCode === 429) {
-          lastError = `Limit kuota terlampaui (HTTP ${statusCode}).`;
-          continue;
-        } else if (statusCode === 400 || statusCode === 401) {
-          lastError = `Kunci API tidak valid (HTTP ${statusCode}).`;
-          break;
-        } else {
-          lastError = `Gemini (${modelName}) Error (${statusCode}): ${responseText.substring(0, 150)}`;
-        }
-      } catch (err) {
-        lastError = err.toString();
-      }
-    }
+  const execRes = executeGeminiRequestWithRotation(apiKeys, payload);
+  if (execRes.ok && execRes.data) {
+    return { status: "SUCCESS", data: execRes.data };
   }
-
-  return { status: "ERROR", message: lastError || "Gagal membuat butir soal dengan AI." };
+  return { status: "ERROR", message: execRes.error || "Gagal membuat butir soal dengan AI." };
 }
 

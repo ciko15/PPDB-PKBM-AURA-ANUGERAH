@@ -2415,12 +2415,16 @@ async function handleAICheck(e) {
 
     const userApiKey = localStorage.getItem('gemini_api_key') || '';
 
-    const result = await callAPI({
+    let result = await callAPI({
       action: "runAICheck",
       dataSiswa: enrichedDataSiswa,
       jenisDokumen: targetDoc,
       apiKey: userApiKey
     });
+    if (!result || String(result.status || '').toUpperCase() === 'ERROR') {
+      const directRes = await runDirectClientGeminiCheck(enrichedDataSiswa, targetDoc, userApiKey);
+      if (directRes) result = directRes;
+    }
     hideLoader();
 
     aiResultBox.classList.remove('hidden');
@@ -2980,14 +2984,18 @@ function isSiswaAlreadyChecked(s) {
   return (!isPending || hasHistory) && (rawStatus === 'sesuai' || rawStatus === 'cocok' || rawStatus === 'tidak sesuai' || rawStatus === 'tidak_cocok' || rawStatus === 'perlu perbaikan' || hasHistory);
 }
 
-// Helper fallback pengecekan kesesuaian berkas AI langsung dari browser apabila model GAS lawas (404)
-async function runDirectClientGeminiCheck(dataSiswa, jenisDokumen, clientApiKey) {
-  const urlGambar = jenisDokumen === 'kk' ? dataSiswa.urlKK : dataSiswa.urlIjazah;
-  if (!urlGambar || !urlGambar.startsWith('data:')) return null;
-
+// Helper Universal Client-Side Gemini / Vertex AI Express Caller
+// Mendukung otomatis kunci Vertex AI Express Mode ("AQ.Ab8RN6...") maupun kunci AI Studio ("AIzaSy...")
+async function callClientGeminiSmart(parts, clientApiKey = '', customConfig = null) {
   let keys = [];
   if (clientApiKey && clientApiKey.trim()) {
     keys.push(...clientApiKey.split(',').map(k => k.trim()).filter(k => k.length > 10));
+  }
+  const localKey = localStorage.getItem('gemini_api_key') || '';
+  if (localKey && localKey.trim()) {
+    localKey.split(',').map(k => k.trim()).filter(k => k.length > 10).forEach(k => {
+      if (!keys.includes(k)) keys.push(k);
+    });
   }
   try {
     const dbKeys = await callAPI({ action: "getApiKeys" });
@@ -3001,6 +3009,59 @@ async function runDirectClientGeminiCheck(dataSiswa, jenisDokumen, clientApiKey)
   } catch (e) { }
 
   if (keys.length === 0) return null;
+
+  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  const bodyPayload = {
+    contents: [{ role: "user", parts: parts }],
+    generationConfig: customConfig || { responseMimeType: "application/json" }
+  };
+
+  for (const rawKey of keys) {
+    const key = String(rawKey).trim();
+    const isVertexExpress = key.startsWith("AQ.");
+
+    for (const model of candidateModels) {
+      // Kunci 'AQ.' adalah Vertex AI Express Mode key -> wajib diarahkan ke aiplatform.googleapis.com terlebih dahulu
+      const endpoints = isVertexExpress
+        ? [
+            `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`
+          ]
+        : [
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
+            `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${encodeURIComponent(key)}`
+          ];
+
+      for (const url of endpoints) {
+        try {
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': key
+            },
+            body: JSON.stringify(bodyPayload)
+          });
+          if (resp.ok) {
+            const json = await resp.json();
+            const txt = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (txt) {
+              const cleaned = txt.replace(/```json/g, '').replace(/```/g, '').trim();
+              return JSON.parse(cleaned);
+            }
+          }
+        } catch (e) { }
+      }
+    }
+  }
+  return null;
+}
+window.callClientGeminiSmart = callClientGeminiSmart;
+
+// Helper fallback pengecekan kesesuaian berkas AI langsung dari browser
+async function runDirectClientGeminiCheck(dataSiswa, jenisDokumen, clientApiKey) {
+  const urlGambar = jenisDokumen === 'kk' ? dataSiswa.urlKK : dataSiswa.urlIjazah;
+  if (!urlGambar || !urlGambar.startsWith('data:')) return null;
 
   const sp = urlGambar.split(";base64,");
   if (sp.length < 2) return null;
@@ -3017,30 +3078,10 @@ async function runDirectClientGeminiCheck(dataSiswa, jenisDokumen, clientApiKey)
     `Periksa kelima data di atas terhadap gambar dokumen yang terlampir. Kembalikan JSON murni:\n` +
     `{"status":"Sesuai"|"Tidak Sesuai","koreksi":"1. ...","tipeMasalah":"KOREKSI_DATA"|"REKOMENDASI_RESMI"|null,"rekomendasiResmi":"","suggestedFix":{"nama":null,"nik":null,"tempatLahir":null,"tglLahir":null,"namaIbu":null}}`;
 
-  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash"];
-
-  for (const key of keys) {
-    for (const model of candidateModels) {
-      try {
-        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }, { inline_data: { mime_type: mimeType, data: imageBase64 } }] }],
-            generationConfig: { responseMimeType: "application/json" }
-          })
-        });
-        if (resp.ok) {
-          const json = await resp.json();
-          const txt = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (txt) {
-            return JSON.parse(txt.replace(/```json/g, '').replace(/```/g, '').trim());
-          }
-        }
-      } catch (e) { }
-    }
-  }
-  return null;
+  return await callClientGeminiSmart(
+    [{ text: promptText }, { inline_data: { mime_type: mimeType, data: imageBase64 } }],
+    clientApiKey
+  );
 }
 
 async function runSingleRowAICheck(siswaId) {
@@ -3269,12 +3310,16 @@ async function runBatchAICheck() {
     };
 
     try {
-      const result = await callAPI({
+      let result = await callAPI({
         action: "runAICheck",
         dataSiswa: enrichedDataSiswa,
         jenisDokumen: targetDoc,
         apiKey: userApiKey
       });
+      if (!result || String(result.status || '').toUpperCase() === 'ERROR') {
+        const directRes = await runDirectClientGeminiCheck(enrichedDataSiswa, targetDoc, userApiKey);
+        if (directRes) result = directRes;
+      }
 
       const normStatus = String(result.status || '').toUpperCase();
       const finalStatus = (normStatus === 'COCOK' || normStatus === 'SESUAI') ? 'Sesuai' : 'Tidak Sesuai';
@@ -5267,25 +5312,8 @@ window.handleUploadPdfGabunganAI = handleUploadPdfGabunganAI;
 window.tukarPosisiKkDanIjazahAI = tukarPosisiKkDanIjazahAI;
 window.showAIStep1Upload = showAIStep1Upload;
 
-// Helper fallback ekstraksi Gemini AI langsung dari browser apabila model di GAS lawas (404 gemini-1.5-pro)
+// Helper fallback ekstraksi Gemini AI langsung dari browser (mendukung kunci Vertex AI Express 'AQ.' & AI Studio 'AIza')
 async function runDirectClientGeminiExtract(nikTarget, kkBase64, ijazahBase64, clientApiKey) {
-  let keys = [];
-  if (clientApiKey && clientApiKey.trim()) {
-    keys.push(...clientApiKey.split(',').map(k => k.trim()).filter(k => k.length > 10));
-  }
-  try {
-    const dbKeys = await callAPI({ action: "getApiKeys" });
-    if (Array.isArray(dbKeys)) {
-      dbKeys.forEach(item => {
-        if (item.apiKey && item.apiKey.length > 10 && item.status !== 'Nonaktif' && !keys.includes(item.apiKey)) {
-          keys.push(item.apiKey);
-        }
-      });
-    }
-  } catch (e) { }
-
-  if (keys.length === 0) return null;
-
   const promptText = `Anda adalah asisten AI cerdas untuk pendaftaran peserta didik baru (PPDB) di PKBM Aura Anugerah.\n` +
     (nikTarget ? `NIK Target Siswa: "${nikTarget}"\n` : `NIK Target Siswa: (Cocokkan nama siswa yang tertera pada Ijazah dengan baris anggota keluarga di Kartu Keluarga)\n`) +
     `Instruksi:\n` +
@@ -5342,31 +5370,7 @@ async function runDirectClientGeminiExtract(nikTarget, kkBase64, ijazahBase64, c
     if (c) parts.push({ inline_data: c });
   }
 
-  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash"];
-
-  for (const key of keys) {
-    for (const model of candidateModels) {
-      try {
-        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts }],
-            generationConfig: { responseMimeType: "application/json" }
-          })
-        });
-        if (resp.ok) {
-          const json = await resp.json();
-          const txt = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (txt) {
-            const cleaned = txt.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(cleaned);
-          }
-        }
-      } catch (e) { }
-    }
-  }
-  return null;
+  return await callClientGeminiSmart(parts, clientApiKey);
 }
 
 async function handleEkstrakDataAI() {
