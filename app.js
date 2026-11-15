@@ -3092,13 +3092,17 @@ async function callClientGeminiSmart(parts, clientApiKey = '', customConfig = nu
 
   if (keys.length === 0) return null;
 
-  // Urutan model aktif terbaru di Google Generative Language API v1beta
-  // Catatan: gemini-2.5-flash dihapus agar tidak menimbulkan log 404 pada API key baru
+  // Urutan model resmi aktif dan berkecepatan tinggi tanpa lonjakan antrean:
+  // 1. gemini-3.1-flash-lite: Super cepat, respon instan < 1 detik, stabil
+  // 2. gemini-3-flash-preview: Model multimodal generasi 3 aktif, kuota longgar
+  // 3. gemini-3.8-flash: Model unggulan
+  // 4. gemini-3.7-flash
+  // 5. gemini-flash-latest
   const candidateModels = [
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
     "gemini-flash-latest"
   ];
   const bodyPayload = {
@@ -5541,23 +5545,25 @@ async function handleEkstrakDataAI() {
     const userApiKey = localStorage.getItem('gemini_api_key') || '';
 
     let result = null;
+    // Jalankan ekstraksi langsung (direct client-side) terlebih dahulu agar proses ekstraksi berlangsung instan tanpa delay Apps Script
     try {
-      result = await callAPI({
-        action: "ekstrakDataAI",
-        nikTarget: nikTarget,
-        kkBase64: kkBase64,
-        ijazahBase64: ijazahBase64,
-        apiKey: userApiKey
-      });
-    } catch (apiErr) {
-      console.warn("GAS ekstrakDataAI error, mencoba direct Gemini fallback:", apiErr);
+      result = await runDirectClientGeminiExtract(nikTarget, kkBase64, ijazahBase64, userApiKey);
+    } catch (directErr) {
+      console.warn("Direct Gemini extract warning:", directErr);
     }
 
-    // Jika backend Google Apps Script masih menggunakan model lama, otomatis gunakan direct Gemini API!
+    // Jika direct extract belum berhasil, gunakan fallback ke backend Google Apps Script
     if (!result || result.status !== "SUCCESS" || !result.data) {
-      const directResult = await runDirectClientGeminiExtract(nikTarget, kkBase64, ijazahBase64, userApiKey);
-      if (directResult && directResult.status === "SUCCESS" && directResult.data) {
-        result = directResult;
+      try {
+        result = await callAPI({
+          action: "ekstrakDataAI",
+          nikTarget: nikTarget,
+          kkBase64: kkBase64,
+          ijazahBase64: ijazahBase64,
+          apiKey: userApiKey
+        });
+      } catch (apiErr) {
+        console.warn("GAS ekstrakDataAI error fallback:", apiErr);
       }
     }
 
