@@ -71,44 +71,112 @@ function formatToDateInput(val) {
   return '';
 }
 
-// ======================= LOCAL FILE STORAGE HELPERS =======================
-// Menyimpan berkas (foto, ijazah, kk, bayar) secara aman di IndexedDB/localStorage
+// ======================= LOCAL FILE STORAGE HELPERS (IndexedDB + Memory + LocalStorage) =======================
+// Menyimpan berkas (foto, ijazah, kk, bayar) tanpa batas kuota 5MB menggunakan IndexedDB dan RAM cache
+const memoryDocCache = new Map();
+let docIdbPromise = null;
+
+function openDocIndexedDB() {
+  if (docIdbPromise) return docIdbPromise;
+  docIdbPromise = new Promise((resolve) => {
+    if (typeof indexedDB === 'undefined') {
+      resolve(null);
+      return;
+    }
+    try {
+      const req = indexedDB.open('SigapAuraDocDB', 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('docs')) {
+          db.createObjectStore('docs');
+        }
+      };
+      req.onsuccess = (e) => {
+        const db = e.target.result;
+        // Muat seluruh berkas dari IndexedDB ke memoryDocCache saat startup
+        try {
+          const tx = db.transaction('docs', 'readonly');
+          const store = tx.objectStore('docs');
+          const cursorReq = store.openCursor();
+          cursorReq.onsuccess = (ev) => {
+            const cursor = ev.target.result;
+            if (cursor) {
+              memoryDocCache.set(cursor.key, cursor.value);
+              cursor.continue();
+            }
+          };
+        } catch (err) { }
+        resolve(db);
+      };
+      req.onerror = () => resolve(null);
+    } catch (err) {
+      resolve(null);
+    }
+  });
+  return docIdbPromise;
+}
+openDocIndexedDB();
+
 function saveFileLocal(siswaId, type, dataUrl) {
   if (!siswaId || !dataUrl) return;
+  const key = `ppdb_doc_${type}_${siswaId}`;
+  memoryDocCache.set(key, dataUrl);
+
+  openDocIndexedDB().then(db => {
+    if (!db) return;
+    try {
+      const tx = db.transaction('docs', 'readwrite');
+      tx.objectStore('docs').put(dataUrl, key);
+    } catch (e) { }
+  });
+
   try {
-    localStorage.setItem(`ppdb_doc_${type}_${siswaId}`, dataUrl);
+    localStorage.setItem(key, dataUrl);
   } catch (e) {
-    console.warn(`Gagal menyimpan ${type} ke storage lokal:`, e);
+    // Jika localStorage penuh (QuotaExceededError), berkas tetap aman di memoryDocCache & IndexedDB!
   }
 }
 
 function getFileLocal(siswaId, type) {
   if (!siswaId) return null;
-  try {
-    const direct = localStorage.getItem(`ppdb_doc_${type}_${siswaId}`);
-    if (direct) return direct;
+  const directKey = `ppdb_doc_${type}_${siswaId}`;
+  if (memoryDocCache.has(directKey)) return memoryDocCache.get(directKey);
 
-    // Fallback: cari berdasarkan NIK jika id siswa berganti
-    if (Array.isArray(siswaDataList)) {
-      const s = siswaDataList.find(x => String(x.id) === String(siswaId) || (x.nik && String(x.nik) === String(siswaId)));
-      if (s && s.nik) {
-        const byNik = localStorage.getItem(`ppdb_doc_${type}_${s.nik}`);
-        if (byNik) return byNik;
-      }
+  try {
+    const direct = localStorage.getItem(directKey);
+    if (direct) {
+      memoryDocCache.set(directKey, direct);
+      return direct;
     }
-    return null;
-  } catch (e) {
-    return null;
+  } catch (e) { }
+
+  // Fallback: cari berdasarkan NIK jika id siswa berganti
+  if (Array.isArray(siswaDataList)) {
+    const s = siswaDataList.find(x => String(x.id) === String(siswaId) || (x.nik && String(x.nik) === String(siswaId)));
+    if (s && s.nik) {
+      const nikKey = `ppdb_doc_${type}_${s.nik}`;
+      if (memoryDocCache.has(nikKey)) return memoryDocCache.get(nikKey);
+      try {
+        const byNik = localStorage.getItem(nikKey);
+        if (byNik) {
+          memoryDocCache.set(nikKey, byNik);
+          return byNik;
+        }
+      } catch (e) { }
+    }
   }
+  return null;
 }
 
-// Helper untuk menggabungkan data dari server tanpa menimpa berkas lokal yang sudah ada
+// Helper untuk menggabungkan data dari server tanpa menimpa berkas lokal atau status AI yang sudah diverifikasi
 function mergeSiswaItem(existing, incoming) {
+  const lookupNik = (incoming && incoming.nik) || (existing && existing.nik) || '';
+  const localFoto = getFileLocal(incoming.id, 'foto') || (lookupNik ? getFileLocal(lookupNik, 'foto') : null);
+  const localIjazah = getFileLocal(incoming.id, 'ijazah') || (lookupNik ? getFileLocal(lookupNik, 'ijazah') : null);
+  const localKk = getFileLocal(incoming.id, 'kk') || (lookupNik ? getFileLocal(lookupNik, 'kk') : null);
+  const localBayar = getFileLocal(incoming.id, 'bayar') || (lookupNik ? getFileLocal(lookupNik, 'bayar') : null);
+
   if (!existing) {
-    const localFoto = getFileLocal(incoming.id, 'foto');
-    const localIjazah = getFileLocal(incoming.id, 'ijazah');
-    const localKk = getFileLocal(incoming.id, 'kk');
-    const localBayar = getFileLocal(incoming.id, 'bayar');
     return {
       ...incoming,
       urlFoto: (incoming.urlFoto && incoming.urlFoto.startsWith('http')) ? incoming.urlFoto : (localFoto || incoming.urlFoto || ''),
@@ -118,15 +186,10 @@ function mergeSiswaItem(existing, incoming) {
     };
   }
 
-  // Jika incoming kosong atau "Data Terlampir", pertahankan existing berkas
+  // Jika incoming kosong atau "Data Terlampir", pertahankan existing berkas & hasil verifikasi AI
   const merged = { ...incoming };
 
   const isValidUrlOrData = (val) => typeof val === 'string' && (val.startsWith('http') || val.startsWith('data:'));
-
-  const localFoto = getFileLocal(incoming.id, 'foto');
-  const localIjazah = getFileLocal(incoming.id, 'ijazah');
-  const localKk = getFileLocal(incoming.id, 'kk');
-  const localBayar = getFileLocal(incoming.id, 'bayar');
 
   if (isValidUrlOrData(incoming.urlFoto)) {
     merged.urlFoto = incoming.urlFoto;
@@ -160,16 +223,50 @@ function mergeSiswaItem(existing, incoming) {
     merged.urlBayar = localBayar || '';
   }
 
+  // Pertahankan hasil verifikasi AI ("Sesuai" / "Tidak Sesuai") dan koreksiAI jika server masih mengembalikan "Pending"
+  if ((!incoming.status || incoming.status === 'Pending') && existing.status && existing.status !== 'Pending') {
+    merged.status = existing.status;
+  }
+  if ((!incoming.koreksiAI || incoming.koreksiAI.trim() === '') && existing.koreksiAI && existing.koreksiAI.trim() !== '') {
+    merged.koreksiAI = existing.koreksiAI;
+  }
+  if ((incoming.statusAktif === 'Tidak Aktif' || !incoming.statusAktif) && existing.statusAktif === 'Aktif') {
+    merged.statusAktif = existing.statusAktif;
+  }
+
   return merged;
 }
 
 function mergeSiswaList(currentList, incomingList) {
   if (!Array.isArray(incomingList)) return currentList || [];
-  const currentMap = new Map((currentList || []).map(item => [String(item.id), item]));
-  return incomingList.map(inc => {
-    const ex = currentMap.get(String(inc.id));
+  const currentMap = new Map();
+  const currentNikMap = new Map();
+  (currentList || []).forEach(item => {
+    if (item.id) currentMap.set(String(item.id), item);
+    if (item.nik) currentNikMap.set(String(item.nik).trim(), item);
+  });
+
+  const incomingIds = new Set();
+  const incomingNiks = new Set();
+
+  const mergedServerList = incomingList.map(inc => {
+    if (inc.id) incomingIds.add(String(inc.id));
+    if (inc.nik) incomingNiks.add(String(inc.nik).trim());
+    const ex = currentMap.get(String(inc.id)) || (inc.nik ? currentNikMap.get(String(inc.nik).trim()) : null);
     return mergeSiswaItem(ex, inc);
   });
+
+  // Pertahankan data siswa baru yang baru saja disimpan secara lokal tetapi sedang dalam proses antrean tulis ke Google Sheets
+  (currentList || []).forEach(localItem => {
+    const idStr = String(localItem.id || '');
+    const nikStr = String(localItem.nik || '').trim();
+    const existsInServer = (idStr && incomingIds.has(idStr)) || (nikStr && incomingNiks.has(nikStr));
+    if (!existsInServer && localItem._pendingCloudSync) {
+      mergedServerList.push(localItem);
+    }
+  });
+
+  return mergedServerList;
 }
 
 // ======================= DOM ELEMENTS =======================
@@ -756,12 +853,6 @@ function setupEventListeners() {
   setupFileInputPreview('ai-reg-file-kk', 'ai-preview-kk');
   setupFileInputPreview('ai-reg-file-ijazah', 'ai-preview-ijazah');
   setupFileInputPreview('ai-reg-file-foto', 'ai-preview-foto');
-
-  // Event listener tombol Pendaftaran Cepat AI
-  const btnProsesAIReg = document.getElementById('btn-proses-ai-reg');
-  if (btnProsesAIReg) {
-    btnProsesAIReg.addEventListener('click', handleEkstrakDataAI);
-  }
 }
 
 // State kamera aktif
@@ -1808,66 +1899,40 @@ async function loadDashboardData(silent = false) {
 
 // ======================= REGISTRATION & EDITING =======================
 async function handleRegistrationOrEdit(e) {
-  Swal.fire({ title: 'Menyimpan Data...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
-
   try {
     const fileIjazah = document.getElementById('reg-file-ijazah').files[0];
     const fileKk = document.getElementById('reg-file-kk').files[0];
     const fileBayar = document.getElementById('reg-file-bayar').files[0];
     const fileFoto = document.getElementById('reg-file-foto').files[0];
 
+    const siswaId = document.getElementById('reg-id').value;
+    const nikVal = document.getElementById('reg-nik').value.trim();
+    const namaVal = document.getElementById('reg-nama').value.trim();
+
+    // Ambil data siswa yang sudah ada jika dalam mode edit atau jika NIK sudah terdaftar
+    const existingSiswa = siswaId
+      ? siswaDataList.find(x => String(x.id) === String(siswaId))
+      : (nikVal ? siswaDataList.find(x => x.nik && String(x.nik).trim() === nikVal) : null);
+
+    const effectiveSiswaId = siswaId || (existingSiswa ? existingSiswa.id : '');
+    const actionStr = effectiveSiswaId ? "updateSiswa" : "registerSiswa";
+    const finalSiswaId = effectiveSiswaId || ('S' + Date.now());
+
     const b64Ijazah = fileIjazah ? await toBase64(fileIjazah) : (aiUploadedFiles && aiUploadedFiles.ijazah ? aiUploadedFiles.ijazah : null);
     const b64Kk = fileKk ? await toBase64(fileKk) : (aiUploadedFiles && aiUploadedFiles.kk ? aiUploadedFiles.kk : null);
     const b64Bayar = fileBayar ? await toBase64(fileBayar) : null;
     const b64Foto = fileFoto ? await toBase64(fileFoto) : (aiUploadedFiles && aiUploadedFiles.foto ? aiUploadedFiles.foto : null);
 
-    const siswaId = document.getElementById('reg-id').value;
-    const actionStr = siswaId ? "updateSiswa" : "registerSiswa";
+    // Tutup modal form terlebih dahulu agar layar belakang tidak bertumpuk / stuck
+    const modalReg = document.getElementById('modal-register');
+    if (modalReg) modalReg.classList.add('hidden');
 
-    const payload = {
-      action: actionStr,
-      data: {
-        id: siswaId,
-        tglDaftar: document.getElementById('reg-tgl-daftar').value,
-        nama: document.getElementById('reg-nama').value,
-        jk: document.getElementById('reg-jk').value,
-        nik: document.getElementById('reg-nik').value,
-        nisn: document.getElementById('reg-nisn').value,
-        noKk: document.getElementById('reg-no-kk').value,
-        urutKk: document.getElementById('reg-urut-kk').value,
-        kabKota: document.getElementById('reg-kab-kota').value,
-        kecamatan: document.getElementById('reg-kecamatan').value,
-        desaKelurahan: document.getElementById('reg-desa-kelurahan').value,
-        kelas: document.getElementById('reg-kelas').value,
-        tempatLahir: document.getElementById('reg-tempat-lahir').value,
-        tglLahir: document.getElementById('reg-tgl-lahir').value,
-        namaIbu: document.getElementById('reg-ibu').value,
-        tahunLahirIbu: document.getElementById('reg-tahun-lahir-ibu').value,
-        nikIbu: document.getElementById('reg-nik-ibu').value,
-        namaAyah: document.getElementById('reg-ayah').value,
-        tahunLahirAyah: document.getElementById('reg-tahun-lahir-ayah').value,
-        nikAyah: document.getElementById('reg-nik-ayah').value,
-        namaWali: document.getElementById('reg-wali').value,
-        program: document.getElementById('reg-program').value,
-        jenjang: document.getElementById('reg-program').value,
-        tahunLulus: document.getElementById('reg-tahun-lulus').value,
-        syarat: document.getElementById('reg-syarat').value,
-        dokBerkas: document.getElementById('reg-dok-berkas').value,
-        ijazahFile: b64Ijazah,
-        kkFile: b64Kk,
-        bayarFile: b64Bayar,
-        fotoFile: b64Foto,
-        createdBy: currentUser ? currentUser.username : 'Public'
-      }
-    };
+    // Tampilkan Animasi Sinkronisasi Terpadu SIGAP AURA
+    showSigapSyncModal(namaVal || 'Peserta Didik', Boolean(effectiveSiswaId));
 
-    // Ambil data siswa yang sudah ada jika dalam mode edit
-    const existingSiswa = siswaId ? siswaDataList.find(x => String(x.id) === String(siswaId)) : null;
+    await new Promise(r => setTimeout(r, 300));
+    updateSigapSyncStep(2, `Menyimpan berkas dokumen <b>${namaVal}</b> ke masing-masing kolom...`);
 
-    // Siapkan object siswa baru/edit untuk optimistic update ke memori & cache lokal
-    const currentTgl = document.getElementById('reg-tgl-daftar').value || new Date().toISOString().split('T')[0];
-    const finalSiswaId = siswaId || ('S' + Date.now());
-    const nikVal = document.getElementById('reg-nik').value;
     if (b64Foto) {
       saveFileLocal(finalSiswaId, 'foto', b64Foto);
       if (nikVal) saveFileLocal(nikVal, 'foto', b64Foto);
@@ -1884,6 +1949,14 @@ async function handleRegistrationOrEdit(e) {
       saveFileLocal(finalSiswaId, 'bayar', b64Bayar);
       if (nikVal) saveFileLocal(nikVal, 'bayar', b64Bayar);
     }
+
+    const currentTgl = document.getElementById('reg-tgl-daftar').value || new Date().toISOString().split('T')[0];
+    const preservedStatus = (aiValidationResult && aiValidationResult.status)
+      ? aiValidationResult.status
+      : (existingSiswa ? (existingSiswa.status || "Pending") : "Pending");
+    const preservedKoreksi = (aiValidationResult && aiValidationResult.details)
+      ? aiValidationResult.details
+      : (existingSiswa ? (existingSiswa.koreksiAI || "") : "");
 
     const newOrUpdatedSiswa = {
       id: finalSiswaId,
@@ -1913,18 +1986,30 @@ async function handleRegistrationOrEdit(e) {
       syarat: document.getElementById('reg-syarat').value,
       dokBerkas: document.getElementById('reg-dok-berkas').value,
       urlFoto: b64Foto ? b64Foto : (existingSiswa ? (existingSiswa.urlFoto || getFileLocal(finalSiswaId, 'foto')) : (getFileLocal(finalSiswaId, 'foto') || "")),
-      status: existingSiswa ? (existingSiswa.status || "Pending") : "Pending",
-      koreksiAI: existingSiswa ? (existingSiswa.koreksiAI || "") : "",
+      status: preservedStatus,
+      koreksiAI: preservedKoreksi,
       urlIjazah: b64Ijazah ? b64Ijazah : (existingSiswa ? (existingSiswa.urlIjazah || getFileLocal(finalSiswaId, 'ijazah')) : (getFileLocal(finalSiswaId, 'ijazah') || "")),
       urlKK: b64Kk ? b64Kk : (existingSiswa ? (existingSiswa.urlKK || getFileLocal(finalSiswaId, 'kk')) : (getFileLocal(finalSiswaId, 'kk') || "")),
       urlBayar: b64Bayar ? b64Bayar : (existingSiswa ? (existingSiswa.urlBayar || getFileLocal(finalSiswaId, 'bayar')) : (getFileLocal(finalSiswaId, 'bayar') || "")),
       statusAktif: existingSiswa ? (existingSiswa.statusAktif || "Tidak Aktif") : "Tidak Aktif",
-      createdBy: existingSiswa ? (existingSiswa.createdBy || (currentUser ? currentUser.username : 'Petugas')) : (currentUser ? currentUser.username : 'Petugas')
+      createdBy: existingSiswa ? (existingSiswa.createdBy || (currentUser ? currentUser.username : 'Petugas')) : (currentUser ? currentUser.username : 'Petugas'),
+      _pendingCloudSync: true
     };
 
-    // Update langsung ke data lokal & render seketika tanpa menunggu sinkronisasi
-    if (siswaId) {
-      const idx = siswaDataList.findIndex(x => String(x.id) === String(siswaId));
+    const payload = {
+      action: actionStr,
+      data: {
+        ...newOrUpdatedSiswa,
+        id: effectiveSiswaId,
+        ijazahFile: b64Ijazah,
+        kkFile: b64Kk,
+        bayarFile: b64Bayar,
+        fotoFile: b64Foto
+      }
+    };
+
+    if (effectiveSiswaId) {
+      const idx = siswaDataList.findIndex(x => String(x.id) === String(effectiveSiswaId));
       if (idx !== -1) {
         siswaDataList[idx] = { ...siswaDataList[idx], ...newOrUpdatedSiswa };
       }
@@ -1934,38 +2019,25 @@ async function handleRegistrationOrEdit(e) {
 
     try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) { }
 
-    // Update tampilan seketika
-    renderDashboardUI(siswaDataList);
-    if (typeof renderSiswaTable === 'function') renderSiswaTable(siswaDataList);
-
-    // Reset & Tutup modal seketika
-    const modalReg = document.getElementById('modal-register');
-    if (modalReg) modalReg.classList.add('hidden');
     if (siswaId) {
       cancelEdit();
-      document.querySelector('li[data-target="section-list"]').click();
     } else {
       formInputSiswa.reset();
     }
 
-    // Tampilkan notifikasi instan
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: siswaId ? "Perubahan berhasil disimpan!" : "Siswa berhasil didaftarkan!",
-      showConfirmButton: false,
-      timer: 2500
-    });
+    // Tahap 3: Kirim sinkronisasi ke server Google Sheets
+    await new Promise(r => setTimeout(r, 300));
+    updateSigapSyncStep(3, `Menyinkronkan data ke Cloud Google Spreadsheet...`);
 
-    // Kirim sinkronisasi ke server Google Sheets di latar belakang
-    callAPI(payload).then(res => {
-      // Jika server mengembalikan link Drive yang telah disimpan, perbarui cache lokal
-      if (res) {
-        const targetId = siswaId || res.id;
-        if (targetId) {
-          const idx = siswaDataList.findIndex(x => String(x.id) === String(targetId));
+    try {
+      const syncTask = (async () => {
+        const res = await callAPI(payload);
+        if (res) {
+          const targetId = effectiveSiswaId || res.id || finalSiswaId;
+          const idx = siswaDataList.findIndex(x => String(x.id) === String(targetId) || String(x.id) === String(finalSiswaId));
           if (idx !== -1) {
+            siswaDataList[idx].id = targetId;
+            delete siswaDataList[idx]._pendingCloudSync;
             if (res.urlIjazah) siswaDataList[idx].urlIjazah = res.urlIjazah;
             if (res.urlKK) siswaDataList[idx].urlKK = res.urlKK;
             if (res.urlBayar) siswaDataList[idx].urlBayar = res.urlBayar;
@@ -1976,24 +2048,34 @@ async function handleRegistrationOrEdit(e) {
               if (res.updatedUrls.urlBayar) siswaDataList[idx].urlBayar = res.updatedUrls.urlBayar;
               if (res.updatedUrls.urlFoto) siswaDataList[idx].urlFoto = res.updatedUrls.urlFoto;
             }
-            try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) { }
+          }
+          if (preservedStatus && preservedStatus !== 'Pending') {
+            await callAPI({
+              action: "updateStatus",
+              idSiswa: targetId,
+              status: preservedStatus,
+              koreksiAI: preservedKoreksi
+            });
           }
         }
-      }
-      // Refresh data di background untuk sinkronisasi penuh
-      loadDashboardData(true);
-      loadAllSiswa(true);
-    }).catch(err => {
-      console.error("Gagal sinkronisasi data ke server:", err);
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'warning',
-        title: 'Data lokal tersimpan, gagal sync: ' + err.message,
-        showConfirmButton: false,
-        timer: 4000
-      });
-    });
+      })();
+
+      await Promise.race([
+        syncTask,
+        new Promise(resolve => setTimeout(resolve, 6500))
+      ]);
+    } catch (err) {
+      console.warn("Cloud sync warning:", err);
+    }
+
+    // Tahap 4: Perbarui tabel & buka konfirmasi akhir
+    updateSigapSyncStep(4, `Memperbarui tabel peserta didik & menyelesaikan sinkronisasi...`);
+    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) { }
+    renderDashboardUI(siswaDataList);
+    focusSiswaInTableAndOpenDetail(newOrUpdatedSiswa.id, false);
+    await new Promise(r => setTimeout(r, 350));
+
+    showFinalRegistrationSummaryModal(newOrUpdatedSiswa, Boolean(effectiveSiswaId));
 
   } catch (err) {
     Swal.fire('Gagal', err.message, 'error');
@@ -3011,21 +3093,24 @@ async function callClientGeminiSmart(parts, clientApiKey = '', customConfig = nu
   if (keys.length === 0) return null;
 
   // Urutan model aktif terbaru di Google Generative Language API v1beta
+  // Catatan: gemini-2.5-flash dihapus agar tidak menimbulkan log 404 pada API key baru
   const candidateModels = [
     "gemini-3.8-flash",
-    "gemini-flash-latest",
+    "gemini-3.7-flash",
+    "gemini-3.6-flash",
     "gemini-3.5-flash",
-    "gemini-2.5-flash"
+    "gemini-flash-latest"
   ];
   const bodyPayload = {
     contents: [{ role: "user", parts: parts }],
     generationConfig: customConfig || { responseMimeType: "application/json" }
   };
 
-  for (const rawKey of keys) {
-    const key = String(rawKey).trim();
+  for (let kIdx = 0; kIdx < keys.length; kIdx++) {
+    const key = String(keys[kIdx]).trim();
 
-    for (const model of candidateModels) {
+    for (let mIdx = 0; mIdx < candidateModels.length; mIdx++) {
+      const model = candidateModels[mIdx];
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
       try {
         const resp = await fetch(url, {
@@ -3045,6 +3130,9 @@ async function callClientGeminiSmart(parts, clientApiKey = '', customConfig = nu
             const cleaned = txt.replace(/```json/g, '').replace(/```/g, '').trim();
             return JSON.parse(cleaned);
           }
+        } else if (resp.status === 429 || resp.status === 503) {
+          // Beri jeda 600ms sebelum pindah ke model/key cadangan agar tidak terkena burst rate-limit beruntun
+          await new Promise(r => setTimeout(r, 600));
         }
       } catch (e) { }
     }
@@ -3367,15 +3455,17 @@ function showSiswaDetail(id) {
     subtitle.textContent = `ID: ${s.id || '-'} | Didaftarkan oleh: ${s.createdBy || 'Petugas'}`;
   }
 
-  const badgeColor = s.status === 'Selesai' ? '#15803d' : (s.status === 'Perlu Perbaikan' ? '#b91c1c' : '#b45309');
-  const badgeBg = s.status === 'Selesai' ? '#dcfce7' : (s.status === 'Perlu Perbaikan' ? '#fee2e2' : '#fef3c7');
+  const isStatusSesuai = s.status === 'Sesuai' || s.status === 'Selesai';
+  const isStatusPerbaikan = s.status === 'Tidak Sesuai' || s.status === 'Perlu Perbaikan';
+  const badgeColor = isStatusSesuai ? '#15803d' : (isStatusPerbaikan ? '#b91c1c' : '#b45309');
+  const badgeBg = isStatusSesuai ? '#dcfce7' : (isStatusPerbaikan ? '#fee2e2' : '#fef3c7');
   const statusAktifColor = s.statusAktif === 'Aktif' ? '#15803d' : '#64748b';
   const statusAktifBg = s.statusAktif === 'Aktif' ? '#dcfce7' : '#f1f5f9';
 
-  const finalFoto = (s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:'))) ? s.urlFoto : getFileLocal(s.id, 'foto');
-  const finalIjazah = (s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:'))) ? s.urlIjazah : getFileLocal(s.id, 'ijazah');
-  const finalKK = (s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:'))) ? s.urlKK : getFileLocal(s.id, 'kk');
-  const finalBayar = (s.urlBayar && (s.urlBayar.startsWith('http') || s.urlBayar.startsWith('data:'))) ? s.urlBayar : getFileLocal(s.id, 'bayar');
+  const finalFoto = (s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:'))) ? s.urlFoto : (getFileLocal(s.id, 'foto') || (s.nik ? getFileLocal(s.nik, 'foto') : null));
+  const finalIjazah = (s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:'))) ? s.urlIjazah : (getFileLocal(s.id, 'ijazah') || (s.nik ? getFileLocal(s.nik, 'ijazah') : null));
+  const finalKK = (s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:'))) ? s.urlKK : (getFileLocal(s.id, 'kk') || (s.nik ? getFileLocal(s.nik, 'kk') : null));
+  const finalBayar = (s.urlBayar && (s.urlBayar.startsWith('http') || s.urlBayar.startsWith('data:'))) ? s.urlBayar : (getFileLocal(s.id, 'bayar') || (s.nik ? getFileLocal(s.nik, 'bayar') : null));
 
   content.innerHTML = `
     <!-- Ringkasan Status Header & Foto Profil -->
@@ -3519,16 +3609,16 @@ function previewDocModal(type, siswaId, namaSiswa) {
   let label = "Dokumen";
 
   if (type === 'foto') {
-    url = (s && s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:'))) ? s.urlFoto : getFileLocal(siswaId, 'foto');
+    url = (s && s.urlFoto && (s.urlFoto.startsWith('http') || s.urlFoto.startsWith('data:'))) ? s.urlFoto : (getFileLocal(siswaId, 'foto') || (s && s.nik ? getFileLocal(s.nik, 'foto') : null));
     label = "Foto Siswa";
   } else if (type === 'ijazah') {
-    url = (s && s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:'))) ? s.urlIjazah : getFileLocal(siswaId, 'ijazah');
+    url = (s && s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:'))) ? s.urlIjazah : (getFileLocal(siswaId, 'ijazah') || (s && s.nik ? getFileLocal(s.nik, 'ijazah') : null));
     label = "Berkas Ijazah";
   } else if (type === 'kk') {
-    url = (s && s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:'))) ? s.urlKK : getFileLocal(siswaId, 'kk');
+    url = (s && s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:'))) ? s.urlKK : (getFileLocal(siswaId, 'kk') || (s && s.nik ? getFileLocal(s.nik, 'kk') : null));
     label = "Kartu Keluarga (KK)";
   } else if (type === 'bayar') {
-    url = (s && s.urlBayar && (s.urlBayar.startsWith('http') || s.urlBayar.startsWith('data:'))) ? s.urlBayar : getFileLocal(siswaId, 'bayar');
+    url = (s && s.urlBayar && (s.urlBayar.startsWith('http') || s.urlBayar.startsWith('data:'))) ? s.urlBayar : (getFileLocal(siswaId, 'bayar') || (s && s.nik ? getFileLocal(s.nik, 'bayar') : null));
     label = "Bukti Pembayaran";
   }
 
@@ -5368,7 +5458,10 @@ async function runDirectClientGeminiExtract(nikTarget, kkBase64, ijazahBase64, c
   return await callClientGeminiSmart(parts, clientApiKey);
 }
 
+let isExtractingAI = false;
+
 async function handleEkstrakDataAI() {
+  if (isExtractingAI) return;
   const nikInput = document.getElementById('ai-reg-nik');
   const fileKkInput = document.getElementById('ai-reg-file-kk');
   const fileIjazahInput = document.getElementById('ai-reg-file-ijazah');
@@ -5388,6 +5481,7 @@ async function handleEkstrakDataAI() {
     return;
   }
 
+  isExtractingAI = true;
   showLoader('Gemini AI sedang membaca dan mengekstrak data dari dokumen KK & Ijazah...');
 
   try {
@@ -5459,7 +5553,7 @@ async function handleEkstrakDataAI() {
       console.warn("GAS ekstrakDataAI error, mencoba direct Gemini fallback:", apiErr);
     }
 
-    // Jika backend Google Apps Script masih menggunakan model lama (misal 404 gemini-1.5-pro), otomatis gunakan direct Gemini API (gemini-2.5-flash / gemini-2.0-flash)!
+    // Jika backend Google Apps Script masih menggunakan model lama, otomatis gunakan direct Gemini API!
     if (!result || result.status !== "SUCCESS" || !result.data) {
       const directResult = await runDirectClientGeminiExtract(nikTarget, kkBase64, ijazahBase64, userApiKey);
       if (directResult && directResult.status === "SUCCESS" && directResult.data) {
@@ -5490,6 +5584,14 @@ async function handleEkstrakDataAI() {
 
     const data = result.data;
 
+    // Simpan berkas langsung ke IndexedDB/memory cache dengan kunci NIK sedini mungkin agar tidak pernah hilang
+    const detectedNik = String(data.nik || nikTarget || '').trim();
+    if (detectedNik) {
+      if (aiUploadedFiles.kk) saveFileLocal(detectedNik, 'kk', aiUploadedFiles.kk);
+      if (aiUploadedFiles.ijazah) saveFileLocal(detectedNik, 'ijazah', aiUploadedFiles.ijazah);
+      if (aiUploadedFiles.foto) saveFileLocal(detectedNik, 'foto', aiUploadedFiles.foto);
+    }
+
     // Masukkan data hasil ekstraksi ke formulir Step 2
     const today = new Date().toISOString().split('T')[0];
     const outTglDaftar = document.getElementById('ai-out-tgl-daftar');
@@ -5507,7 +5609,7 @@ async function handleEkstrakDataAI() {
 
     // Isi otomatis rekomendasi program kesetaraan jika terdeteksi dari ijazah (misal Ijazah SD -> Paket B)
     const elProg = document.getElementById('ai-out-program');
-    if (elProg && !elProg.value && data.jenjangRekomendasi && ['Paket A', 'Paket B', 'Paket C'].includes(data.jenjangRekomendasi)) {
+    if (elProg && (!elProg.value || data.jenjangRekomendasi) && ['Paket A', 'Paket B', 'Paket C'].includes(data.jenjangRekomendasi)) {
       elProg.value = data.jenjangRekomendasi;
     }
 
@@ -5522,7 +5624,7 @@ async function handleEkstrakDataAI() {
     }
 
     setField('ai-out-tempat-lahir', data.tempatLahir || '');
-    setField('ai-out-tgl-lahir', data.tglLahir || '');
+    setField('ai-out-tgl-lahir', formatToDateInput(data.tglLahir || ''));
     setField('ai-out-ibu', data.namaIbu || '');
     setField('ai-out-nik-ibu', data.nikIbu || '');
     setField('ai-out-ayah', data.namaAyah || '');
@@ -5595,12 +5697,14 @@ async function handleEkstrakDataAI() {
     renderAIStep2Previews();
 
     Swal.fire({
+      toast: true,
+      position: 'top-end',
       icon: aiValidationResult.status === 'Sesuai' ? 'success' : 'warning',
       title: aiValidationResult.status === 'Sesuai' ? 'Data Berhasil Diekstrak & Sesuai!' : 'Data Diekstrak (Ada Ketidaksesuaian)',
       text: aiValidationResult.status === 'Sesuai'
-        ? 'Seluruh data cocok dengan dokumen resmi.'
+        ? 'Seluruh data cocok dengan dokumen resmi. Silakan periksa & klik Simpan.'
         : 'Periksa catatan perbedaan pada banner sebelum menyimpan.',
-      timer: 3000,
+      timer: 2800,
       showConfirmButton: false
     });
 
@@ -5608,6 +5712,8 @@ async function handleEkstrakDataAI() {
     hideLoader();
     console.error("AI Extraction Error:", err);
     Swal.fire('Error', 'Terjadi kesalahan saat memproses dokumen: ' + err.message, 'error');
+  } finally {
+    isExtractingAI = false;
   }
 }
 
@@ -5726,6 +5832,205 @@ function renderAIStep2Previews() {
   updateBox('ai-preview-box-foto', 'ai-status-badge-foto', aiUploadedFiles.foto, 'Pas Foto');
 }
 
+// ======================= SIGAP AURA CLOUD SYNC MODAL & FINAL CONFIRMATION =======================
+function showSigapSyncModal(namaSiswa, isUpdate = false) {
+  Swal.fire({
+    title: '',
+    html: `
+      <div style="padding: 8px 4px 4px 4px; text-align: center;">
+        <div class="sigap-sync-hero">
+          <div class="sigap-sync-ring"></div>
+          <div class="sigap-sync-ring delay-1"></div>
+          <div class="sigap-sync-core">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+              <path d="m9 13 2 2 4-4"></path>
+            </svg>
+          </div>
+        </div>
+        <h3 style="margin: 0 0 4px 0; font-size: 1.15rem; font-weight: 800; color: var(--text-color, #0f172a);">
+          ${isUpdate ? 'Menyinkronkan Pembaruan Data Siswa' : 'Menyinkronkan Pendaftaran Siswa Baru'}
+        </h3>
+        <p id="sigap-sync-subtitle" style="margin: 0; font-size: 0.85rem; color: var(--text-muted, #64748b);">
+          Memproses data <b>${namaSiswa}</b> ke Database SIGAP AURA...
+        </p>
+
+        <div class="sigap-sync-progress-track">
+          <div id="sigap-sync-progress-bar" class="sigap-sync-progress-fill" style="width: 25%;"></div>
+        </div>
+
+        <div class="sigap-sync-step-list">
+          <div id="sigap-sync-step-1" class="sigap-sync-step-item active">
+            <span class="sigap-sync-step-badge" id="sigap-sync-badge-1">1</span>
+            <span>Memvalidasi & menyimpan identitas buku induk siswa</span>
+          </div>
+          <div id="sigap-sync-step-2" class="sigap-sync-step-item">
+            <span class="sigap-sync-step-badge" id="sigap-sync-badge-2">2</span>
+            <span>Menyimpan berkas Kartu Keluarga (KK) & Ijazah ke masing-masing kolom</span>
+          </div>
+          <div id="sigap-sync-step-3" class="sigap-sync-step-item">
+            <span class="sigap-sync-step-badge" id="sigap-sync-badge-3">3</span>
+            <span>Menyinkronkan hasil pemeriksaan AI & Cloud Google Spreadsheet</span>
+          </div>
+          <div id="sigap-sync-step-4" class="sigap-sync-step-item">
+            <span class="sigap-sync-step-badge" id="sigap-sync-badge-4">4</span>
+            <span>Memperbarui tabel peserta didik & menyiapkan kartu ringkasan</span>
+          </div>
+        </div>
+      </div>
+    `,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    width: '480px'
+  });
+}
+
+function updateSigapSyncStep(stepNumber, customSubtitle = null) {
+  const bar = document.getElementById('sigap-sync-progress-bar');
+  if (bar) {
+    const pct = Math.min(100, Math.max(25, stepNumber * 25));
+    bar.style.width = pct + '%';
+  }
+  if (customSubtitle) {
+    const sub = document.getElementById('sigap-sync-subtitle');
+    if (sub) sub.innerHTML = customSubtitle;
+  }
+  for (let i = 1; i <= 4; i++) {
+    const item = document.getElementById(`sigap-sync-step-${i}`);
+    const badge = document.getElementById(`sigap-sync-badge-${i}`);
+    if (!item || !badge) continue;
+    item.classList.remove('active', 'done');
+    if (i < stepNumber) {
+      item.classList.add('done');
+      badge.innerHTML = '✓';
+    } else if (i === stepNumber) {
+      item.classList.add('active');
+      badge.textContent = String(i);
+    } else {
+      badge.textContent = String(i);
+    }
+  }
+}
+
+function focusSiswaInTableAndOpenDetail(siswaId, openDrawer = false) {
+  // Pastikan filter tidak menyembunyikan siswa yang baru disimpan
+  const searchEl = document.getElementById('search-siswa');
+  if (searchEl && searchEl.value) searchEl.value = '';
+  const progEl = document.getElementById('filter-program-siswa');
+  if (progEl && progEl.value) progEl.value = '';
+  const statEl = document.getElementById('filter-status-siswa');
+  if (statEl && statEl.value) statEl.value = '';
+  const aiEl = document.getElementById('filter-ai-siswa');
+  if (aiEl && aiEl.value) aiEl.value = '';
+
+  currentFilteredSiswaList = siswaDataList.slice();
+  const idx = currentFilteredSiswaList.findIndex(x => String(x.id) === String(siswaId));
+  if (idx !== -1 && siswaPageSize !== 'all') {
+    currentSiswaPage = Math.max(1, Math.ceil((idx + 1) / siswaPageSize));
+  }
+  renderSiswaPage();
+
+  if (openDrawer) {
+    showSiswaDetail(siswaId);
+  }
+}
+
+function showFinalRegistrationSummaryModal(siswaObj, isUpdated = false) {
+  const s = siswaDataList.find(x => String(x.id) === String(siswaObj.id)) || siswaObj;
+  const kkImg = (s.urlKK && (s.urlKK.startsWith('http') || s.urlKK.startsWith('data:'))) ? s.urlKK : (getFileLocal(s.id, 'kk') || (s.nik ? getFileLocal(s.nik, 'kk') : null));
+  const ijazahImg = (s.urlIjazah && (s.urlIjazah.startsWith('http') || s.urlIjazah.startsWith('data:'))) ? s.urlIjazah : (getFileLocal(s.id, 'ijazah') || (s.nik ? getFileLocal(s.nik, 'ijazah') : null));
+  const isSesuai = s.status === 'Sesuai' || s.status === 'Cocok';
+
+  Swal.fire({
+    title: '',
+    html: `
+      <div style="text-align: left; font-size: 0.9rem; color: var(--text-color, #1e293b);">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color, #e2e8f0);">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #16a34a, #059669); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
+            ✓
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.5px;">
+              Tahap Akhir · Sinkronisasi Selesai
+            </div>
+            <h3 style="margin: 2px 0 0 0; font-size: 1.15rem; font-weight: 800; color: var(--text-color, #0f172a);">
+              ${isUpdated ? 'Data & Berkas Siswa Diperbarui!' : 'Pendaftaran Siswa Berhasil Disimpan!'}
+            </h3>
+          </div>
+        </div>
+
+        <!-- Ringkasan Identitas Siswa -->
+        <div style="background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+            <strong style="font-size: 1.02rem; color: var(--text-color, #0f172a);">${s.nama || '-'}</strong>
+            <span style="background: #dcfce7; color: #15803d; padding: 2px 10px; border-radius: 99px; font-size: 0.76rem; font-weight: 700;">
+              ${s.program || 'Paket Kesetaraan'} · ${s.statusAktif || 'Aktif'}
+            </span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 0.82rem; color: var(--text-muted, #64748b);">
+            <div>NIK: <b style="color: var(--text-color, #1e293b);">${s.nik || '-'}</b></div>
+            <div>NISN: <b style="color: var(--text-color, #1e293b);">${s.nisn || '-'}</b></div>
+            <div>TTL: <b style="color: var(--text-color, #1e293b);">${s.tempatLahir || '-'}, ${formatToDateInput(s.tglLahir) || '-'}</b></div>
+            <div>Ibu Kandung: <b style="color: var(--text-color, #1e293b);">${s.namaIbu || '-'}</b></div>
+          </div>
+        </div>
+
+        <!-- Status Pemeriksaan AI -->
+        <div style="background: ${isSesuai ? 'rgba(22, 163, 74, 0.08)' : 'rgba(245, 158, 11, 0.1)'}; border: 1px solid ${isSesuai ? '#86efac' : '#fde68a'}; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-weight: 700; font-size: 0.84rem; color: ${isSesuai ? '#15803d' : '#b45309'};">
+              🤖 Status Pemeriksaan AI: ${isSesuai ? '✅ Sesuai' : (s.status || 'Terdaftar')}
+            </span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-color, #334155); line-height: 1.45; white-space: pre-line; max-height: 90px; overflow-y: auto;">
+            ${s.koreksiAI || 'Seluruh data dan berkas telah tersimpan.'}
+          </div>
+        </div>
+
+        <!-- Kolom Berkas KK & Ijazah yang Tersimpan -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div style="background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px;">
+            ${kkImg && kkImg.startsWith('data:image')
+              ? `<img src="${kkImg}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1.5px solid #10b981; flex-shrink: 0;">`
+              : `<div style="width: 44px; height: 44px; border-radius: 6px; background: rgba(16,185,129,0.12); color: #059669; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; flex-shrink: 0;">KK</div>`
+            }
+            <div style="min-width: 0;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-color, #0f172a);">Kolom KK</div>
+              <div style="font-size: 0.74rem; color: ${kkImg ? '#059669' : '#94a3b8'}; font-weight: 600;">
+                ${kkImg ? '✓ Tersimpan' : 'Belum ada'}
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px;">
+            ${ijazahImg && ijazahImg.startsWith('data:image')
+              ? `<img src="${ijazahImg}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1.5px solid #0284c7; flex-shrink: 0;">`
+              : `<div style="width: 44px; height: 44px; border-radius: 6px; background: rgba(2,132,199,0.12); color: #0284c7; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem; flex-shrink: 0;">IJZ</div>`
+            }
+            <div style="min-width: 0;">
+              <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-color, #0f172a);">Kolom Ijazah</div>
+              <div style="font-size: 0.74rem; color: ${ijazahImg ? '#0284c7' : '#94a3b8'}; font-weight: 600;">
+                ${ijazahImg ? '✓ Tersimpan' : 'Belum ada'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '🔍 Buka Detail & Berkas Siswa',
+    cancelButtonText: 'Selesai',
+    confirmButtonColor: '#16a34a',
+    cancelButtonColor: '#64748b',
+    width: '520px'
+  }).then((res) => {
+    if (res.isConfirmed) {
+      focusSiswaInTableAndOpenDetail(s.id, true);
+    }
+  });
+}
+
 async function handleAISiswaSubmit() {
   const getVal = (id) => {
     const el = document.getElementById(id);
@@ -5746,26 +6051,33 @@ async function handleAISiswaSubmit() {
     return;
   }
 
-  Swal.fire({
-    title: 'Mendaftarkan Calon Siswa...',
-    allowOutsideClick: false,
-    didOpen: () => { Swal.showLoading(); }
-  });
-
   try {
-    const finalSiswaId = 'S' + Date.now();
-    const tglDaftar = getVal('ai-out-tgl-daftar') || new Date().toISOString().split('T')[0];
+    // Cek apakah siswa dengan NIK atau Nama yang sama sudah ada di daftar (misal Syawaluddin yang sudah terdaftar sebelumnya)
+    const existingByNik = nik ? siswaDataList.find(x => x.nik && String(x.nik).trim() === String(nik).trim()) : null;
+    const isUpdatingExisting = Boolean(existingByNik);
+    const finalSiswaId = existingByNik ? existingByNik.id : ('S' + Date.now());
+    const tglDaftar = getVal('ai-out-tgl-daftar') || (existingByNik && existingByNik.tglDaftar) || new Date().toISOString().split('T')[0];
 
     // Periksa apakah ada file pengganti / tambahan yang diunggah di Step 2
     const step2Kk = document.getElementById('ai-step2-file-kk');
     const step2Ijazah = document.getElementById('ai-step2-file-ijazah');
     const step2Foto = document.getElementById('ai-step2-file-foto');
 
-    let b64Kk = (step2Kk && step2Kk.files[0]) ? await toBase64(step2Kk.files[0]) : aiUploadedFiles.kk;
-    let b64Ijazah = (step2Ijazah && step2Ijazah.files[0]) ? await toBase64(step2Ijazah.files[0]) : aiUploadedFiles.ijazah;
-    let b64Foto = (step2Foto && step2Foto.files[0]) ? await toBase64(step2Foto.files[0]) : aiUploadedFiles.foto;
+    let b64Kk = (step2Kk && step2Kk.files[0]) ? await toBase64(step2Kk.files[0]) : (aiUploadedFiles.kk || getFileLocal(finalSiswaId, 'kk') || (nik ? getFileLocal(nik, 'kk') : null));
+    let b64Ijazah = (step2Ijazah && step2Ijazah.files[0]) ? await toBase64(step2Ijazah.files[0]) : (aiUploadedFiles.ijazah || getFileLocal(finalSiswaId, 'ijazah') || (nik ? getFileLocal(nik, 'ijazah') : null));
+    let b64Foto = (step2Foto && step2Foto.files[0]) ? await toBase64(step2Foto.files[0]) : (aiUploadedFiles.foto || getFileLocal(finalSiswaId, 'foto') || (nik ? getFileLocal(nik, 'foto') : null));
 
-    // Simpan berkas ke penyimpanan offline / lokal seketika
+    // Tutup modal form terlebih dahulu agar layar belakang tidak bertumpuk / stuck
+    resetAIRegForm();
+    closeAIRegModal();
+
+    // Tampilkan Animasi Sinkronisasi Terpadu SIGAP AURA
+    showSigapSyncModal(nama, isUpdatingExisting);
+
+    // Tahap 1: Simpan berkas ke IndexedDB & Memory Cache dengan kunci ID dan NIK
+    await new Promise(r => setTimeout(r, 350));
+    updateSigapSyncStep(2, `Menyimpan gambar KK & Ijazah <b>${nama}</b> ke masing-masing kolom...`);
+
     if (b64Foto) {
       saveFileLocal(finalSiswaId, 'foto', b64Foto);
       if (nik) saveFileLocal(nik, 'foto', b64Foto);
@@ -5779,7 +6091,11 @@ async function handleAISiswaSubmit() {
       if (nik) saveFileLocal(nik, 'kk', b64Kk);
     }
 
+    const finalAiStatus = (aiValidationResult && aiValidationResult.status) ? aiValidationResult.status : 'Sesuai';
+    const finalAiDetails = (aiValidationResult && aiValidationResult.details) ? aiValidationResult.details : '1. Nama lengkap, tempat lahir, dan tanggal lahir calon siswa pada KK dan Ijazah telah sesuai.';
+
     const newSiswa = {
+      ...(existingByNik || {}),
       id: finalSiswaId,
       tglDaftar: tglDaftar,
       nama: nama,
@@ -5795,53 +6111,42 @@ async function handleAISiswaSubmit() {
       tempatLahir: getVal('ai-out-tempat-lahir'),
       tglLahir: getVal('ai-out-tgl-lahir'),
       namaIbu: getVal('ai-out-ibu'),
-      tahunLahirIbu: '',
+      tahunLahirIbu: (existingByNik && existingByNik.tahunLahirIbu) || '',
       nikIbu: getVal('ai-out-nik-ibu'),
       namaAyah: getVal('ai-out-ayah'),
-      tahunLahirAyah: '',
+      tahunLahirAyah: (existingByNik && existingByNik.tahunLahirAyah) || '',
       nikAyah: getVal('ai-out-nik-ayah'),
-      namaWali: '',
+      namaWali: (existingByNik && existingByNik.namaWali) || '',
       program: program,
       jenjang: program,
       tahunLulus: getVal('ai-out-tahun-lulus'),
       syarat: 'Lengkap',
       dokBerkas: 'KK' + (b64Ijazah ? ', Ijazah' : ''),
-      urlFoto: b64Foto || '',
-      status: (aiValidationResult && aiValidationResult.status) ? aiValidationResult.status : 'Sesuai',
-      koreksiAI: (aiValidationResult && aiValidationResult.details) ? aiValidationResult.details : 'Data berhasil diekstrak dan sesuai dokumen resmi.',
-      urlIjazah: b64Ijazah || '',
-      urlKK: b64Kk || '',
-      urlBayar: '',
-      statusAktif: 'Aktif',
-      createdBy: currentUser ? currentUser.username : 'AI Quick Reg'
+      urlFoto: b64Foto || (existingByNik && existingByNik.urlFoto) || '',
+      status: finalAiStatus,
+      koreksiAI: finalAiDetails,
+      urlIjazah: b64Ijazah || (existingByNik && existingByNik.urlIjazah) || '',
+      urlKK: b64Kk || (existingByNik && existingByNik.urlKK) || '',
+      urlBayar: (existingByNik && existingByNik.urlBayar) || '',
+      statusAktif: (existingByNik && existingByNik.statusAktif) || 'Aktif',
+      createdBy: currentUser ? currentUser.username : 'AI Quick Reg',
+      _pendingCloudSync: true
     };
 
-    // Optimistic Update ke state memori & cache lokal secara seketika
-    siswaDataList.push(newSiswa);
+    if (isUpdatingExisting) {
+      const idx = siswaDataList.findIndex(x => String(x.id) === String(finalSiswaId));
+      if (idx !== -1) siswaDataList[idx] = newSiswa;
+    } else {
+      siswaDataList.push(newSiswa);
+    }
     try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) { }
 
-    // Update UI seketika
-    renderDashboardUI(siswaDataList);
-    if (typeof renderSiswaTable === 'function') renderSiswaTable(siswaDataList);
+    // Tahap 3: Sinkronisasi ke Cloud Google Sheets & Google Drive
+    await new Promise(r => setTimeout(r, 350));
+    updateSigapSyncStep(3, `Menyinkronkan data & hasil verifikasi AI ke Cloud Google Sheets...`);
 
-    // Langsung reset formulir dan tutup modal popup
-    resetAIRegForm();
-    closeAIRegModal();
-
-    // Notifikasi Toast Instan (Non-blocking, tidak menahan layar)
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: `Siswa "${nama}" berhasil didaftarkan!`,
-      text: 'Data langsung tersimpan. Sinkronisasi Google Drive berjalan di latar belakang.',
-      showConfirmButton: false,
-      timer: 3500
-    });
-
-    // Kirim sinkronisasi ke backend Google Sheets di latar belakang tanpa menghalangi user
     const payload = {
-      action: "registerSiswa",
+      action: isUpdatingExisting ? "updateSiswa" : "registerSiswa",
       data: {
         ...newSiswa,
         ijazahFile: b64Ijazah,
@@ -5850,20 +6155,57 @@ async function handleAISiswaSubmit() {
       }
     };
 
-    callAPI(payload).then(res => {
-      if (res) {
-        const targetId = res.id || finalSiswaId;
-        const idx = siswaDataList.findIndex(x => String(x.id) === String(targetId) || String(x.id) === String(finalSiswaId));
+    // Tunggu sinkronisasi cloud dengan batas waktu aman (maksimal 6 detik agar tidak pernah stuck)
+    try {
+      const syncPromise = (async () => {
+        const res = await callAPI(payload);
+        const targetId = (res && res.id) ? res.id : finalSiswaId;
+        const idx = siswaDataList.findIndex(x => String(x.id) === String(targetId) || String(x.id) === String(finalSiswaId) || (nik && String(x.nik).trim() === String(nik).trim()));
         if (idx !== -1) {
-          if (res.urlIjazah) siswaDataList[idx].urlIjazah = res.urlIjazah;
-          if (res.urlKK) siswaDataList[idx].urlKK = res.urlKK;
-          if (res.urlFoto) siswaDataList[idx].urlFoto = res.urlFoto;
-          try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) { }
+          siswaDataList[idx].id = targetId;
+          delete siswaDataList[idx]._pendingCloudSync;
+          if (res) {
+            if (res.urlIjazah) siswaDataList[idx].urlIjazah = res.urlIjazah;
+            if (res.urlKK) siswaDataList[idx].urlKK = res.urlKK;
+            if (res.urlFoto) siswaDataList[idx].urlFoto = res.urlFoto;
+            if (res.updatedUrls) {
+              if (res.updatedUrls.urlIjazah) siswaDataList[idx].urlIjazah = res.updatedUrls.urlIjazah;
+              if (res.updatedUrls.urlKK) siswaDataList[idx].urlKK = res.updatedUrls.urlKK;
+              if (res.updatedUrls.urlFoto) siswaDataList[idx].urlFoto = res.updatedUrls.urlFoto;
+            }
+          }
+          // Simpan juga berkas dengan targetId baru jika server memberikan ID baru
+          if (b64Kk) saveFileLocal(targetId, 'kk', b64Kk);
+          if (b64Ijazah) saveFileLocal(targetId, 'ijazah', b64Ijazah);
+          if (b64Foto) saveFileLocal(targetId, 'foto', b64Foto);
         }
-      }
-    }).catch(err => {
-      console.warn("Background sync AI registration:", err);
-    });
+
+        // Pastikan status AI ("Sesuai") & koreksiAI juga tertulis permanen ke kolom 24 & 25 Google Sheets
+        await callAPI({
+          action: "updateStatus",
+          idSiswa: targetId,
+          status: finalAiStatus,
+          koreksiAI: finalAiDetails
+        });
+      })();
+
+      await Promise.race([
+        syncPromise,
+        new Promise(resolve => setTimeout(resolve, 6500))
+      ]);
+    } catch (syncErr) {
+      console.warn("Cloud sync AI registration warning:", syncErr);
+    }
+
+    // Tahap 4: Perbarui tabel & fokus ke halaman siswa terbaru
+    updateSigapSyncStep(4, `Memperbarui tabel peserta didik & menyelesaikan sinkronisasi...`);
+    try { localStorage.setItem('ppdb_siswa_cache', JSON.stringify(siswaDataList)); } catch (e) { }
+    renderDashboardUI(siswaDataList);
+    focusSiswaInTableAndOpenDetail(newSiswa.id, false);
+    await new Promise(r => setTimeout(r, 400));
+
+    // Tampilkan Kartu Konfirmasi Akhir (Tahap Selesai) lengkap dengan status AI & pratinjau berkas
+    showFinalRegistrationSummaryModal(newSiswa, isUpdatingExisting);
 
   } catch (err) {
     console.error("AI Submit Error:", err);

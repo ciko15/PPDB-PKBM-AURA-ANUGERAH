@@ -3554,3 +3554,156 @@ textarea:disabled,
   border-color: var(--border-color) !important;
 }
 
+/* ==================== SIGAP AURA CLOUD SYNC ANIMATION & STEPPER ==================== */
+@keyframes sigapPulseRing {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+@keyframes sigapFloatDoc {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes sigapShimmerBar {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.sigap-sync-hero {
+  position: relative;
+  width: 78px;
+  height: 78px;
+  margin: 0 auto 14px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sigap-sync-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(2, 132, 199, 0.15) 70%, transparent 100%);
+  animation: sigapPulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.sigap-sync-ring.delay-1 {
+  animation-delay: 0.8s;
+}
+
+.sigap-sync-core {
+  position: relative;
+  z-index: 2;
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #16a34a 0%, #0284c7 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.45);
+  animation: sigapFloatDoc 2.4s ease-in-out infinite;
+}
+
+.sigap-sync-progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--surface-2, #e2e8f0);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 12px 0 16px 0;
+  border: 1px solid var(--border-color, #cbd5e1);
+}
+
+.sigap-sync-progress-fill {
+  height: 100%;
+  width: 25%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #16a34a, #0ea5e9, #10b981, #16a34a);
+  background-size: 200% 100%;
+  animation: sigapShimmerBar 2.2s linear infinite;
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sigap-sync-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  margin-top: 6px;
+}
+
+.sigap-sync-step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-muted, #64748b);
+  transition: all 0.25s ease;
+}
+
+.sigap-sync-step-item.active {
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(14, 165, 233, 0.4);
+  color: var(--text-color, #0f172a);
+  font-weight: 700;
+  transform: translateX(2px);
+}
+
+.sigap-sync-step-item.done {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #10b981;
+  font-weight: 600;
+}
+
+.sigap-sync-step-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-muted, #64748b);
+}
+
+.sigap-sync-step-item.active .sigap-sync-step-badge {
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+}
+
+.sigap-sync-step-item.done .sigap-sync-step-badge {
+  background: #10b981;
+  color: #ffffff;
+}
+
+

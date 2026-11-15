@@ -443,6 +443,10 @@ function registerSiswa(dataObj) {
   const urlBayar = dataObj.bayarFile ? uploadFileToDrive(dataObj.bayarFile, `Bayar_${safeNik}`) : "";
   const urlFoto = dataObj.fotoFile ? uploadFileToDrive(dataObj.fotoFile, `Foto_${safeNik}`) : "";
 
+  const finalStatusValidasi = (dataObj.status && (dataObj.status === "Sesuai" || dataObj.status === "Tidak Sesuai")) ? dataObj.status : "Pending";
+  const finalKoreksiAI = dataObj.koreksiAI || "";
+  const finalStatusAktif = dataObj.statusAktif || "Tidak Aktif";
+
   sheet.appendRow([
     id,
     tglDaftar,
@@ -467,12 +471,12 @@ function registerSiswa(dataObj) {
     dataObj.dokBerkas || "",
     dataObj.kelas || "",
     urlFoto,
-    "Pending",
-    "",
+    finalStatusValidasi,
+    finalKoreksiAI,
     urlIjazah,
     urlKK,
     urlBayar,
-    "Tidak Aktif",
+    finalStatusAktif,
     dataObj.createdBy || "",
     dataObj.jk || "",
     dataObj.tahunLulus || "",
