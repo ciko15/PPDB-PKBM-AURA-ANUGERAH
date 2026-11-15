@@ -3092,15 +3092,10 @@ async function callClientGeminiSmart(parts, clientApiKey = '', customConfig = nu
 
   if (keys.length === 0) return null;
 
-  // Urutan model resmi aktif dan berkecepatan tinggi tanpa lonjakan antrean:
-  // 1. gemini-3.1-flash-lite: Super cepat, respon instan < 1 detik, stabil
-  // 2. gemini-3-flash-preview: Model multimodal generasi 3 aktif, kuota longgar
-  // 3. gemini-3.8-flash: Model unggulan
-  // 4. gemini-3.7-flash
-  // 5. gemini-flash-latest
+  // Urutan model resmi aktif: prioritaskan gemini-3-flash-preview karena paling cepat & akurat untuk multimodal gambar dokumen
   const candidateModels = [
-    "gemini-3.1-flash-lite",
     "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
     "gemini-flash-latest"
@@ -5255,14 +5250,15 @@ async function convertPdfPagesToImages(file) {
 
   for (let i = 1; i <= Math.min(numPages, 4); i++) {
     const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale: 1.8 });
+    // Skala 1.25 memberikan resolusi tajam untuk OCR dokumen tanpa membengkakkan ukuran memory
+    const viewport = page.getViewport({ scale: 1.25 });
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
     await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
     pageResults.push({
       pageNumber: i,
       width: viewport.width,
