@@ -5673,27 +5673,40 @@ async function handleEkstrakDataAI() {
       if (modalContent) modalContent.scrollTop = 0;
     }
 
-    // Tampilkan banner hasil pemeriksaan dokumen (Sesuai / Tidak Sesuai)
+    // Tampilkan banner hasil pemeriksaan dokumen (Sesuai / Tidak Sesuai) dengan format rapi bernomor
     const banner = document.getElementById('ai-cross-check-banner');
     const headerBadge = document.getElementById('ai-extract-header-badge');
     if (banner) {
       const isMatch = aiValidationResult.status === 'Sesuai';
       banner.style.display = 'block';
-      banner.style.background = isMatch ? '#f0fdf4' : '#fef2f2';
-      banner.style.border = `1px solid ${isMatch ? '#86efac' : '#fca5a5'}`;
+      banner.style.background = isMatch ? 'rgba(22, 163, 74, 0.08)' : 'rgba(239, 68, 68, 0.08)';
+      banner.style.border = `1.5px solid ${isMatch ? '#86efac' : '#fca5a5'}`;
+      banner.style.borderRadius = '10px';
+      banner.style.padding = '14px 16px';
+
+      // Rapikan teks poin detail hasil AI agar rapi per baris
+      let formattedDetails = aiValidationResult.details || '';
+      if (formattedDetails.includes('1.') && formattedDetails.includes('2.')) {
+        formattedDetails = formattedDetails
+          .replace(/(\d+\.\s*)/g, '\n$1')
+          .trim();
+      }
+
       banner.innerHTML = `
-        <div style="display: flex; align-items: flex-start; gap: 8px;">
-          <span style="font-size: 1.25rem;">${isMatch ? '✅' : '⚠️'}</span>
-          <div>
-            <strong style="color: ${isMatch ? '#15803d' : '#b91c1c'}; font-size: 0.95rem;">
-              Status Dokumen: ${isMatch ? 'Data Sesuai' : 'Ditemukan Ketidaksesuaian Antara Berkas'}
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: ${isMatch ? '#dcfce7' : '#fee2e2'}; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;">
+            ${isMatch ? '✅' : '⚠️'}
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <strong style="color: ${isMatch ? '#15803d' : '#b91c1c'}; font-size: 0.95rem; display: block; margin-bottom: 4px;">
+              Status Dokumen: ${isMatch ? 'Data Sesuai' : 'Ditemukan Ketidaksesuaian Antara Dokumen'}
             </strong>
-            <div style="font-size: 0.85rem; color: #334155; margin-top: 4px; line-height: 1.5; white-space: pre-line;">
-              ${aiValidationResult.details}
+            <div style="font-size: 0.84rem; color: var(--text-color, #334155); line-height: 1.6; white-space: pre-line;">
+              ${formattedDetails}
             </div>
             ${!isMatch ? `
-              <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <button type="button" onclick="applyQuickFixInAIRegistration()" class="btn btn-success" style="padding: 5px 12px; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; background: #16a34a;">
+              <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <button type="button" onclick="applyQuickFixInAIRegistration()" class="btn btn-success" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; background: #16a34a; border-radius: 8px;">
                   ⚡ Terapkan Koreksi dari Dokumen Fisik (KK)
                 </button>
                 <small style="color: #64748b;">ℹ️ Klik untuk menyinkronkan data di form bawah dan ubah status jadi Sesuai.</small>

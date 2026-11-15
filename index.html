@@ -3070,145 +3070,208 @@
       </div>
 
       <!-- Step 2: Formulir Hasil Ekstraksi yang Dapat Ditinjau & Disimpan -->
-      <div id="ai-extracted-container" class="card" style="display: none; margin-top: 16px; border: 1.5px solid var(--primary-color);">
-        <div
-          style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <button type="button" class="btn btn-sm btn-outline" onclick="showAIStep1Upload()" style="padding: 4px 10px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px;">
-              ← Kembali ke Upload Berkas
+      <div id="ai-extracted-container" class="card"
+        style="display: none; margin-top: 14px; border: 1.5px solid var(--primary-color); border-radius: 14px; padding: 18px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+        
+        <!-- Header Step 2 -->
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button type="button" class="btn btn-sm btn-outline" onclick="showAIStep1Upload()"
+              style="padding: 5px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; border-radius: 8px; font-weight: 600;">
+              ← Kembali ke Upload
             </button>
-            <h3 style="font-size: 1rem; margin: 0;">2. Hasil Ekstraksi & Konfirmasi Data Siswa</h3>
+            <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0; color: var(--text-color);">
+              Hasil Ekstraksi & Konfirmasi Data Siswa
+            </h3>
           </div>
-          <span class="tag pusat" id="ai-extract-header-badge">AI Verified</span>
+          <span class="tag pusat" id="ai-extract-header-badge" style="font-weight: 700; padding: 4px 12px; border-radius: 99px;">
+            AI Verified
+          </span>
         </div>
 
         <!-- Banner status kesesuaian berkas (Sesuai / Tidak Sesuai) -->
-        <div id="ai-cross-check-banner"
-          style="margin-bottom: 16px; border-radius: var(--radius-sm); padding: 12px; display: none;"></div>
+        <div id="ai-cross-check-banner" style="margin-bottom: 16px; border-radius: 10px; padding: 12px 14px; display: none;"></div>
 
         <form id="form-ai-siswa-submit" onsubmit="event.preventDefault(); handleAISiswaSubmit();">
-          <div class="form">
-            <label>Tanggal Daftar
-              <input type="date" id="ai-out-tgl-daftar" readonly>
-            </label>
-            <label>Pilihan Program / Jenjang *
-              <select id="ai-out-program" required>
-                <option value="">-- Pilih Program --</option>
-                <option value="Paket A">Paket A (Setara SD)</option>
-                <option value="Paket B">Paket B (Setara SMP)</option>
-                <option value="Paket C">Paket C (Setara SMA)</option>
-              </select>
-            </label>
-            <label>Nama Lengkap Siswa *
-              <input type="text" id="ai-out-nama" required>
-            </label>
-            <label>Jenis Kelamin
-              <select id="ai-out-jk">
-                <option value="Laki-laki">Laki-laki</option>
-                <option value="Perempuan">Perempuan</option>
-              </select>
-            </label>
-            <label>NIK Calon Siswa *
-              <input type="text" id="ai-out-nik" required>
-            </label>
-            <label>NISN (Dari Ijazah)
-              <input type="text" id="ai-out-nisn" placeholder="Kosong jika belum ada">
-            </label>
-            <label>Nomor Kartu Keluarga (No. KK)
-              <input type="text" id="ai-out-no-kk">
-            </label>
-            <label>No. Urut di KK
-              <input type="text" id="ai-out-urut-kk">
-            </label>
-            <label>Tempat Lahir
-              <input type="text" id="ai-out-tempat-lahir">
-            </label>
-            <label>Tanggal Lahir
-              <input type="date" id="ai-out-tgl-lahir">
-            </label>
-            <label>Nama Ibu Kandung
-              <input type="text" id="ai-out-ibu">
-            </label>
-            <label>NIK Ibu
-              <input type="text" id="ai-out-nik-ibu">
-            </label>
-            <label>Nama Ayah Kandung
-              <input type="text" id="ai-out-ayah">
-            </label>
-            <label>NIK Ayah
-              <input type="text" id="ai-out-nik-ayah">
-            </label>
-            <label>Kabupaten / Kota
-              <input type="text" id="ai-out-kab-kota">
-            </label>
-            <label>Kecamatan
-              <input type="text" id="ai-out-kecamatan">
-            </label>
-            <label>Desa / Kelurahan
-              <input type="text" id="ai-out-desa-kelurahan">
-            </label>
-            <label>Tahun Lulus Asal
-              <input type="text" id="ai-out-tahun-lulus">
-            </label>
+          <!-- Section 1: Pendaftaran & Program -->
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary-color); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <span>📌</span> Jenjang & Waktu Pendaftaran
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Tanggal Daftar
+                <input type="date" id="ai-out-tgl-daftar" readonly style="background: var(--surface-2, #f8fafc); cursor: not-allowed; font-weight: 500;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Pilihan Program / Jenjang *
+                <select id="ai-out-program" required style="font-weight: 600; color: var(--primary-color);">
+                  <option value="">-- Pilih Program --</option>
+                  <option value="Paket A">Paket A (Setara SD)</option>
+                  <option value="Paket B">Paket B (Setara SMP)</option>
+                  <option value="Paket C">Paket C (Setara SMA)</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <!-- Section 2: Data Identitas Siswa -->
+          <div style="margin-bottom: 14px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+            <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary-color); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <span>👤</span> Identitas Calon Siswa
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Nama Lengkap Siswa *
+                <input type="text" id="ai-out-nama" required style="font-weight: 600;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Jenis Kelamin
+                <select id="ai-out-jk">
+                  <option value="Laki-laki">Laki-laki</option>
+                  <option value="Perempuan">Perempuan</option>
+                </select>
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                NIK Calon Siswa (16 Digit) *
+                <input type="text" id="ai-out-nik" required maxlength="16" style="letter-spacing: 0.5px;">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                NISN (Dari Ijazah)
+                <input type="text" id="ai-out-nisn" placeholder="Kosong jika belum ada" maxlength="10">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Tempat Lahir
+                <input type="text" id="ai-out-tempat-lahir">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Tanggal Lahir
+                <input type="date" id="ai-out-tgl-lahir">
+              </label>
+            </div>
+          </div>
+
+          <!-- Section 3: Data Kartu Keluarga (KK) & Orang Tua -->
+          <div style="margin-bottom: 14px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+            <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary-color); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <span>👨‍👩‍👦</span> Data Keluarga (KK & Orang Tua)
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Nomor Kartu Keluarga (No. KK)
+                <input type="text" id="ai-out-no-kk" maxlength="16">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                No. Urut di KK
+                <input type="text" id="ai-out-urut-kk" placeholder="Contoh: 1, 2, 3">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Nama Ibu Kandung
+                <input type="text" id="ai-out-ibu">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                NIK Ibu
+                <input type="text" id="ai-out-nik-ibu" maxlength="16">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Nama Ayah Kandung
+                <input type="text" id="ai-out-ayah">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                NIK Ayah
+                <input type="text" id="ai-out-nik-ayah" maxlength="16">
+              </label>
+            </div>
+          </div>
+
+          <!-- Section 4: Wilayah Domisili & Asal Sekolah -->
+          <div style="margin-bottom: 14px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+            <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary-color); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <span>📍</span> Wilayah Domisili & Riwayat Lulus
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Kabupaten / Kota
+                <input type="text" id="ai-out-kab-kota">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Kecamatan
+                <input type="text" id="ai-out-kecamatan">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Desa / Kelurahan
+                <input type="text" id="ai-out-desa-kelurahan">
+              </label>
+              <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-color);">
+                Tahun Lulus Asal
+                <input type="text" id="ai-out-tahun-lulus" placeholder="Contoh: 2023">
+              </label>
+            </div>
           </div>
 
           <!-- Berkas Dokumen yang akan Disimpan -->
           <div class="card"
-            style="margin-top: 16px; background: var(--surface-2); border: 1px solid var(--border-color); padding: 16px;">
+            style="margin-top: 16px; background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 16px;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
               <div>
-                <h4 style="font-size: 0.95rem; margin-top: 0; margin-bottom: 2px;">📁 Berkas Dokumen Calon Siswa (Siap Disimpan ke Kolom Masing-Masing)</h4>
-                <p class="sub" style="margin-bottom: 0;">Setiap halaman dokumen otomatis ditempatkan ke kolom KK & Ijazah. Jika terbalik, klik tombol Tukar Posisi.</p>
+                <h4 style="font-size: 0.92rem; font-weight: 700; margin: 0 0 2px 0; color: var(--text-color);">
+                  📁 Berkas Dokumen yang Disimpan ke Kolom Masing-Masing
+                </h4>
+                <p class="sub" style="margin: 0; font-size: 0.78rem; color: var(--text-muted);">
+                  Halaman KK & Ijazah otomatis dipisahkan ke kolomnya. Klik tombol Tukar jika posisi terbalik.
+                </p>
               </div>
-              <button type="button" class="btn btn-sm btn-outline" onclick="tukarPosisiKkDanIjazahAI()" style="font-size: 11.5px; border-color: #0284c7; color: #0284c7; display: inline-flex; align-items: center; gap: 5px;">
+              <button type="button" class="btn btn-sm btn-outline" onclick="tukarPosisiKkDanIjazahAI()"
+                style="font-size: 11.5px; border-color: #0284c7; color: #0284c7; display: inline-flex; align-items: center; gap: 5px; border-radius: 8px; font-weight: 600;">
                 <i data-lucide="arrow-left-right" style="width: 13px; height: 13px;"></i> Tukar Gambar KK ↔ Ijazah
               </button>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;">
               <!-- KK -->
-              <div
-                style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
+              <div style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-weight: 600; font-size: 12px;">Kartu Keluarga (KK)</span>
+                  <span style="font-weight: 700; font-size: 12px; color: var(--text-color);">Kartu Keluarga (KK)</span>
                   <span id="ai-status-badge-kk" class="tag pusat" style="font-size: 11px;">✓ Terlampir</span>
                 </div>
                 <div id="ai-preview-box-kk" style="margin-bottom: 8px;"></div>
-                <input type="file" id="ai-step2-file-kk" accept="image/*,application/pdf" style="font-size: 12px;">
+                <input type="file" id="ai-step2-file-kk" accept="image/*,application/pdf" style="font-size: 11.5px;">
               </div>
 
               <!-- Ijazah -->
-              <div
-                style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
+              <div style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-weight: 600; font-size: 12px;">Ijazah Terakhir</span>
+                  <span style="font-weight: 700; font-size: 12px; color: var(--text-color);">Ijazah Terakhir</span>
                   <span id="ai-status-badge-ijazah" class="tag def" style="font-size: 11px;">(Opsional)</span>
                 </div>
                 <div id="ai-preview-box-ijazah" style="margin-bottom: 8px;"></div>
-                <input type="file" id="ai-step2-file-ijazah" accept="image/*,application/pdf" style="font-size: 12px;">
+                <input type="file" id="ai-step2-file-ijazah" accept="image/*,application/pdf" style="font-size: 11.5px;">
               </div>
 
               <!-- Pas Foto -->
-              <div
-                style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px;">
+              <div style="background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-weight: 600; font-size: 12px;">Pas Foto Siswa</span>
+                  <span style="font-weight: 700; font-size: 12px; color: var(--text-color);">Pas Foto Siswa</span>
                   <span id="ai-status-badge-foto" class="tag def" style="font-size: 11px;">(Opsional)</span>
                 </div>
                 <div id="ai-preview-box-foto" style="margin-bottom: 8px;"></div>
-                <input type="file" id="ai-step2-file-foto" accept="image/*" style="font-size: 12px;">
+                <input type="file" id="ai-step2-file-foto" accept="image/*" style="font-size: 11.5px;">
               </div>
             </div>
           </div>
 
-          <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap;">
-            <button type="button" class="btn btn-outline" onclick="transferAIToMainRegisterForm()" style="font-size: 12.5px; color: #0284c7; border-color: #0284c7;">
-              📋 Buka di Form Pendaftaran Lengkap (3 Tahap)
+          <!-- Action Buttons Form Step 2 -->
+          <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-outline" onclick="transferAIToMainRegisterForm()"
+              style="font-size: 12px; color: #0284c7; border-color: #0284c7; font-weight: 600; border-radius: 8px; padding: 8px 14px;">
+              📋 Buka di Form Pendaftaran Lengkap
             </button>
             <div style="display: flex; gap: 10px;">
-              <button type="button" class="btn btn-outline" onclick="closeAIRegModal()">Batal</button>
-              <button type="submit" class="btn p" style="padding: 0 20px; height: 38px;">
-                <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Simpan & Daftarkan Siswa Ini
+              <button type="button" class="btn btn-outline" onclick="closeAIRegModal()" style="border-radius: 8px; font-weight: 600;">
+                Batal
+              </button>
+              <button type="submit" class="btn p" style="padding: 0 22px; height: 40px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                <i data-lucide="check-circle" style="width: 17px; height: 17px;"></i> Simpan & Daftarkan Siswa Ini
               </button>
             </div>
           </div>
@@ -5315,9 +5378,9 @@
   <!-- SheetJS Library for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="transkrip-assets.js"></script>
-  <script src="app.js?v=20261115_click_extract_v5"></script>
-  <script src="cbt-engine.js?v=20261115_click_extract_v5"></script>
-  <script src="raport-engine.js?v=20261115_click_extract_v5"></script>
+  <script src="app.js?v=20261115_layout_clean_v6"></script>
+  <script src="cbt-engine.js?v=20261115_layout_clean_v6"></script>
+  <script src="raport-engine.js?v=20261115_layout_clean_v6"></script>
 </body>
 
 </html>
