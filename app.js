@@ -2984,8 +2984,8 @@ function isSiswaAlreadyChecked(s) {
   return (!isPending || hasHistory) && (rawStatus === 'sesuai' || rawStatus === 'cocok' || rawStatus === 'tidak sesuai' || rawStatus === 'tidak_cocok' || rawStatus === 'perlu perbaikan' || hasHistory);
 }
 
-// Helper Universal Client-Side Gemini / Vertex AI Express Caller
-// Mendukung otomatis kunci Vertex AI Express Mode ("AQ.Ab8RN6...") maupun kunci AI Studio ("AIzaSy...")
+// Helper Universal Client-Side Gemini Caller
+// Menggunakan model resmi aktif terbaru ("gemini-3.8-flash", "gemini-flash-latest", "gemini-3.5-flash")
 async function callClientGeminiSmart(parts, clientApiKey = '', customConfig = null) {
   let keys = [];
   if (clientApiKey && clientApiKey.trim()) {
@@ -3010,7 +3010,13 @@ async function callClientGeminiSmart(parts, clientApiKey = '', customConfig = nu
 
   if (keys.length === 0) return null;
 
-  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  // Urutan model aktif terbaru di Google Generative Language API v1beta
+  const candidateModels = [
+    "gemini-3.8-flash",
+    "gemini-flash-latest",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash"
+  ];
   const bodyPayload = {
     contents: [{ role: "user", parts: parts }],
     generationConfig: customConfig || { responseMimeType: "application/json" }
@@ -3018,40 +3024,29 @@ async function callClientGeminiSmart(parts, clientApiKey = '', customConfig = nu
 
   for (const rawKey of keys) {
     const key = String(rawKey).trim();
-    const isVertexExpress = key.startsWith("AQ.");
 
     for (const model of candidateModels) {
-      // Kunci 'AQ.' adalah Vertex AI Express Mode key -> wajib diarahkan ke aiplatform.googleapis.com terlebih dahulu
-      const endpoints = isVertexExpress
-        ? [
-            `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`
-          ]
-        : [
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
-            `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${encodeURIComponent(key)}`
-          ];
-
-      for (const url of endpoints) {
-        try {
-          const resp = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': key
-            },
-            body: JSON.stringify(bodyPayload)
-          });
-          if (resp.ok) {
-            const json = await resp.json();
-            const txt = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (txt) {
-              const cleaned = txt.replace(/```json/g, '').replace(/```/g, '').trim();
-              return JSON.parse(cleaned);
-            }
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(bodyPayload)
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          const partsList = json?.candidates?.[0]?.content?.parts || [];
+          // Ambil part teks JSON (abaikan thought part jika thinking aktif)
+          const textPart = partsList.find(p => typeof p.text === 'string' && !p.thought) || partsList[0];
+          const txt = textPart?.text;
+          if (txt) {
+            const cleaned = txt.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(cleaned);
           }
-        } catch (e) { }
-      }
+        }
+      } catch (e) { }
     }
   }
   return null;
