@@ -622,17 +622,160 @@ function hapusDataRaport(id) {
   });
 }
 
-// ==================== VIEWER / PRATINJAU DOKUMEN PDF INTERAKTIF ====================
+// ==================== VIEWER / PRATINJAU DOKUMEN PDF INTERAKTIF (PDF.JS CANVAS) ====================
 let currentPdfBlobUrl = null;
+let currentJsPdfDoc = null;
+let currentPreviewPdfInstance = null;
+let previewPdfPageNum = 1;
+let previewPdfTotalPages = 1;
+let previewPdfScale = 1.0;
+let isRenderingPdfPreview = false;
 
-function tampilkanPratinjauPDF(doc, judulDokumen, namaFileDownload) {
+async function renderPdfPreviewPage(num) {
+  if (!currentPreviewPdfInstance || isRenderingPdfPreview) return;
+  isRenderingPdfPreview = true;
+
+  const canvas = document.getElementById('pdf-viewer-canvas');
+  const spinner = document.getElementById('pdf-viewer-spinner');
+  const pageLabel = document.getElementById('pdf-current-page');
+  const zoomLabel = document.getElementById('pdf-zoom-label');
+  const btnPrev = document.getElementById('btn-pdf-prev');
+  const btnNext = document.getElementById('btn-pdf-next');
+
+  if (spinner) spinner.style.display = 'flex';
+
+  try {
+    const page = await currentPreviewPdfInstance.getPage(num);
+    const viewport = page.getViewport({ scale: previewPdfScale });
+
+    // Dukung Retina Display / High-DPI agar dokumen PDF sangat jernih dan tajam
+    const outputScale = window.devicePixelRatio || 1;
+
+    canvas.width = Math.floor(viewport.width * outputScale);
+    canvas.height = Math.floor(viewport.height * outputScale);
+    canvas.style.width = Math.floor(viewport.width) + "px";
+    canvas.style.height = Math.floor(viewport.height) + "px";
+
+    const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+    const ctx = canvas.getContext('2d');
+
+    const renderContext = {
+      canvasContext: ctx,
+      transform: transform,
+      viewport: viewport
+    };
+
+    await page.render(renderContext).promise;
+
+    previewPdfPageNum = num;
+    if (pageLabel) pageLabel.textContent = num;
+    if (zoomLabel) zoomLabel.textContent = `${Math.round(previewPdfScale * 100)}%`;
+
+    if (btnPrev) btnPrev.disabled = (num <= 1);
+    if (btnNext) btnNext.disabled = (num >= previewPdfTotalPages);
+
+    canvas.style.display = 'block';
+  } catch (err) {
+    console.error("Gagal me-render halaman PDF:", err);
+  } finally {
+    isRenderingPdfPreview = false;
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+
+async function initPdfJsViewer(dataArrayBuffer) {
+  const spinner = document.getElementById('pdf-viewer-spinner');
+  const canvas = document.getElementById('pdf-viewer-canvas');
+  const iframe = document.getElementById('iframe-preview-pdf');
+  const totalLabel = document.getElementById('pdf-total-pages');
+  const wrapper = document.getElementById('pdf-viewer-canvas-wrapper');
+
+  if (spinner) spinner.style.display = 'flex';
+  if (iframe) iframe.style.display = 'none';
+  if (canvas) canvas.style.display = 'none';
+
+  // Pastikan PDF.js Library tersedia
+  if (typeof pdfjsLib === 'undefined') {
+    console.warn('PDF.js belum tersedia, fallback ke browser native...');
+    if (iframe && currentPdfBlobUrl) {
+      iframe.src = currentPdfBlobUrl;
+      iframe.style.display = 'block';
+      if (spinner) spinner.style.display = 'none';
+    }
+    return;
+  }
+
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    
+    // Inisialisasi dokumen dari ArrayBuffer
+    const loadingTask = pdfjsLib.getDocument({ data: dataArrayBuffer });
+    currentPreviewPdfInstance = await loadingTask.promise;
+    previewPdfTotalPages = currentPreviewPdfInstance.numPages;
+    if (totalLabel) totalLabel.textContent = previewPdfTotalPages;
+
+    // Kalkulasi fit width awal berdasarkan lebar layar (terutama layar HP)
+    const firstPage = await currentPreviewPdfInstance.getPage(1);
+    const unscaledViewport = firstPage.getViewport({ scale: 1 });
+    const availableWidth = wrapper ? (wrapper.clientWidth - 32) : (window.innerWidth - 32);
+
+    if (availableWidth > 0 && unscaledViewport.width > 0) {
+      previewPdfScale = Math.min(1.5, Math.max(0.6, availableWidth / unscaledViewport.width));
+    } else {
+      previewPdfScale = window.innerWidth <= 768 ? 0.75 : 1.1;
+    }
+
+    await renderPdfPreviewPage(1);
+  } catch (e) {
+    console.warn("Gagal inisialisasi PDF.js, beralih ke iframe fallback:", e);
+    if (iframe && currentPdfBlobUrl) {
+      iframe.src = currentPdfBlobUrl;
+      iframe.style.display = 'block';
+    }
+  } finally {
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+
+function navigasiPdfViewer(direction) {
+  const target = previewPdfPageNum + direction;
+  if (target >= 1 && target <= previewPdfTotalPages) {
+    renderPdfPreviewPage(target);
+  }
+}
+
+function zoomPdfViewer(delta) {
+  const newScale = Math.min(2.5, Math.max(0.4, previewPdfScale + delta));
+  if (newScale !== previewPdfScale) {
+    previewPdfScale = newScale;
+    renderPdfPreviewPage(previewPdfPageNum);
+  }
+}
+
+function zoomPdfViewerFit() {
+  if (!currentPreviewPdfInstance) return;
+  const wrapper = document.getElementById('pdf-viewer-canvas-wrapper');
+  currentPreviewPdfInstance.getPage(previewPdfPageNum).then(page => {
+    const unscaled = page.getViewport({ scale: 1 });
+    const availableWidth = wrapper ? (wrapper.clientWidth - 32) : (window.innerWidth - 32);
+    previewPdfScale = Math.min(2.2, Math.max(0.5, availableWidth / unscaled.width));
+    renderPdfPreviewPage(previewPdfPageNum);
+  });
+}
+
+window.navigasiPdfViewer = navigasiPdfViewer;
+window.zoomPdfViewer = zoomPdfViewer;
+window.zoomPdfViewerFit = zoomPdfViewerFit;
+
+async function tampilkanPratinjauPDF(doc, judulDokumen, namaFileDownload) {
   if (!doc) return;
 
+  currentJsPdfDoc = doc;
   const modal = document.getElementById('modal-preview-pdf');
-  const iframe = document.getElementById('iframe-preview-pdf');
   const titleEl = document.getElementById('modal-preview-pdf-title');
   const btnDownload = document.getElementById('btn-modal-preview-download');
   const btnPrint = document.getElementById('btn-modal-preview-print');
+  const btnNewTab = document.getElementById('btn-modal-preview-newtab');
 
   if (titleEl) titleEl.textContent = judulDokumen || 'Pratinjau Dokumen PDF';
 
@@ -642,13 +785,10 @@ function tampilkanPratinjauPDF(doc, judulDokumen, namaFileDownload) {
     currentPdfBlobUrl = null;
   }
 
-  // Buat blob URL dari output jsPDF
+  // Buat blob URL & ArrayBuffer dari output jsPDF
   const pdfBlob = doc.output('blob');
   currentPdfBlobUrl = URL.createObjectURL(pdfBlob);
-
-  if (iframe) {
-    iframe.src = currentPdfBlobUrl;
-  }
+  const pdfArrayBuffer = await pdfBlob.arrayBuffer();
 
   if (btnDownload) {
     btnDownload.onclick = () => {
@@ -656,10 +796,17 @@ function tampilkanPratinjauPDF(doc, judulDokumen, namaFileDownload) {
     };
   }
 
+  if (btnNewTab) {
+    btnNewTab.onclick = () => {
+      window.open(currentPdfBlobUrl, '_blank');
+    };
+  }
+
   if (btnPrint) {
     btnPrint.onclick = () => {
       try {
-        if (iframe && iframe.contentWindow) {
+        const iframe = document.getElementById('iframe-preview-pdf');
+        if (iframe && iframe.contentWindow && iframe.style.display !== 'none') {
           iframe.contentWindow.focus();
           iframe.contentWindow.print();
         } else {
@@ -675,6 +822,9 @@ function tampilkanPratinjauPDF(doc, judulDokumen, namaFileDownload) {
     modal.classList.remove('hidden');
   }
 
+  // Jalankan render canvas PDF.js
+  await initPdfJsViewer(pdfArrayBuffer);
+
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
     window.lucide.createIcons();
   }
@@ -683,8 +833,19 @@ function tampilkanPratinjauPDF(doc, judulDokumen, namaFileDownload) {
 function closeModalPreviewPDF() {
   const modal = document.getElementById('modal-preview-pdf');
   const iframe = document.getElementById('iframe-preview-pdf');
+  const canvas = document.getElementById('pdf-viewer-canvas');
+
   if (modal) modal.classList.add('hidden');
   if (iframe) iframe.src = '';
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.style.display = 'none';
+  }
+
+  currentPreviewPdfInstance = null;
+  currentJsPdfDoc = null;
+
   if (currentPdfBlobUrl) {
     URL.revokeObjectURL(currentPdfBlobUrl);
     currentPdfBlobUrl = null;

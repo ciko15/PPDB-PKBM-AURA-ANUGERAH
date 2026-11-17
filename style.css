@@ -3873,7 +3873,7 @@ input[type="file"] {
     margin-right: 0 !important;
   }
 
-  /* Penataan Rapi Aksi Upload Dokumen di Layar HP */
+/* Penataan Rapi Aksi Upload Dokumen di Layar HP */
   .upload-action-box,
   .form-group .upload-action-box,
   .form label > div[style*="display: flex; gap: 8px;"] {
@@ -3884,10 +3884,105 @@ input[type="file"] {
     width: 100% !important;
   }
 
+  /* Cegah file input meluber keluar frame pada layar HP */
+  .file-input-wrapper,
+  .ai-doc-preview-card .file-input-wrapper,
+  .upload-action-box input[type="file"],
+  input[type="file"] {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  /* Toolbar Filter & Pencarian agar responsif penuh dan rapi di HP */
+  .filter-toolbar {
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+
+  .filter-toolbar-top {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .filter-search-box {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .filter-controls-group {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+
+  .filter-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 12px !important;
+    padding: 8px 10px !important;
+  }
+
+  /* Header Modal Preview PDF & Dokumen di HP */
+  .pdf-viewer-header,
+  .doc-viewer-modal-content > div:first-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .pdf-viewer-header-actions {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+  }
+
+  .pdf-viewer-header-actions button {
+    flex: 1 !important;
+    min-height: 44px !important;
+    justify-content: center !important;
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+  }
+
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  #pdf-toolbar-container,
+  #doc-pdf-toolbar {
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+
+  #pdf-toolbar-container > div,
+  #doc-pdf-toolbar > div {
+    display: flex !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  #pdf-toolbar-container button,
+  #doc-pdf-toolbar button {
+    min-height: 38px !important;
+  }
+
+  /* Touch target standard minimal 44px untuk interaksi tombol utama */
+  .btn:not(.btn-sm):not(.tabs button) {
+    min-height: 44px !important;
+  }
+
   /* Tombol kamera trigger & file selector di HP menjadi lebar penuh dan nyaman ditekan */
   .btn-camera-trigger {
     width: 100% !important;
-    height: 42px !important;
+    height: 44px !important;
+    min-height: 44px !important;
     font-size: 13.5px !important;
     font-weight: 600 !important;
     display: inline-flex !important;

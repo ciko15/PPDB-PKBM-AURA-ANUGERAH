@@ -3618,6 +3618,133 @@ function showSiswaDetail(id) {
 // ======================= MODAL LIGHTBOX PRATINJAU BERKAS =======================
 let currentDocUrl = "";
 let currentDocTitle = "";
+let docPdfDoc = null;
+let docPdfCurrentPage = 1;
+let docPdfTotalPages = 1;
+let docPdfScale = 1.0;
+
+async function loadDocPdfPreview(urlOrData) {
+  const canvas = document.getElementById('doc-modal-canvas');
+  const imgEl = document.getElementById('doc-modal-img');
+  const iframeEl = document.getElementById('doc-modal-iframe');
+  const toolbar = document.getElementById('doc-pdf-toolbar');
+  const spinner = document.getElementById('doc-loading-spinner');
+
+  if (imgEl) { imgEl.style.display = 'none'; imgEl.removeAttribute('src'); }
+  if (iframeEl) { iframeEl.style.display = 'none'; iframeEl.removeAttribute('src'); }
+  if (toolbar) toolbar.style.display = 'flex';
+  if (canvas) canvas.style.display = 'block';
+  if (spinner) spinner.style.display = 'flex';
+
+  try {
+    if (typeof pdfjsLib === 'undefined') {
+      throw new Error('PDF.js library belum tersedia.');
+    }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let loadingTask;
+    if (typeof urlOrData === 'string' && urlOrData.startsWith('data:application/pdf;base64,')) {
+      const base64Data = urlOrData.replace('data:application/pdf;base64,', '');
+      const binaryString = atob(base64Data);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      loadingTask = pdfjsLib.getDocument({ data: bytes });
+    } else {
+      loadingTask = pdfjsLib.getDocument(urlOrData);
+    }
+
+    docPdfDoc = await loadingTask.promise;
+    docPdfTotalPages = docPdfDoc.numPages;
+    docPdfCurrentPage = 1;
+    docPdfScale = 1.0;
+
+    const elTotal = document.getElementById('doc-pdf-total');
+    if (elTotal) elTotal.textContent = docPdfTotalPages;
+
+    await renderDocPdfPage(docPdfCurrentPage);
+  } catch (err) {
+    console.warn("Gagal render PDF via canvas:", err);
+    // Fallback ke iframe jika PDF.js gagal
+    if (canvas) canvas.style.display = 'none';
+    if (toolbar) toolbar.style.display = 'none';
+    if (iframeEl) {
+      iframeEl.style.display = 'block';
+      iframeEl.src = urlOrData;
+    }
+  } finally {
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+
+async function renderDocPdfPage(num) {
+  if (!docPdfDoc) return;
+  const canvas = document.getElementById('doc-modal-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  try {
+    const page = await docPdfDoc.getPage(num);
+    const viewportBox = document.getElementById('doc-viewer-body');
+    const availableWidth = viewportBox ? Math.max(viewportBox.clientWidth - 32, 280) : 560;
+
+    let unscaledViewport = page.getViewport({ scale: 1.0 });
+    let baseScale = availableWidth / unscaledViewport.width;
+    if (baseScale > 1.8) baseScale = 1.8;
+    if (baseScale < 0.4) baseScale = 0.4;
+
+    const viewport = page.getViewport({ scale: baseScale * docPdfScale });
+    const outputScale = window.devicePixelRatio || 1;
+
+    canvas.width = Math.floor(viewport.width * outputScale);
+    canvas.height = Math.floor(viewport.height * outputScale);
+    canvas.style.width = Math.floor(viewport.width) + "px";
+    canvas.style.height = Math.floor(viewport.height) + "px";
+
+    const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+
+    const renderContext = {
+      canvasContext: ctx,
+      transform: transform,
+      viewport: viewport
+    };
+
+    await page.render(renderContext).promise;
+
+    const elPage = document.getElementById('doc-pdf-page');
+    const elZoom = document.getElementById('doc-pdf-zoom');
+    if (elPage) elPage.textContent = num;
+    if (elZoom) elZoom.textContent = Math.round(docPdfScale * 100) + '%';
+  } catch (e) {
+    console.error("Error rendering PDF doc page:", e);
+  }
+}
+
+function navigasiDocPdf(dir) {
+  if (!docPdfDoc) return;
+  const target = docPdfCurrentPage + dir;
+  if (target >= 1 && target <= docPdfTotalPages) {
+    docPdfCurrentPage = target;
+    renderDocPdfPage(docPdfCurrentPage);
+  }
+}
+
+function zoomDocPdf(delta) {
+  if (!docPdfDoc) return;
+  const nextScale = Math.round((docPdfScale + delta) * 10) / 10;
+  if (nextScale >= 0.5 && nextScale <= 3.0) {
+    docPdfScale = nextScale;
+    renderDocPdfPage(docPdfCurrentPage);
+  }
+}
+
+function zoomDocPdfFit() {
+  if (!docPdfDoc) return;
+  docPdfScale = 1.0;
+  renderDocPdfPage(docPdfCurrentPage);
+}
 
 function previewDocModal(type, siswaId, namaSiswa) {
   const s = siswaDataList.find(x => String(x.id) === String(siswaId));
@@ -3649,12 +3776,16 @@ function previewDocModal(type, siswaId, namaSiswa) {
   const modal = document.getElementById('modal-doc-viewer');
   const titleEl = document.getElementById('doc-modal-title');
   const imgEl = document.getElementById('doc-modal-img');
+  const canvasEl = document.getElementById('doc-modal-canvas');
   const iframeEl = document.getElementById('doc-modal-iframe');
+  const toolbar = document.getElementById('doc-pdf-toolbar');
 
   if (titleEl) titleEl.textContent = `${label} - ${namaSiswa || 'Siswa'}`;
 
   const isDrive = url.includes('drive.google.com');
   const isPdf = url.toLowerCase().includes('.pdf') || url.includes('application/pdf');
+
+  if (modal) modal.classList.remove('hidden');
 
   if (isDrive) {
     let previewUrl = url;
@@ -3666,23 +3797,27 @@ function previewDocModal(type, siswaId, namaSiswa) {
         if (id) previewUrl = `https://drive.google.com/file/d/${id}/preview`;
       } catch (e) { }
     }
-    imgEl.style.display = 'none';
-    imgEl.removeAttribute('src');
-    iframeEl.style.display = 'block';
-    iframeEl.src = previewUrl;
+    if (imgEl) { imgEl.style.display = 'none'; imgEl.removeAttribute('src'); }
+    if (canvasEl) canvasEl.style.display = 'none';
+    if (toolbar) toolbar.style.display = 'none';
+    if (iframeEl) {
+      iframeEl.style.display = 'block';
+      iframeEl.src = previewUrl;
+    }
   } else if (isPdf) {
-    imgEl.style.display = 'none';
-    imgEl.removeAttribute('src');
-    iframeEl.style.display = 'block';
-    iframeEl.src = url;
+    loadDocPdfPreview(url);
   } else {
-    iframeEl.style.display = 'none';
-    iframeEl.removeAttribute('src');
-    imgEl.style.display = 'block';
-    imgEl.src = url;
+    if (toolbar) toolbar.style.display = 'none';
+    if (canvasEl) canvasEl.style.display = 'none';
+    if (iframeEl) {
+      iframeEl.style.display = 'none';
+      iframeEl.removeAttribute('src');
+    }
+    if (imgEl) {
+      imgEl.style.display = 'block';
+      imgEl.src = url;
+    }
   }
-
-  if (modal) modal.classList.remove('hidden');
 }
 
 function openDocViewerModal(url, customTitle) {
@@ -3697,12 +3832,16 @@ function openDocViewerModal(url, customTitle) {
   const modal = document.getElementById('modal-doc-viewer');
   const titleEl = document.getElementById('doc-modal-title');
   const imgEl = document.getElementById('doc-modal-img');
+  const canvasEl = document.getElementById('doc-modal-canvas');
   const iframeEl = document.getElementById('doc-modal-iframe');
+  const toolbar = document.getElementById('doc-pdf-toolbar');
 
   if (titleEl) titleEl.textContent = customTitle || 'Pratinjau Dokumen';
 
   const isDrive = url.includes('drive.google.com');
   const isPdf = url.toLowerCase().includes('.pdf') || url.includes('application/pdf');
+
+  if (modal) modal.classList.remove('hidden');
 
   if (isDrive) {
     let previewUrl = url;
@@ -3714,24 +3853,18 @@ function openDocViewerModal(url, customTitle) {
         if (id) previewUrl = `https://drive.google.com/file/d/${id}/preview`;
       } catch (e) { }
     }
-    if (imgEl) {
-      imgEl.style.display = 'none';
-      imgEl.removeAttribute('src');
-    }
+    if (imgEl) { imgEl.style.display = 'none'; imgEl.removeAttribute('src'); }
+    if (canvasEl) canvasEl.style.display = 'none';
+    if (toolbar) toolbar.style.display = 'none';
     if (iframeEl) {
       iframeEl.style.display = 'block';
       iframeEl.src = previewUrl;
     }
   } else if (isPdf) {
-    if (imgEl) {
-      imgEl.style.display = 'none';
-      imgEl.removeAttribute('src');
-    }
-    if (iframeEl) {
-      iframeEl.style.display = 'block';
-      iframeEl.src = url;
-    }
+    loadDocPdfPreview(url);
   } else {
+    if (toolbar) toolbar.style.display = 'none';
+    if (canvasEl) canvasEl.style.display = 'none';
     if (iframeEl) {
       iframeEl.style.display = 'none';
       iframeEl.removeAttribute('src');
@@ -3741,8 +3874,6 @@ function openDocViewerModal(url, customTitle) {
       imgEl.src = url;
     }
   }
-
-  if (modal) modal.classList.remove('hidden');
 }
 
 window.openDocViewerModal = openDocViewerModal;
