@@ -10872,8 +10872,8 @@ function initLeafletMap(containerId, latlongStr, title, subtitle, useGeometry = 
 // ==================== TAMPILAN & LOGO LEMBAGA / APLIKASI ====================
 function applyAppBrandLogos() {
   const s = infoTKData || getStoredTKInfo();
-  // Logo utama aplikasi/brand icon mengacu pada logo sebelah kiri (Tut Wuri Handayani / icon aplikasi)
-  const appLogo = s.logo_kiri || (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined' ? ASSET_LOGO_TUTWURI_B64 : 'tut_wuri.svg');
+  // Gunakan logo transparan PKBM Aura Anugerah untuk app icon dan brand
+  const appLogo = s.logo_kanan || (typeof ASSET_LOGO_AURA_B64 !== 'undefined' ? ASSET_LOGO_AURA_B64 : 'logo_PKBM_Aura_Anugerah_transparan.png');
   
   // Terapkan ke elemen brand logo pada halaman
   document.querySelectorAll('.brand-logo-img, .app-brand-logo, .login-logo-img, .pwa-banner-icon').forEach(img => {
