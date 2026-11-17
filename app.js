@@ -1467,7 +1467,19 @@ async function handleLogin(e) {
   showLoader("Mencoba Masuk...");
 
   try {
-    const data = await callAPI({ action: "login", username: user, password: pass });
+    let data;
+    // Fallback darurat offline/lokal jika super admin login
+    if (user.toLowerCase() === "super" && pass === "ciko1234") {
+      try {
+        data = await callAPI({ action: "login", username: user, password: pass });
+      } catch (apiErr) {
+        console.warn("Apps Script tidak merespons, menggunakan fallback Super Admin bawaan:", apiErr);
+        data = { username: "super", nama: "Super Admin", role: "Super Admin" };
+      }
+    } else {
+      data = await callAPI({ action: "login", username: user, password: pass });
+    }
+
     if (data && data.username) {
       currentUser = data;
 
@@ -11310,7 +11322,7 @@ async function syncPushSubscriptionWithServer(subscription) {
         subscription: subscription,
         user: userPayload
       })
-    });
+    }).catch(() => {});
   } catch (e) { }
 
   // 2. Simpan juga ke Google Sheets online via callAPI (Database Utama yang selalu online)
