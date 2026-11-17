@@ -15,3 +15,4 @@ export default async function handler(req, res) {
     publicKey: VAPID_PUBLIC_KEY
   });
 }
+
