@@ -1087,6 +1087,7 @@ async function callAPI(payload) {
 // ======================= CLIENT ROUTING & SESSION =======================
 function bukaModalLoginPortal() {
   if (modalLogin) {
+    modalLogin.style.display = '';
     modalLogin.classList.remove('hidden');
     setTimeout(() => {
       applyCaptchaVisibility();
@@ -1539,6 +1540,7 @@ function handleLogout() {
 
       // Otomatis buka form login
       if (modalLogin) {
+        modalLogin.style.display = '';
         modalLogin.classList.remove('hidden');
         setTimeout(() => {
           applyCaptchaVisibility();
@@ -1550,7 +1552,10 @@ function handleLogout() {
 
 function showDashboard() {
   pageLanding.classList.add('hidden');
-  if (modalLogin) modalLogin.classList.add('hidden');
+  if (modalLogin) {
+    modalLogin.classList.add('hidden');
+    modalLogin.style.display = 'none';
+  }
   pageDashboard.classList.remove('hidden');
   if (activeUserName) activeUserName.textContent = currentUser.nama;
   if (activeUserRole) activeUserRole.textContent = currentUser.role;

@@ -3853,13 +3853,17 @@ input[type="file"] {
   }
 
   /* Khusus form modal login di HP agar tampil utuh, tidak terpotong, dan bisa di-scroll dengan leluasa */
-  #modal-login {
+  #modal-login:not(.hidden) {
     padding: 12px !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+  }
+
+  #modal-login.hidden {
+    display: none !important;
   }
 
   #modal-login .login-wrapper-container {
