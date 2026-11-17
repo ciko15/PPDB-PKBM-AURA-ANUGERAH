@@ -28,14 +28,14 @@
       "short_name": "Portal",
       "description": "Buka Portal Login SIGAP AURA",
       "url": "/portal",
-      "icons": [{ "src": "logo_PKBM_Aura_Anugerah_transparan.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Informasi PKBM",
       "short_name": "Info PKBM",
       "description": "Lihat Informasi Kursus & PPDB",
       "url": "/pkbm",
-      "icons": [{ "src": "logo_PKBM_Aura_Anugerah_transparan.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

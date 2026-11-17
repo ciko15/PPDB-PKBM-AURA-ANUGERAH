@@ -10872,17 +10872,22 @@ function initLeafletMap(containerId, latlongStr, title, subtitle, useGeometry = 
 // ==================== TAMPILAN & LOGO LEMBAGA / APLIKASI ====================
 function applyAppBrandLogos() {
   const s = infoTKData || getStoredTKInfo();
-  const logoKanan = s.logo_kanan || (typeof ASSET_LOGO_AURA_B64 !== 'undefined' ? ASSET_LOGO_AURA_B64 : 'logo_PKBM_Aura_Anugerah_transparan.png');
+  // Logo utama aplikasi/brand icon mengacu pada logo sebelah kiri (Tut Wuri Handayani / icon aplikasi)
+  const appLogo = s.logo_kiri || (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined' ? ASSET_LOGO_TUTWURI_B64 : 'tut_wuri.svg');
   
   // Terapkan ke elemen brand logo pada halaman
   document.querySelectorAll('.brand-logo-img, .app-brand-logo, .login-logo-img, .pwa-banner-icon').forEach(img => {
-    img.src = logoKanan;
+    img.src = appLogo;
   });
 
   // Terapkan favicon browser jika didukung
   const favIcon = document.querySelector("link[rel*='icon']");
-  if (favIcon && logoKanan.startsWith('data:image')) {
-    favIcon.href = logoKanan;
+  if (favIcon) {
+    if (appLogo.startsWith('data:image')) {
+      favIcon.href = appLogo;
+    } else {
+      favIcon.href = '/icon-192.png';
+    }
   }
 }
 
