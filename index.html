@@ -3802,16 +3802,6 @@
           </div>
         </div>
 
-        <div class="form-group" style="margin-top: 14px; background: var(--surface-2); padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border-color);">
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-weight: 700; color: var(--text-color);">
-            <input type="checkbox" id="paket-butuh-kartu" style="width: 17px; height: 17px; cursor: pointer;">
-            <span>🪪 Wajibkan Kartu Ujian Resmi (Event Semester / UTS / UAS / USP)</span>
-          </label>
-          <small style="color: var(--text-muted); display: block; margin-top: 4px; line-height: 1.4;">
-            Centang opsi ini jika ujian ini adalah event resmi (UTS, UAS, dll.) di mana peserta didik dapat mencetak/mengunduh <b>Kartu Peserta Ujian</b> resmi ber-barcode/identitas. Untuk evaluasi modul harian tidak perlu dicentang.
-          </small>
-        </div>
-
         <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
           <button type="button" class="btn btn-outline" onclick="closeModalFormPaketSoal()">Batal</button>
           <button type="submit" class="btn btn-primary"><i data-lucide="save"
@@ -4820,10 +4810,10 @@
         <div class="form-group">
           <label>Pilih Event / Paket Ujian <span style="color:red">*</span></label>
           <select id="cetak-kartu-pilih-paket" class="form-control" required onchange="onPaketKartuUjianChange(this.value)">
-            <option value="">-- Pilih Paket Ujian Resmi --</option>
+            <option value="">-- Pilih Paket Ujian --</option>
           </select>
           <small style="color: var(--text-muted); font-size: 11.5px; margin-top: 4px; display: block;">
-            Menampilkan paket ujian yang ditandai <b>Wajib Kartu Ujian</b> atau jenis UTS / UAS / USP.
+            Pilih paket soal CBT atau mata pelajaran ujian yang ingin dicetak kartu pesertanya.
           </small>
         </div>
 
@@ -5532,7 +5522,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="transkrip-assets.js"></script>
   <script src="app.js?v=20261117_mobile_login_fix1"></script>
-  <script src="cbt-engine.js?v=20261117_mobile_notif_fix18"></script>
+  <script src="cbt-engine.js?v=20261125_cetak_kartu_fix1"></script>
   <script src="raport-engine.js?v=20261117_mobile_notif_fix18"></script>
 </body>
 

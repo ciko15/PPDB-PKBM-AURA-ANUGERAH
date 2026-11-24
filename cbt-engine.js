@@ -1886,7 +1886,7 @@ function renderBankSoalTable() {
         '<td><small style="color: var(--text-muted);">' + (pkt.pembuat || 'Tutor') + '</small></td>',
         '<td style="text-align: right;">',
           '<div style="display: inline-flex; gap: 6px;">',
-            (isButuhKartu ? '<button class="btn btn-sm btn-outline" style="font-size: 11.5px; padding: 4px 8px; border-color: #f472b6; color: #db2777;" onclick="cetakKartuUjianPaketLangsung(\'' + pkt.id + '\')" title="Cetak Kartu Ujian Siswa"><i data-lucide="printer" style="width: 13px; height: 13px;"></i> Kartu</button>' : ''),
+            '<button class="btn btn-sm btn-outline" style="font-size: 11.5px; padding: 4px 8px; border-color: #f472b6; color: #db2777;" onclick="cetakKartuUjianPaketLangsung(\'' + pkt.id + '\')" title="Cetak Kartu Ujian Siswa"><i data-lucide="printer" style="width: 13px; height: 13px;"></i> Kartu</button>',
             '<button class="btn btn-sm" style="background: #059669; color: #fff; border: none; font-size: 12px; padding: 5px 10px;" onclick="bukaKelolaButirSoal(\'' + pkt.id + '\')" title="Kelola Pertanyaan & Kunci Jawaban">',
               '📝 Butir Soal (' + countButir + ')',
             '</button>',
@@ -1918,29 +1918,24 @@ function onJenisUjianChange(jenis) {
     if (judulInput && (!judulInput.value || judulInput.value.startsWith('Evaluasi'))) {
       judulInput.value = 'Penilaian Tengah Semester (PTS) Ganjil';
     }
-    if (checkKartu) checkKartu.checked = true;
   } else if (jenis === 'UAS') {
     if (durasiInput) durasiInput.value = '90';
     if (judulInput && (!judulInput.value || judulInput.value.startsWith('Evaluasi'))) {
       judulInput.value = 'Penilaian Akhir Semester (PAS) Genap';
     }
-    if (checkKartu) checkKartu.checked = true;
   } else if (jenis === 'Ujian Sekolah') {
     if (durasiInput) durasiInput.value = '90';
     if (judulInput && (!judulInput.value || judulInput.value.startsWith('Evaluasi'))) {
       judulInput.value = 'Ujian Satuan Pendidikan (USP) Kelulusan';
     }
-    if (checkKartu) checkKartu.checked = true;
   } else if (jenis === 'Placement Test') {
     if (durasiInput) durasiInput.value = '45';
     if (judulInput && (!judulInput.value || judulInput.value.startsWith('Evaluasi'))) {
       judulInput.value = 'Asesmen Diagnostik / Penempatan Siswa Baru';
     }
-    if (checkKartu) checkKartu.checked = false;
   } else {
     // Evaluasi Modul
     if (durasiInput) durasiInput.value = '15';
-    if (checkKartu) checkKartu.checked = false;
   }
 }
 
@@ -3112,19 +3107,19 @@ function bukaModalPilihCetakKartuUjian(defaultPaketId) {
   const boxInfo = document.getElementById('box-info-cetak-kartu');
   if (!modal || !selPaket) return;
 
-  // Filter paket yang butuh kartu atau event resmi
-  const paketResmi = cbtBankSoalList.filter(p => !!p.butuhKartu || ['UTS', 'UAS', 'Ujian Sekolah'].includes(p.jenisUjian));
+  // Semua paket soal CBT dapat dicetak kartu pesertanya
+  const paketResmi = cbtBankSoalList;
 
   if (paketResmi.length === 0) {
     Swal.fire({
       icon: 'info',
-      title: 'Belum Ada Event Ujian Resmi',
-      text: 'Tidak ada paket ujian yang mewajibkan kartu ujian. Anda dapat mengaktifkannya pada opsi "Wajibkan Kartu Ujian" saat membuat/mengedit paket soal CBT.'
+      title: 'Belum Ada Paket Ujian',
+      text: 'Belum ada paket soal CBT yang dibuat. Silakan buat paket soal terlebih dahulu.'
     });
     return;
   }
 
-  selPaket.innerHTML = '<option value="">-- Pilih Paket Ujian Resmi --</option>' + 
+  selPaket.innerHTML = '<option value="">-- Pilih Paket Ujian --</option>' + 
     paketResmi.map(p => {
       const label = `[${p.jenisUjian || 'UJIAN'}] ${p.kode} - ${p.judul} (${p.jenjang} · ${p.kelas || 'Semua Kelas'})`;
       return `<option value="${p.id}">${label}</option>`;
