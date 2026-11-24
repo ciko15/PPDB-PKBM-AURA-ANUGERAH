@@ -1578,14 +1578,16 @@ function saveBankSoalToStorage() {
 
 function switchUjianSubTab(tabName) {
   const tabBank = document.getElementById('subtab-bank-soal');
+  const tabSemuaButir = document.getElementById('subtab-semua-butir-soal');
   const tabHasil = document.getElementById('subtab-hasil-ujian');
   const tabSiswa = document.getElementById('subtab-siswa-cbt');
   const btnBank = document.getElementById('tab-btn-bank-soal');
+  const btnSemuaButir = document.getElementById('tab-btn-semua-butir-soal');
   const btnHasil = document.getElementById('tab-btn-hasil-ujian');
   const btnSiswa = document.getElementById('tab-btn-siswa-cbt');
 
   // Reset tab active indicators
-  [btnBank, btnHasil, btnSiswa].forEach(b => {
+  [btnBank, btnSemuaButir, btnHasil, btnSiswa].forEach(b => {
     if (b) {
       b.style.borderBottom = '2px solid transparent';
       b.style.color = 'var(--text-muted)';
@@ -1594,6 +1596,7 @@ function switchUjianSubTab(tabName) {
   });
 
   if (tabBank) tabBank.classList.add('hidden');
+  if (tabSemuaButir) tabSemuaButir.classList.add('hidden');
   if (tabHasil) tabHasil.classList.add('hidden');
   if (tabSiswa) tabSiswa.classList.add('hidden');
 
@@ -1605,6 +1608,14 @@ function switchUjianSubTab(tabName) {
       btnBank.style.fontWeight = '700';
     }
     renderBankSoalTable();
+  } else if (tabName === 'semua-butir-soal') {
+    if (tabSemuaButir) tabSemuaButir.classList.remove('hidden');
+    if (btnSemuaButir) {
+      btnSemuaButir.style.borderBottom = '2px solid #7c3aed';
+      btnSemuaButir.style.color = '#7c3aed';
+      btnSemuaButir.style.fontWeight = '700';
+    }
+    renderKatalogSemuaButirSoal();
   } else if (tabName === 'siswa-cbt') {
     if (tabSiswa) tabSiswa.classList.remove('hidden');
     if (btnSiswa) {
@@ -1824,6 +1835,12 @@ function renderBankSoalTable() {
 
   const countEl = document.getElementById('count-paket-soal');
   if (countEl) countEl.textContent = cbtBankSoalList.length;
+
+  const countSemuaButirEl = document.getElementById('count-semua-butir-soal');
+  if (countSemuaButirEl) {
+    const totalSemua = ambilSemuaButirSoalMaster().length;
+    countSemuaButirEl.textContent = totalSemua;
+  }
 
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">Tidak ada paket soal CBT yang cocok. Silakan klik tombol <b>Buat Paket Soal Baru</b> di atas.</td></tr>';
@@ -2691,6 +2708,21 @@ function ambilSemuaButirSoalMaster() {
   if (typeof cbtBankSoalList === 'undefined' || !cbtBankSoalList) return masterList;
 
   cbtBankSoalList.forEach(pkt => {
+    // Cari nama mata pelajaran dari linked book atau dari judul paket
+    let namaMapel = 'Umum';
+    if (pkt.bukuId && typeof bukuList !== 'undefined') {
+      const bObj = bukuList.find(x => String(x.id) === String(pkt.bukuId));
+      if (bObj && (bObj.mapel || bObj.kategori)) {
+        namaMapel = bObj.mapel || bObj.kategori;
+      }
+    }
+    if (namaMapel === 'Umum' && pkt.judul) {
+      const parts = pkt.judul.split(/[-–:]/);
+      if (parts.length > 1) {
+        namaMapel = parts[0].trim();
+      }
+    }
+
     if (pkt.soalList && Array.isArray(pkt.soalList)) {
       pkt.soalList.forEach((s, idx) => {
         masterList.push({
@@ -2700,7 +2732,7 @@ function ambilSemuaButirSoalMaster() {
           paketJudul: pkt.judul || 'Paket Ujian',
           jenjang: s.jenjang || pkt.jenjang || 'Paket C',
           kelas: s.kelas || pkt.kelas || 'Semua Kelas',
-          mapel: s.mapel || (pkt.judul ? pkt.judul.split(':')[0] : 'Umum'),
+          mapel: s.mapel || namaMapel,
           pertanyaan: s.pertanyaan || '',
           opsi: s.opsi || [],
           kunci: s.kunci || 'A',
@@ -3528,7 +3560,403 @@ function gambarHalamanKartuUjian(doc, pkt, s) {
   doc.text(`Dokumen resmi diterbitkan secara otomatis oleh Sistem CBT PKBM Aura Anugerah pada ${new Date().toLocaleString('id-ID')}`, 14, pageHeight - 7);
 }
 
+// ==================== KATALOG SEMUA BUTIR SOAL & GENERATOR GABUNG/ACAK ====================
+
+/**
+ * Render Katalog Semua Butir Soal dengan filter Jenjang, Mapel, dan Search
+ */
+function renderKatalogSemuaButirSoal() {
+  const container = document.getElementById('container-katalog-semua-butir');
+  const countFilteredEl = document.getElementById('label-count-semua-butir-filtered');
+  const countTotalEl = document.getElementById('label-count-semua-butir-total');
+  const countTabEl = document.getElementById('count-semua-butir-soal');
+  const selMapel = document.getElementById('filter-semua-butir-mapel');
+  if (!container) return;
+
+  const allItems = ambilSemuaButirSoalMaster();
+  if (countTotalEl) countTotalEl.textContent = allItems.length;
+  if (countTabEl) countTabEl.textContent = allItems.length;
+
+  // Isi dropdown filter mapel jika belum lengkap
+  if (selMapel) {
+    const currentVal = selMapel.value;
+    const mapelSet = new Set();
+    allItems.forEach(it => {
+      if (it.mapel && it.mapel !== 'Umum') mapelSet.add(it.mapel);
+    });
+    if (typeof bukuList !== 'undefined' && Array.isArray(bukuList)) {
+      bukuList.forEach(b => {
+        if (b.mapel) mapelSet.add(b.mapel);
+      });
+    }
+
+    let opts = '<option value="">Semua Mata Pelajaran</option>';
+    Array.from(mapelSet).sort().forEach(m => {
+      opts += `<option value="${m}" ${currentVal === m ? 'selected' : ''}>${m}</option>`;
+    });
+    selMapel.innerHTML = opts;
+  }
+
+  const query = (document.getElementById('search-semua-butir-soal')?.value || '').toLowerCase().trim();
+  const jenjang = document.getElementById('filter-semua-butir-jenjang')?.value || '';
+  const mapel = document.getElementById('filter-semua-butir-mapel')?.value || '';
+
+  const filtered = allItems.filter(item => {
+    const matchQuery = !query || 
+      item.pertanyaan.toLowerCase().includes(query) || 
+      item.paketJudul.toLowerCase().includes(query) || 
+      item.paketKode.toLowerCase().includes(query) ||
+      (item.opsi && item.opsi.some(o => (o.t || '').toLowerCase().includes(query)));
+    const matchJenjang = !jenjang || item.jenjang === jenjang || item.jenjang === 'Umum';
+    const matchMapel = !mapel || item.mapel.toLowerCase() === mapel.toLowerCase();
+    return matchQuery && matchJenjang && matchMapel;
+  });
+
+  if (countFilteredEl) countFilteredEl.textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 48px 16px; border: 2px dashed var(--border-color); border-radius: 10px; color: var(--text-muted); background: var(--surface-color);">
+        <i data-lucide="help-circle" style="width: 36px; height: 36px; margin-bottom: 8px; opacity: 0.5;"></i>
+        <div style="font-weight: 700; font-size: 15px; color: var(--text-color);">Tidak ada butir soal yang sesuai filter</div>
+        <div style="font-size: 12px; margin-top: 4px;">Coba ubah kata kunci pencarian, filter jenjang, atau filter mata pelajaran.</div>
+      </div>
+    `;
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = filtered.map((item, idx) => {
+    return `
+      <div class="card" style="background: var(--surface-color); border: 1.5px solid var(--border-color); border-radius: 10px; padding: 16px; box-shadow: var(--shadow-sm); transition: transform 0.15s, border-color 0.15s;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="background: var(--primary-light); color: var(--primary-color); padding: 3px 10px; border-radius: 6px; font-weight: 800; font-size: 12.5px;">
+              #${idx + 1}
+            </span>
+            <span class="badge" style="background: rgba(2, 132, 199, 0.12); color: #0284c7; font-weight: 700; font-size: 11px;">
+              ${item.jenjang}
+            </span>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; font-weight: 700; font-size: 11px;">
+              ${item.kelas || 'Semua Kelas'}
+            </span>
+            <span class="badge" style="background: #fdf2f8; color: #db2777; font-weight: 700; font-size: 11px;">
+              📚 ${item.mapel}
+            </span>
+            <span style="font-size: 11.5px; color: var(--text-muted);">
+              Asal Paket: <b>${item.paketKode}</b> - ${item.paketJudul}
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 700; background: #ecfdf5; color: #047857; padding: 3px 8px; border-radius: 4px; border: 1px solid #a7f3d0;">
+              Kunci Jawaban: ${item.kunci}
+            </span>
+            <button class="btn btn-sm btn-outline" onclick="bukaKelolaButirSoal('${item.paketId}')" style="font-size: 11px; padding: 3px 8px;" title="Buka editor paket soal ini">
+              <i data-lucide="external-link" style="width: 12px; height: 12px;"></i> Edit di Paket
+            </button>
+          </div>
+        </div>
+
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-color); line-height: 1.5; margin-bottom: 10px;">
+          ${item.pertanyaan}
+        </div>
+
+        ${item.media ? `
+          <div style="margin-bottom: 10px; padding: 6px 10px; background: var(--surface-2); border-radius: 6px; font-size: 12px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="paperclip" style="width: 13px; height: 13px;"></i> Memiliki Lampiran Media (${item.media.type})
+          </div>
+        ` : ''}
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; font-size: 13px;">
+          ${(item.opsi || []).map(o => {
+            const isKunci = o.k === item.kunci;
+            return `
+              <div style="padding: 6px 10px; border-radius: 6px; border: 1px solid ${isKunci ? '#10b981' : 'var(--border-color)'}; background: ${isKunci ? '#ecfdf5' : 'var(--surface-2)'}; color: ${isKunci ? '#065f46' : 'var(--text-color)'}; font-weight: ${isKunci ? '700' : 'normal'};">
+                <span style="font-weight: 800; color: ${isKunci ? '#059669' : 'var(--primary-color)'}; margin-right: 4px;">${o.k}.</span> ${o.t}
+                ${isKunci ? ' <span style="font-size: 11px; color: #059669;">✓ (Kunci)</span>' : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+/**
+ * State & Modal Generator Gabung / Acak Soal Semesteran
+ */
+let gabungSelectedPaketIds = new Set();
+
+function bukaModalGabungAcakSoal() {
+  const modal = document.getElementById('modal-gabung-acak-soal');
+  if (!modal) return;
+
+  gabungSelectedPaketIds.clear();
+
+  // Atur nilai default form
+  const selJenjang = document.getElementById('gabung-jenjang');
+  const selKelas = document.getElementById('gabung-kelas');
+  const inputJudul = document.getElementById('gabung-judul-baru');
+  const inputTarget = document.getElementById('gabung-target-jumlah-soal');
+
+  if (selJenjang) selJenjang.value = 'Paket C';
+  if (selKelas) selKelas.value = 'Kelas X';
+  if (inputJudul) inputJudul.value = 'Penilaian Akhir Semester (PAS) Terpadu Paket C';
+  if (inputTarget) inputTarget.value = '30';
+
+  renderPilihPaketSumberGabung();
+  updateKeteranganAcakSoal();
+
+  modal.classList.remove('hidden');
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+function closeModalGabungAcakSoal() {
+  const modal = document.getElementById('modal-gabung-acak-soal');
+  if (modal) modal.classList.add('hidden');
+  gabungSelectedPaketIds.clear();
+}
+
+function onFilterPaketSumberGabungChange() {
+  const jenjang = document.getElementById('gabung-jenjang')?.value || 'Paket C';
+  const inputJudul = document.getElementById('gabung-judul-baru');
+  if (inputJudul && !inputJudul.value.includes('Custom')) {
+    inputJudul.value = `Penilaian Akhir Semester (PAS) Terpadu ${jenjang}`;
+  }
+  renderPilihPaketSumberGabung();
+  updateKeteranganAcakSoal();
+}
+
+function renderPilihPaketSumberGabung() {
+  const container = document.getElementById('container-pilih-paket-sumber');
+  const countPaketEl = document.getElementById('count-paket-sumber-terpilih');
+  const totalPoolEl = document.getElementById('total-pool-soal-tersedia');
+  if (!container) return;
+
+  const jenjang = document.getElementById('gabung-jenjang')?.value || '';
+
+  const matchedPaket = cbtBankSoalList.filter(p => {
+    return !jenjang || p.jenjang === jenjang || p.jenjang === 'Umum';
+  });
+
+  if (matchedPaket.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 12.5px;">
+        Tidak ada paket soal untuk jenjang ${jenjang}. Silakan buat paket soal terlebih dahulu.
+      </div>
+    `;
+    if (countPaketEl) countPaketEl.textContent = '0';
+    if (totalPoolEl) totalPoolEl.textContent = '0';
+    return;
+  }
+
+  let totalPool = 0;
+  let countSelected = 0;
+
+  container.innerHTML = matchedPaket.map(pkt => {
+    const isChecked = gabungSelectedPaketIds.has(pkt.id);
+    const jmlSoal = (pkt.soalList && Array.isArray(pkt.soalList)) ? pkt.soalList.length : 0;
+    if (isChecked) {
+      countSelected++;
+      totalPool += jmlSoal;
+    }
+
+    return `
+      <label style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; background: ${isChecked ? 'rgba(124, 58, 237, 0.08)' : 'var(--surface-2)'}; border: 1.5px solid ${isChecked ? '#7c3aed' : 'var(--border-color)'}; border-radius: 6px; cursor: pointer; margin: 0; transition: all 0.15s;">
+        <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+          <input type="checkbox" value="${pkt.id}" ${isChecked ? 'checked' : ''} onchange="onPaketSumberCheckChange('${pkt.id}', this.checked)" style="width: 17px; height: 17px; accent-color: #7c3aed; cursor: pointer;">
+          <span style="font-weight: 700; font-size: 12px; font-family: monospace; background: var(--surface-color); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color);">${pkt.kode}</span>
+          <span style="font-weight: 600; font-size: 12.5px; color: var(--text-color); text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">${pkt.judul}</span>
+          <span style="font-size: 11px; color: var(--text-muted);">(${pkt.kelas || 'Semua Kelas'})</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 11.5px; font-weight: 700; color: ${jmlSoal > 0 ? '#059669' : '#dc2626'}; background: ${jmlSoal > 0 ? '#ecfdf5' : '#fee2e2'}; padding: 2px 8px; border-radius: 4px;">
+            ${jmlSoal} Soal
+          </span>
+        </div>
+      </label>
+    `;
+  }).join('');
+
+  if (countPaketEl) countPaketEl.textContent = countSelected;
+  if (totalPoolEl) totalPoolEl.textContent = totalPool;
+}
+
+function onPaketSumberCheckChange(paketId, isChecked) {
+  if (isChecked) {
+    gabungSelectedPaketIds.add(paketId);
+  } else {
+    gabungSelectedPaketIds.delete(paketId);
+  }
+  renderPilihPaketSumberGabung();
+  updateKeteranganAcakSoal();
+}
+
+function toggleSelectAllPaketSumberGabung() {
+  const jenjang = document.getElementById('gabung-jenjang')?.value || '';
+  const matchedPaket = cbtBankSoalList.filter(p => !jenjang || p.jenjang === jenjang || p.jenjang === 'Umum');
+
+  if (gabungSelectedPaketIds.size >= matchedPaket.length) {
+    gabungSelectedPaketIds.clear();
+  } else {
+    matchedPaket.forEach(p => gabungSelectedPaketIds.add(p.id));
+  }
+  renderPilihPaketSumberGabung();
+  updateKeteranganAcakSoal();
+}
+
+function updateKeteranganAcakSoal() {
+  const labelKet = document.getElementById('keterangan-target-soal');
+  const inputTarget = document.getElementById('gabung-target-jumlah-soal');
+  const targetSoal = parseInt(inputTarget?.value, 10) || 30;
+
+  let totalPool = 0;
+  gabungSelectedPaketIds.forEach(id => {
+    const pkt = cbtBankSoalList.find(p => p.id === id);
+    if (pkt && pkt.soalList) totalPool += pkt.soalList.length;
+  });
+
+  if (!labelKet) return;
+
+  if (gabungSelectedPaketIds.size === 0) {
+    labelKet.innerHTML = '<span style="color:#ef4444;">Pilih minimal 1 paket referensi di atas terlebih dahulu.</span>';
+  } else if (totalPool < targetSoal) {
+    labelKet.innerHTML = `<span style="color:#d97706;">⚠️ Total soal yang tersedia di paket referensi (${totalPool} butir) lebih sedikit dari target (${targetSoal} butir). Sistem akan mengambil seluruh ${totalPool} soal yang ada.</span>`;
+  } else {
+    labelKet.innerHTML = `✅ Dari <b>${totalPool}</b> total butir soal di <b>${gabungSelectedPaketIds.size}</b> paket referensi terpilih, sistem akan mengacak dan mengambil <b>${targetSoal}</b> butir soal unik.`;
+  }
+}
+
+/**
+ * Eksekusi Generator Penggabungan & Pengacakan Soal
+ */
+function prosesGeneratePaketGabunganAcak() {
+  if (gabungSelectedPaketIds.size === 0) {
+    Swal.fire('Peringatan', 'Pilih minimal satu paket soal referensi untuk digabungkan!', 'warning');
+    return;
+  }
+
+  const judul = (document.getElementById('gabung-judul-baru')?.value || '').trim();
+  const jenisUjian = document.getElementById('gabung-jenis-ujian')?.value || 'UAS';
+  const jenjang = document.getElementById('gabung-jenjang')?.value || 'Paket C';
+  const kelas = document.getElementById('gabung-kelas')?.value || 'Kelas X';
+  const durasiMenit = parseInt(document.getElementById('gabung-durasi')?.value, 10) || 90;
+  const kkm = parseInt(document.getElementById('gabung-kkm')?.value, 10) || 70;
+  const targetJumlah = parseInt(document.getElementById('gabung-target-jumlah-soal')?.value, 10) || 30;
+  const acakUrutan = document.getElementById('gabung-opsi-acak-posisi')?.checked ?? true;
+  const cegahKembar = document.getElementById('gabung-opsi-cegah-duplikasi')?.checked ?? true;
+
+  if (!judul) {
+    Swal.fire('Peringatan', 'Judul paket soal baru wajib diisi!', 'warning');
+    return;
+  }
+
+  // 1. Kumpulkan seluruh butir soal dari paket-paket referensi
+  const poolSoal = [];
+  const textSeen = new Set();
+
+  gabungSelectedPaketIds.forEach(id => {
+    const pkt = cbtBankSoalList.find(p => p.id === id);
+    if (pkt && pkt.soalList && Array.isArray(pkt.soalList)) {
+      pkt.soalList.forEach(s => {
+        const cleanText = (s.pertanyaan || '').trim().toLowerCase();
+        if (cegahKembar) {
+          if (!cleanText || textSeen.has(cleanText)) return;
+          textSeen.add(cleanText);
+        }
+        poolSoal.push(JSON.parse(JSON.stringify(s)));
+      });
+    }
+  });
+
+  if (poolSoal.length === 0) {
+    Swal.fire('Tidak Ada Soal', 'Paket-paket referensi yang dipilih belum memiliki butir pertanyaan!', 'warning');
+    return;
+  }
+
+  // 2. Acak urutan pool jika diaktifkan (Fisher-Yates Shuffle)
+  if (acakUrutan) {
+    for (let i = poolSoal.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [poolSoal[i], poolSoal[j]] = [poolSoal[j], poolSoal[i]];
+    }
+  }
+
+  // 3. Ambil sejumlah target soal
+  const finalSoalList = poolSoal.slice(0, targetJumlah);
+
+  // Re-index ID nomor butir soal 1, 2, 3...
+  finalSoalList.forEach((s, idx) => {
+    s.id = idx + 1;
+  });
+
+  // 4. Buat objek paket ujian baru
+  const pembuat = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.nama : 'Tutor PKBM';
+  const prefixKode = jenisUjian === 'UTS' ? 'PTS' : (jenisUjian === 'UAS' ? 'PAS' : 'CBT');
+  const newKode = `${prefixKode}-${jenjang.replace(/\s+/g, '').toUpperCase()}-${Date.now().toString().slice(-4)}`;
+
+  const newPaket = {
+    id: 'PKT-' + Date.now(),
+    kode: newKode,
+    token: 'AURA' + Math.floor(1000 + Math.random() * 9000),
+    statusUjian: 'AKTIF',
+    jenisUjian: jenisUjian,
+    jenjang: jenjang,
+    kelas: kelas,
+    bukuId: '',
+    judul: judul,
+    durasiMenit: durasiMenit,
+    kkm: kkm,
+    minProgress: 0,
+    minStudyMinutes: 0,
+    instruksi: `Ujian ${judul}. Terdiri dari ${finalSoalList.length} butir pertanyaan pilihan ganda yang dihimpun dari modul pembelajaran.`,
+    pembuat: pembuat,
+    tanggal: new Date().toLocaleDateString('id-ID'),
+    soalList: finalSoalList
+  };
+
+  cbtBankSoalList.unshift(newPaket);
+  saveBankSoalToStorage();
+  closeModalGabungAcakSoal();
+
+  // Refresh tampilan
+  renderBankSoalTable();
+  if (typeof renderKatalogSemuaButirSoal === 'function') renderKatalogSemuaButirSoal();
+
+  Swal.fire({
+    icon: 'success',
+    title: 'Paket Ujian Berhasil Digenerate! 🎉',
+    html: `
+      Paket Ujian Semesteran <b>${newPaket.kode}</b> telah dibuat.<br>
+      Total <b>${finalSoalList.length} butir soal</b> berhasil diacak dan digabungkan dari <b>${gabungSelectedPaketIds.size} paket referensi</b>.
+    `,
+    showCancelButton: true,
+    confirmButtonText: '📝 Buka Butir Soal',
+    cancelButtonText: 'Tutup',
+    confirmButtonColor: '#7c3aed'
+  }).then((res) => {
+    if (res.isConfirmed) {
+      bukaKelolaButirSoal(newPaket.id);
+    }
+  });
+}
+
 // Ekspos fungsi ke global window agar dapat dipanggil dari elemen HTML
+window.renderKatalogSemuaButirSoal = renderKatalogSemuaButirSoal;
+window.bukaModalGabungAcakSoal = bukaModalGabungAcakSoal;
+window.closeModalGabungAcakSoal = closeModalGabungAcakSoal;
+window.onFilterPaketSumberGabungChange = onFilterPaketSumberGabungChange;
+window.toggleSelectAllPaketSumberGabung = toggleSelectAllPaketSumberGabung;
+window.onPaketSumberCheckChange = onPaketSumberCheckChange;
+window.updateKeteranganAcakSoal = updateKeteranganAcakSoal;
+window.prosesGeneratePaketGabunganAcak = prosesGeneratePaketGabunganAcak;
 window.bukaModalPilihCetakKartuUjian = bukaModalPilihCetakKartuUjian;
 window.closeModalPilihCetakKartuUjian = closeModalPilihCetakKartuUjian;
 window.onPaketKartuUjianChange = onPaketKartuUjianChange;
