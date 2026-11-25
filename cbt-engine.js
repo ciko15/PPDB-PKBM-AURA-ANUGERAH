@@ -3438,20 +3438,42 @@ function gambarSatuKartuKTP(doc, pkt, s, x, y, w, h) {
   doc.setFillColor(5, 150, 105);
   doc.rect(x + 0.6, y + 0.6, 2, 11, 'F'); // Aksen pita hijau kiri
 
+  // Render Icon / Logo Aplikasi PKBM Aura Anugerah di Kop Kartu KTP
+  const logoAppBase64 = (typeof window.ASSET_LOGO_AURA_B64 !== 'undefined' && window.ASSET_LOGO_AURA_B64) 
+    ? window.ASSET_LOGO_AURA_B64 
+    : ((typeof ASSET_LOGO_AURA_B64 !== 'undefined' && ASSET_LOGO_AURA_B64) ? ASSET_LOGO_AURA_B64 : null);
+  
+  let headerTextLeft = x + 3.8;
+  if (logoAppBase64) {
+    try {
+      // Kotak background icon rounded mini
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(x + 3.2, y + 1.2, 9.6, 9.6, 1.5, 1.5, 'F');
+      doc.setDrawColor(187, 247, 208);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x + 3.2, y + 1.2, 9.6, 9.6, 1.5, 1.5, 'S');
+
+      doc.addImage(logoAppBase64, 'PNG', x + 3.6, y + 1.6, 8.8, 8.8);
+      headerTextLeft = x + 14.5;
+    } catch (errLogo) {
+      console.warn("Logo KTP addImage notice:", errLogo);
+    }
+  }
+
   // Teks Kop Lembaga
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(6.2);
   doc.setTextColor(5, 150, 105);
-  doc.text('PKBM AURA ANUGERAH · SENTANI', x + 4, y + 3.8);
+  doc.text('PKBM AURA ANUGERAH · SENTANI', headerTextLeft, y + 3.8);
 
   doc.setFontSize(7.2);
   doc.setTextColor(15, 23, 42);
-  doc.text('KARTU PESERTA UJIAN RESMI', x + 4, y + 7.2);
+  doc.text('KARTU PESERTA UJIAN RESMI', headerTextLeft, y + 7.2);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(5.2);
   doc.setTextColor(100, 116, 139);
-  doc.text('NPSN: P2960013 · Sentani, Kab. Jayapura, Papua', x + 4, y + 10.2);
+  doc.text('NPSN: P2960013 · Sentani, Kab. Jayapura, Papua', headerTextLeft, y + 10.2);
 
   // Garis Bawah Kop
   doc.setDrawColor(5, 150, 105);
