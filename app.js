@@ -4512,28 +4512,28 @@ function renderUsersTable(keyword = '') {
         </td>
         <td>${roleBadge}</td>
         <td>${contactInfo}</td>
-        <td style="text-align: center;">
-          <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;">
+        <td style="text-align: center; white-space: nowrap;">
+          <div style="display: inline-flex; flex-direction: row; flex-wrap: nowrap; gap: 6px; align-items: center; justify-content: center;">
             ${isSiswa ? `
               <button class="btn btn-sm ${isAktif ? 'btn-outline' : 'btn-primary'}" onclick="toggleStatusSiswaFromUsers('${u.idSiswa || u.username}', '${isAktif ? 'Tidak Aktif' : 'Aktif'}')"
-                style="padding: 4px 8px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px;"
+                style="padding: 4px 8px; font-size: 0.75rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; height: 32px;"
                 title="${isAktif ? 'Nonaktifkan Akun Siswa' : 'Aktifkan Akun Siswa'}">
-                <i data-lucide="${isAktif ? 'user-x' : 'user-check'}" style="width: 12px; height: 12px;"></i> ${isAktif ? 'Nonaktifkan' : 'Aktifkan Akun'}
+                <i data-lucide="${isAktif ? 'user-x' : 'user-check'}" style="width: 12px; height: 12px;"></i> ${isAktif ? 'Nonaktifkan' : 'Aktifkan'}
               </button>
               <button class="btn btn-sm btn-outline" onclick="showAdminEditSiswaModal('${encodeURIComponent(JSON.stringify(u))}')"
-                style="padding: 4px 8px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px; border-color: var(--primary-color); color: var(--primary-color);" 
+                style="padding: 4px 8px; font-size: 0.75rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; border-color: var(--primary-color); color: var(--primary-color); height: 32px;" 
                 title="Sesuaikan Profil Siswa (No HP, Foto, Alamat, Sandi)">
                 <i data-lucide="edit-3" style="width: 12px; height: 12px;"></i> Edit Profil
               </button>
             ` : ''}
             <button class="btn btn-sm btn-outline" onclick="resetUserPassword('${u.username}', '${encodeURIComponent(u.nama)}', ${isSiswa})" 
-              style="padding: 4px 8px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px; border-color: #d97706; color: #d97706;" 
+              style="padding: 4px 8px; font-size: 0.75rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; border-color: #d97706; color: #d97706; height: 32px;" 
               title="Reset Password Akun">
               <i data-lucide="key-round" style="width: 12px; height: 12px;"></i> Reset Sandi
             </button>
             ${!isSiswa ? `
               <button class="btn btn-danger" onclick="deleteUser('${u.username}')" 
-                style="padding: 4px 8px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 4px;"
+                style="padding: 4px 8px; font-size: 0.75rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; height: 32px;"
                 ${isSuperAdminOrSelf ? 'disabled title="Akun sendiri tidak dapat dihapus"' : ''}>
                 <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i> Hapus
               </button>
