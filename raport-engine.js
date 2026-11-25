@@ -885,6 +885,8 @@ function cetakBukuRaportPDF(id, options = {}) {
   let logoBase64 = dapatkanLogoSekolahBase64();
 
   // Ambil profil terbaru PKBM Aura Anugerah dari database Pengaturan jika tersedia
+  let logoKananKustom = null;
+  let logoKiriKustom = null;
   try {
     const tkStored = (typeof infoTKData !== 'undefined' && infoTKData) ? infoTKData : (typeof getStoredTKInfo === 'function' ? getStoredTKInfo() : null);
     if (tkStored) {
@@ -894,16 +896,40 @@ function cetakBukuRaportPDF(id, options = {}) {
       if (tkStored.jalan) alamatKop = tkStored.jalan;
       if (tkStored.kepala_sekolah) kepalaNamaKop = tkStored.kepala_sekolah;
       if (tkStored.nip_kepala) kepalaNipKop = tkStored.nip_kepala;
+      if (tkStored.logo_kanan) logoKananKustom = tkStored.logo_kanan;
+      if (tkStored.logo_kiri) logoKiriKustom = tkStored.logo_kiri;
     }
   } catch (e) {}
 
-  if (logoBase64) {
+  // Helper aman untuk merender gambar base64 ke jsPDF dengan deteksi otomatis format
+  function safeRenderPdfImage(targetDoc, rawSource, defaultB64, x, y, w, h) {
+    let src = rawSource;
+    if (!src || src.includes('.svg') || src.includes('.png') || src.includes('.jpg') || src.includes('.jpeg')) {
+      if (!src || !src.startsWith('data:image')) {
+        src = defaultB64;
+      }
+    }
+    if (!src || !src.startsWith('data:image')) {
+      src = defaultB64;
+    }
+    if (!src || !src.startsWith('data:image')) return;
+
+    let fmt = src.startsWith('data:image/png') ? 'PNG' : 'JPEG';
     try {
-      doc.addImage(logoBase64, 'PNG', marginX + 1, 9, 18, 18);
-    } catch (e) {
-      console.warn("Gagal render logo kop raport:", e.message);
+      targetDoc.addImage(src, fmt, x, y, w, h);
+    } catch (e1) {
+      try {
+        // Coba balik format jika header tidak cocok
+        targetDoc.addImage(src, fmt === 'PNG' ? 'JPEG' : 'PNG', x, y, w, h);
+      } catch (e2) {
+        console.warn("safeRenderPdfImage gagal render:", e2.message);
+      }
     }
   }
+
+  // Gunakan logo kustom jika ada, atau default resmi
+  const defaultLogoAura = (typeof ASSET_LOGO_AURA_B64 !== 'undefined') ? ASSET_LOGO_AURA_B64 : dapatkanLogoSekolahBase64();
+  safeRenderPdfImage(doc, (logoKiriKustom || logoKananKustom || logoBase64), defaultLogoAura, marginX + 1, 9, 18, 18);
 
   const kopCenterX = logoBase64 ? (pageWidth / 2) + 5 : pageWidth / 2;
   doc.setFont('helvetica', 'bold');
@@ -1807,13 +1833,34 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
     console.warn("Gagal membaca infoTKData untuk transkrip:", e);
   }
 
-  // 2 Logo Kop: Logo Kiri Tut Wuri Handayani & Logo Kanan PKBM Aura Anugerah / Kustom
-  if (!logoKiriBase64) {
-    logoKiriBase64 = (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined') ? ASSET_LOGO_TUTWURI_B64 : null;
+  // Helper fungsi untuk merender gambar base64 dengan deteksi format (PNG / JPEG) serta fallback
+  function renderKopLogoPdf(rawLogo, defaultLogo, x, y, w, h) {
+    let src = rawLogo;
+    if (!src || src.includes('.svg') || src.includes('.png') || src.includes('.jpg') || src.includes('.jpeg')) {
+      if (!src || !src.startsWith('data:image')) {
+        src = defaultLogo;
+      }
+    }
+    if (!src || !src.startsWith('data:image')) {
+      src = defaultLogo;
+    }
+    if (!src || !src.startsWith('data:image')) return;
+
+    let fmt = src.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+    try {
+      doc.addImage(src, fmt, x, y, w, h);
+    } catch (err1) {
+      try {
+        doc.addImage(src, fmt === 'PNG' ? 'JPEG' : 'PNG', x, y, w, h);
+      } catch (err2) {
+        console.warn("Gagal render logo pada kop PDF transkrip:", err2.message);
+      }
+    }
   }
-  if (!logoKananBase64) {
-    logoKananBase64 = (typeof ASSET_LOGO_AURA_B64 !== 'undefined') ? ASSET_LOGO_AURA_B64 : dapatkanLogoSekolahBase64();
-  }
+
+  // Default Base64 Logo: Kiri (Tut Wuri) & Kanan (Aura Anugerah)
+  const defaultTutWuri = (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined') ? ASSET_LOGO_TUTWURI_B64 : null;
+  const defaultAura = (typeof ASSET_LOGO_AURA_B64 !== 'undefined') ? ASSET_LOGO_AURA_B64 : dapatkanLogoSekolahBase64();
 
   // Bingkai / Border Keaslian Dokumen Resmi
   doc.setDrawColor(2, 132, 199);
@@ -1823,21 +1870,12 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
   doc.setLineWidth(0.25);
   doc.rect(9.5, 9.5, pageWidth - 19, pageHeight - 19);
 
-  // KOP RESMI DENGAN 2 GAMBAR LOGO (KIRI: TUT WURI HANDAYANI, KANAN: LOGO LEMBAGA)
-  if (logoKiriBase64) {
-    try {
-      doc.addImage(logoKiriBase64, 'JPEG', marginX + 1, 12, 22, 22);
-    } catch (e) {
-      console.warn("Gagal render logo kiri kop:", e.message);
-    }
-  }
-  if (logoKananBase64) {
-    try {
-      doc.addImage(logoKananBase64, 'PNG', pageWidth - marginX - 23, 12, 22, 22);
-    } catch (e) {
-      console.warn("Gagal render logo kanan kop:", e.message);
-    }
-  }
+  // KOP RESMI DENGAN 2 GAMBAR LOGO (KIRI: LOGO KIRI PENGATURAN / TUT WURI, KANAN: LOGO KANAN PENGATURAN / AURA)
+  // Posisi Kiri
+  renderKopLogoPdf(logoKiriBase64, defaultTutWuri, marginX + 1, 12, 22, 22);
+
+  // Posisi Kanan
+  renderKopLogoPdf(logoKananBase64, defaultAura, pageWidth - marginX - 23, 12, 22, 22);
 
   const kopCenterX = pageWidth / 2;
   doc.setFont('helvetica', 'bold');
