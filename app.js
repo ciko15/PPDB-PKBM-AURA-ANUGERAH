@@ -414,20 +414,30 @@ let currentAppLanguage = localStorage.getItem('app_language') || 'id';
 
 function updateLanguageUIIndicators(lang) {
   const isEn = lang === 'en';
+  const labelText = isEn ? 'EN' : 'ID';
   document.querySelectorAll('.label-lang-current').forEach(el => {
-    el.textContent = isEn ? 'EN' : 'ID';
+    el.textContent = labelText;
+    el.innerText = labelText;
+    el.classList.add('notranslate');
+    el.setAttribute('translate', 'no');
   });
 
   const btnLanding = document.getElementById('btn-lang-landing');
   if (btnLanding) {
+    btnLanding.classList.add('notranslate');
+    btnLanding.setAttribute('translate', 'no');
     btnLanding.setAttribute('title', isEn ? 'Switch to Indonesian (Bahasa Indonesia)' : 'Switch to English (Bahasa Inggris)');
   }
   const btnMobile = document.getElementById('btn-lang-mobile');
   if (btnMobile) {
+    btnMobile.classList.add('notranslate');
+    btnMobile.setAttribute('translate', 'no');
     btnMobile.setAttribute('title', isEn ? 'Switch to Indonesian' : 'Switch to English');
   }
   const btnWho = document.getElementById('who-toggle-lang');
   if (btnWho) {
+    btnWho.classList.add('notranslate');
+    btnWho.setAttribute('translate', 'no');
     btnWho.setAttribute('title', isEn ? 'Switch to Indonesian' : 'Switch to English');
   }
 }
