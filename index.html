@@ -5047,6 +5047,18 @@
           </select>
         </div>
 
+        <!-- Opsi Format Cetak Ukuran -->
+        <div class="form-group" style="margin-top: 12px;">
+          <label>Format Ukuran Kartu Ujian <span style="color:red">*</span></label>
+          <select id="cetak-kartu-format-ukuran" class="form-control">
+            <option value="ktp" selected>💳 Ukuran KTP / ID Card (8 Kartu per Lembar A4 - Hemat Kertas & Siap Potong)</option>
+            <option value="a5">📄 Ukuran Standar Formulir A5 (1 Kartu per Halaman A5)</option>
+          </select>
+          <small style="color: var(--text-muted); font-size: 11.5px; margin-top: 4px; display: block;">
+            Ukuran KTP (85.6mm × 54mm) mencetak 8 kartu siswa per lembar A4 secara kolektif dengan batas garis potong rapi dan teks terkunci di dalam frame.
+          </small>
+        </div>
+
         <!-- Info Preview Ringkas -->
         <div id="box-info-cetak-kartu" style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-top: 14px; font-size: 12.5px; display: none;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -5755,7 +5767,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="transkrip-assets.js"></script>
   <script src="app.js?v=20261125_btn_height_auto_fix8"></script>
-  <script src="cbt-engine.js?v=20261125_katalog_dan_acak_fix2"></script>
+  <script src="cbt-engine.js?v=20261125_kartu_ktp_kolektif_fix9"></script>
   <script src="raport-engine.js?v=20261117_mobile_notif_fix18"></script>
 </body>
 

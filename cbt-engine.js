@@ -3255,6 +3255,7 @@ function cetakKartuUjianSiswaLogin(paketId) {
  */
 function prosesCetakKartuUjianDariModal() {
   const paketId = document.getElementById('cetak-kartu-pilih-paket')?.value;
+  const formatUkuran = document.getElementById('cetak-kartu-format-ukuran')?.value || 'ktp';
 
   if (!paketId) {
     Swal.fire('Peringatan', 'Pilih paket ujian terlebih dahulu!', 'warning');
@@ -3274,7 +3275,11 @@ function prosesCetakKartuUjianDariModal() {
       Swal.fire('Error', 'Data siswa tidak ditemukan!', 'error');
       return;
     }
-    cetakKartuUjianResmi(paketId, siswa);
+    if (formatUkuran === 'ktp') {
+      cetakKartuUjianKolektifKTP(pkt, [siswa]);
+    } else {
+      cetakKartuUjianResmi(paketId, siswa);
+    }
   } else {
     // Cetak batch semua siswa yang cocok
     const matchingSiswa = allSiswa.filter(s => {
@@ -3290,14 +3295,22 @@ function prosesCetakKartuUjianDariModal() {
         nama: 'Peserta Ujian Resmi PKBM',
         nisn: '0012345678',
         nik: '9103012345670001',
-        program: pkt.jenjang,
+        program: pkt.jenjang || 'Paket C',
         kelas: pkt.kelas !== 'Semua Kelas' ? pkt.kelas : 'Kelas X'
       };
-      cetakKartuUjianResmi(paketId, dummy);
+      if (formatUkuran === 'ktp') {
+        cetakKartuUjianKolektifKTP(pkt, [dummy]);
+      } else {
+        cetakKartuUjianResmi(paketId, dummy);
+      }
       return;
     }
 
-    cetakBatchKartuUjianResmi(pkt, matchingSiswa);
+    if (formatUkuran === 'ktp') {
+      cetakKartuUjianKolektifKTP(pkt, matchingSiswa);
+    } else {
+      cetakBatchKartuUjianResmi(pkt, matchingSiswa);
+    }
   }
 
   closeModalPilihCetakKartuUjian();
@@ -3338,6 +3351,218 @@ function cetakKartuUjianResmi(paketId, siswaData) {
       });
     }
   }
+}
+
+/**
+ * Cetak kolektif kartu ujian berformat ukuran KTP (85.6mm x 54mm)
+ * 8 Kartu per halaman A4 Portrait (2 Kolom x 4 Baris) dengan garis potong dan teks terkunci di frame
+ */
+function cetakKartuUjianKolektifKTP(paket, siswaArray) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    Swal.fire('Error', 'Library PDF (jsPDF) belum termuat sempurna.', 'error');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  // A4 Portrait: 210mm x 297mm
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  // Dimensi kartu KTP standar: 85.6mm x 54mm (dibulatkan 86mm x 54mm)
+  const cardW = 86;
+  const cardH = 54;
+  const marginLeft = 15; // (210 - (86*2 + 8)) / 2 = (210 - 180)/2 = 15mm
+  const marginTop = 18;  // (297 - (54*4 + 3*10)) / 2 = (297 - 246)/2 = 25.5mm -> pakai 18mm agar lega
+  const gapX = 8;
+  const gapY = 12;
+
+  const cols = 2;
+  const rows = 4;
+  const cardsPerPage = cols * rows; // 8 kartu per halaman A4
+
+  siswaArray.forEach((s, idx) => {
+    const pageIndex = Math.floor(idx / cardsPerPage);
+    const indexOnPage = idx % cardsPerPage;
+
+    if (idx > 0 && indexOnPage === 0) {
+      doc.addPage('a4', 'portrait');
+    }
+
+    const col = indexOnPage % cols;
+    const row = Math.floor(indexOnPage / cols);
+
+    const x = marginLeft + (col * (cardW + gapX));
+    const y = marginTop + (row * (cardH + gapY));
+
+    gambarSatuKartuKTP(doc, paket, s, x, y, cardW, cardH);
+  });
+
+  const namaFile = `Kartu_Ujian_KTP_${paket.kode}_${siswaArray.length}_Siswa.pdf`;
+  
+  if (typeof window.tampilkanPratinjauPDF === 'function') {
+    window.tampilkanPratinjauPDF(doc, `Kartu Ujian KTP Kolektif (${siswaArray.length} Siswa - ${paket.kode})`, namaFile);
+  } else {
+    doc.save(namaFile);
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'success',
+        title: 'Kartu Ujian KTP Berhasil Dibuat',
+        text: `Berhasil mencetak ${siswaArray.length} kartu ukuran KTP (8 kartu per halaman A4) ke dalam file: ${namaFile}`,
+        timer: 4000,
+        showConfirmButton: false
+      });
+    }
+  }
+}
+
+/**
+ * Render visual 1 kartu ujian ukuran KTP (86mm x 54mm)
+ * Memastikan semua teks terpotong rapi dengan splitTextToSize / substring agar tidak keluar dari frame.
+ */
+function gambarSatuKartuKTP(doc, pkt, s, x, y, w, h) {
+  // 1. Frame Luar Kartu KTP (Rounded border halus & garis putus-putus panduan potong)
+  doc.setDrawColor(203, 213, 225); // Slate 300
+  doc.setLineWidth(0.2);
+  doc.setLineDashPattern([1.5, 1.5], 0);
+  doc.rect(x - 1, y - 1, w + 2, h + 2); // Garis panduan potong luar
+  doc.setLineDashPattern([], 0); // Reset solid
+
+  // Background Putih Bersih Kartu dengan Border Hijau Emerald
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(x, y, w, h, 2.5, 2.5, 'FD');
+  doc.setDrawColor(5, 150, 105);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(x, y, w, h, 2.5, 2.5, 'S');
+
+  // 2. KOP KARTU KTP
+  doc.setFillColor(240, 253, 244); // Hijau sangat muda
+  doc.rect(x + 0.6, y + 0.6, w - 1.2, 11, 'F');
+  doc.setFillColor(5, 150, 105);
+  doc.rect(x + 0.6, y + 0.6, 2, 11, 'F'); // Aksen pita hijau kiri
+
+  // Teks Kop Lembaga
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.2);
+  doc.setTextColor(5, 150, 105);
+  doc.text('PKBM AURA ANUGERAH · SENTANI', x + 4, y + 3.8);
+
+  doc.setFontSize(7.2);
+  doc.setTextColor(15, 23, 42);
+  doc.text('KARTU PESERTA UJIAN RESMI', x + 4, y + 7.2);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(5.2);
+  doc.setTextColor(100, 116, 139);
+  doc.text('NPSN: P2960013 · Sentani, Kab. Jayapura, Papua', x + 4, y + 10.2);
+
+  // Garis Bawah Kop
+  doc.setDrawColor(5, 150, 105);
+  doc.setLineWidth(0.4);
+  doc.line(x, y + 12, x + w, y + 12);
+
+  // 3. FOTO & KODE TOKEN (Sebelah Kiri / Kolom Foto)
+  const fotoX = x + 3;
+  const fotoY = y + 14.5;
+  const fotoW = 16;
+  const fotoH = 20;
+
+  // Box Foto
+  doc.setDrawColor(203, 213, 225);
+  doc.setFillColor(248, 250, 252);
+  doc.setLineWidth(0.3);
+  doc.rect(fotoX, fotoY, fotoW, fotoH, 'FD');
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(5);
+  doc.setTextColor(148, 163, 184);
+  doc.text('FOTO', fotoX + (fotoW / 2), fotoY + 8, { align: 'center' });
+  doc.text('2 x 3', fotoX + (fotoW / 2), fotoY + 13, { align: 'center' });
+
+  // Box Token Akses Ujian di bawah foto
+  const tokenY = fotoY + fotoH + 1.5;
+  const tokenH = 14;
+  doc.setFillColor(254, 243, 199); // Kuning Amber lembut
+  doc.setDrawColor(245, 158, 11);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(fotoX, tokenY, fotoW, tokenH, 1, 1, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(4.8);
+  doc.setTextColor(180, 83, 9);
+  doc.text('TOKEN UJIAN', fotoX + (fotoW / 2), tokenY + 4, { align: 'center' });
+
+  doc.setFontSize(6.8);
+  doc.setTextColor(15, 23, 42);
+  const tokenText = (pkt ? pkt.token || pkt.kode || 'AURA1' : 'AURA1').slice(0, 7);
+  doc.text(tokenText, fotoX + (fotoW / 2), tokenY + 8.5, { align: 'center' });
+
+  doc.setFontSize(4.2);
+  doc.setTextColor(100, 116, 139);
+  doc.text('CBT ONLINE', fotoX + (fotoW / 2), tokenY + 12, { align: 'center' });
+
+  // 4. BIODATA PESERTA UJIAN (Sebelah Kanan Foto)
+  // Lebar kolom teks: w - fotoW - margin = 86 - 16 - 10 = 60mm
+  const bioX = x + 21;
+  let bioY = y + 16;
+  const bioGap = 4.3;
+  const maxValWidth = 42; // Batas maksimal lebar nilai teks agar tidak tembus border
+
+  const noPeserta = s.nomorPesertaCustom || `P-${(s.nisn || s.nik || '2026').toString().slice(-6)}-${(pkt ? pkt.kode : 'CBT').slice(-3)}`;
+  const namaSiswa = (s.nama || 'Peserta Didik').toUpperCase();
+  const nisnText = `${s.nisn || '-'} / ${s.nik || '-'}`;
+  const rombelText = `${s.program || (pkt ? pkt.jenjang : 'Paket C')} - ${s.kelas || (pkt ? pkt.kelas : 'Semua')}`;
+  const mapelText = (pkt ? pkt.judul : 'Evaluasi Belajar');
+  const durasiText = `${pkt ? pkt.durasiMenit : 60} Mnt · Ruang: ${s.ruangCbt || 'Lab CBT'}`;
+
+  const rows = [
+    { lbl: 'No. Peserta', val: noPeserta, bold: true, color: [5, 150, 105] },
+    { lbl: 'Nama Siswa', val: namaSiswa, bold: true, color: [15, 23, 42] },
+    { lbl: 'NISN / NIK', val: nisnText, bold: false, color: [51, 65, 85] },
+    { lbl: 'Rombel', val: rombelText, bold: false, color: [51, 65, 85] },
+    { lbl: 'Mata Uji', val: mapelText, bold: true, color: [15, 23, 42] },
+    { lbl: 'Waktu / Sesi', val: durasiText, bold: false, color: [51, 65, 85] }
+  ];
+
+  rows.forEach((r, idx) => {
+    const curY = bioY + (idx * bioGap);
+    
+    // Label
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(5.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(r.lbl, bioX, curY);
+    doc.text(':', bioX + 17, curY);
+
+    // Value dengan proteksi overflow teks (potong rapi dengan splitTextToSize baris pertama saja)
+    doc.setFont('helvetica', r.bold ? 'bold' : 'normal');
+    doc.setFontSize(5.6);
+    doc.setTextColor(r.color[0], r.color[1], r.color[2]);
+
+    const splitted = doc.splitTextToSize(String(r.val), maxValWidth);
+    doc.text(splitted[0] || '', bioX + 19, curY);
+  });
+
+  // 5. AREA PENGESAHAN KECIL (Kanan Bawah)
+  const ttdX = bioX + 22;
+  const ttdY = y + 43.5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(4.6);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Sentani, Panitia Ujian', ttdX, ttdY);
+
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.3);
+  doc.line(ttdX, ttdY + 5.5, x + w - 3, ttdY + 5.5); // Garis TTD
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(4.6);
+  doc.setTextColor(5, 150, 105);
+  doc.text('TIM PENGUJI CBT', ttdX, ttdY + 7.5);
+
+  // Footer Watermark Kecil di Bawah Kartu
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(3.8);
+  doc.setTextColor(148, 163, 184);
+  doc.text('Kartu resmi sah jika dibawa saat ujian tatap muka / daring mandiri', x + 3, y + h - 1.2);
 }
 
 /**
@@ -3963,6 +4188,7 @@ window.onPaketKartuUjianChange = onPaketKartuUjianChange;
 window.cetakKartuUjianPaketLangsung = cetakKartuUjianPaketLangsung;
 window.cetakKartuUjianSiswaLogin = cetakKartuUjianSiswaLogin;
 window.prosesCetakKartuUjianDariModal = prosesCetakKartuUjianDariModal;
+window.cetakKartuUjianKolektifKTP = cetakKartuUjianKolektifKTP;
 window.cetakKartuUjianResmi = cetakKartuUjianResmi;
 window.simpanPaketSoal = simpanPaketSoalBaru;
 window.bukaModalAmbilBankSoalMaster = bukaModalAmbilBankSoalMaster;
