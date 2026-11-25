@@ -1109,6 +1109,11 @@ async function callAPI(payload) {
   activeCloudRequests++;
   updateCloudSyncStatusUI('syncing', isWriteAction ? 'Menyimpan...' : 'Sinkronisasi...');
 
+  // Controller Timeout: 25 detik agar jika Apps Script cold start atau lambat, tidak membekukan aplikasi selamanya
+  const controller = new AbortController();
+  const timeoutMs = isWriteAction ? 45000 : 25000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   async function parseFetchResponse(response) {
     const rawText = await response.text();
     let result;
@@ -1137,7 +1142,8 @@ async function callAPI(payload) {
   try {
     const fetchOptions = {
       method: "POST",
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller.signal
     };
 
     // Jangan kirim header application/json ke Apps Script agar tidak memicu CORS Preflight (OPTIONS)
@@ -1146,11 +1152,13 @@ async function callAPI(payload) {
     }
 
     const response = await fetch(API_URL, fetchOptions);
+    clearTimeout(timeoutId);
     const data = await parseFetchResponse(response);
     activeCloudRequests = Math.max(0, activeCloudRequests - 1);
     if (activeCloudRequests === 0) updateCloudSyncStatusUI('synced');
     return data;
   } catch (err) {
+    clearTimeout(timeoutId);
     // Jika server lokal gagal dan fallback tersedia, coba ke SCRIPT_URL
     if (API_URL !== SCRIPT_URL) {
       console.warn("Koneksi server lokal gagal, beralih ke Apps Script URL...", err);
@@ -1989,14 +1997,31 @@ function loadCachedSiswaData() {
 
 // ======================= DASHBOARD DATA =======================
 async function loadDashboardData(silent = false) {
-  // Jika sudah ada data dari cache / memori, jangan block UI dengan loader layar penuh
+  // Selalu muat dari cache lokal terlebih dahulu agar UI dashboard langsung tampil instan tanpa spinner
+  if (!siswaDataList || siswaDataList.length === 0) {
+    try {
+      const cached = localStorage.getItem('ppdb_siswa_cache');
+      if (cached) {
+        siswaDataList = JSON.parse(cached);
+        if (siswaDataList && siswaDataList.length > 0) {
+          renderDashboardUI(siswaDataList);
+        }
+      }
+    } catch (e) { }
+  }
+
   const hasExistingData = siswaDataList && siswaDataList.length > 0;
 
   const syncIndicator = document.getElementById('sync-indicator');
   if (syncIndicator) syncIndicator.style.display = 'flex';
 
+  // Jangan pernah memblokir layar dengan loader penuh jika sudah ada data
   if (!silent && !hasExistingData) {
     showLoader("Memuat data...");
+    // Safety auto-dismiss loader setelah 8 detik agar user tidak tertahan jika jaringan seluler lambat
+    setTimeout(() => {
+      hideLoader();
+    }, 8000);
   }
 
   try {
@@ -2012,7 +2037,7 @@ async function loadDashboardData(silent = false) {
     console.error("Load dashboard error:", err);
   } finally {
     if (syncIndicator) syncIndicator.style.display = 'none';
-    if (!silent && !hasExistingData) hideLoader();
+    hideLoader();
   }
 }
 

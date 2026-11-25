@@ -6171,21 +6171,27 @@
   <div id="google_translate_element" style="display: none;"></div>
   <script type="text/javascript">
     function googleTranslateElementInit() {
-      new google.translate.TranslateElement({
-        pageLanguage: 'id',
-        includedLanguages: 'id,en',
-        autoDisplay: false
-      }, 'google_translate_element');
+      try {
+        if (typeof google !== 'undefined' && google.translate && google.translate.TranslateElement) {
+          new google.translate.TranslateElement({
+            pageLanguage: 'id',
+            includedLanguages: 'id,en',
+            autoDisplay: false
+          }, 'google_translate_element');
+        }
+      } catch (e) {
+        console.warn("Google translate init notice:", e);
+      }
     }
   </script>
-  <script type="text/javascript"
-    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+  <script type="text/javascript" async
+    src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
   <!-- SheetJS Library for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="transkrip-assets.js"></script>
-  <script src="app.js?v=20261125_btn_height_auto_fix8"></script>
-  <script src="cbt-engine.js?v=20261125_kartu_ktp_with_icon_fix10"></script>
+  <script src="app.js?v=20261125_loader_timeout_fix11"></script>
+  <script src="cbt-engine.js?v=20261125_loader_timeout_fix11"></script>
   <script src="raport-engine.js?v=20261117_mobile_notif_fix18"></script>
 </body>
 
