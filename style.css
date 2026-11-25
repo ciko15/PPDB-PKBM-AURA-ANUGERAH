@@ -805,17 +805,21 @@ aside .brand {
 
 .who-account-card {
   width: 100%;
-  display: flex;
+  height: auto !important;
+  min-height: unset !important;
+  max-height: none !important;
+  display: flex !important;
   align-items: center;
-  gap: 14px;
-  padding: 16px 16px;
+  gap: 12px;
+  padding: 12px 14px !important;
   background: var(--surface-2);
   border: 1px solid var(--border-color);
-  border-radius: 14px;
+  border-radius: 12px;
   text-align: left;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
+  overflow: visible !important;
 }
 
 .who-account-card:hover {
@@ -831,8 +835,10 @@ aside .brand {
 
 .who-avatar-wrap {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
   flex-shrink: 0;
   border-radius: 50%;
   overflow: hidden;
@@ -854,14 +860,14 @@ aside .brand {
   border-radius: 50%;
   background: #16a34a;
   color: #ffffff;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   text-transform: uppercase;
   user-select: none;
-  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
+  box-shadow: 0 2px 5px rgba(22, 163, 74, 0.3);
 }
 
 .who-info {
@@ -870,26 +876,26 @@ aside .brand {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .who-name {
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .who-action-link {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-muted);
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  line-height: 1.3;
+  gap: 4px;
+  line-height: 1.25;
   transition: color 0.15s ease;
 }
 
@@ -898,7 +904,7 @@ aside .brand {
 }
 
 .who-action-link .who-arrow {
-  font-size: 13px;
+  font-size: 12px;
   transition: transform 0.2s ease;
 }
 
