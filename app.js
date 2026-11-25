@@ -10597,10 +10597,10 @@ function getStoredTKInfo() {
     const raw = localStorage.getItem('ppdb_tk_info');
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Validasi logo_kanan: jika mengarah ke tut_wuri atau kosong, kembalikan ke logo PKBM Aura Anugerah transparan resmi
+      // Validasi logo_kanan: jika mengarah ke tut_wuri atau berisi base64 tut_wuri, kembalikan ke logo PKBM Aura Anugerah resmi
       let logoKananFixed = parsed.logo_kanan;
-      if (!logoKananFixed || logoKananFixed.includes('tut_wuri')) {
-        logoKananFixed = DEFAULT_TK_INFO.logo_kanan;
+      if (!logoKananFixed || logoKananFixed.includes('tut_wuri') || (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined' && logoKananFixed === ASSET_LOGO_TUTWURI_B64)) {
+        logoKananFixed = (typeof ASSET_LOGO_AURA_B64 !== 'undefined') ? ASSET_LOGO_AURA_B64 : DEFAULT_TK_INFO.logo_kanan;
       }
       return {
         ...DEFAULT_TK_INFO,
@@ -10636,8 +10636,8 @@ async function loadTKData() {
     const cloudTK = await callAPI({ action: "getAppSetting", key: "ppdb_tk_info" });
     if (cloudTK && typeof cloudTK === 'object' && cloudTK.nama) {
       // Pastikan logo_kanan dari cloud tidak tertimpa tut_wuri
-      if (!cloudTK.logo_kanan || cloudTK.logo_kanan.includes('tut_wuri')) {
-        cloudTK.logo_kanan = DEFAULT_TK_INFO.logo_kanan;
+      if (!cloudTK.logo_kanan || cloudTK.logo_kanan.includes('tut_wuri') || (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined' && cloudTK.logo_kanan === ASSET_LOGO_TUTWURI_B64)) {
+        cloudTK.logo_kanan = (typeof ASSET_LOGO_AURA_B64 !== 'undefined') ? ASSET_LOGO_AURA_B64 : DEFAULT_TK_INFO.logo_kanan;
       }
       infoTKData = cloudTK;
       try { localStorage.setItem('ppdb_tk_info', JSON.stringify(infoTKData)); } catch (e) { }
@@ -10978,9 +10978,11 @@ function initLeafletMap(containerId, latlongStr, title, subtitle, useGeometry = 
 
 // ==================== TAMPILAN & LOGO LEMBAGA / APLIKASI ====================
 function applyAppBrandLogos() {
-  const s = infoTKData || getStoredTKInfo();
-  // Gunakan logo transparan PKBM Aura Anugerah untuk app icon dan brand
-  const appLogo = s.logo_kanan || (typeof ASSET_LOGO_AURA_B64 !== 'undefined' ? ASSET_LOGO_AURA_B64 : 'logo_PKBM_Aura_Anugerah_transparan.png');
+  // Brand logo SIGAP AURA & header/login/PWA selalu mengunci logo resmi PKBM Aura Anugerah transparan.
+  // Tidak boleh tertimpa oleh logo kop surat / Tut Wuri Handayani dari pengaturan TK.
+  const appLogo = (typeof ASSET_LOGO_AURA_B64 !== 'undefined' && ASSET_LOGO_AURA_B64) 
+    ? ASSET_LOGO_AURA_B64 
+    : 'logo_PKBM_Aura_Anugerah_transparan.png';
   
   // Terapkan ke elemen brand logo pada halaman
   document.querySelectorAll('.brand-logo-img, .app-brand-logo, .login-logo-img, .pwa-banner-icon').forEach(img => {
@@ -10990,11 +10992,7 @@ function applyAppBrandLogos() {
   // Terapkan favicon browser jika didukung
   const favIcon = document.querySelector("link[rel*='icon']");
   if (favIcon) {
-    if (appLogo.startsWith('data:image')) {
-      favIcon.href = appLogo;
-    } else {
-      favIcon.href = '/icon-192.png';
-    }
+    favIcon.href = '/icon-192.png';
   }
 }
 
