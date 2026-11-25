@@ -10681,9 +10681,20 @@ function getStoredTKInfo() {
       if (!logoKananFixed || logoKananFixed.includes('tut_wuri') || (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined' && logoKananFixed === ASSET_LOGO_TUTWURI_B64)) {
         logoKananFixed = (typeof ASSET_LOGO_AURA_B64 !== 'undefined') ? ASSET_LOGO_AURA_B64 : DEFAULT_TK_INFO.logo_kanan;
       }
+      // Normalisasi nama lembaga: jika masih tertulis "TK Aura Anugerah", otomatis perbarui menjadi "PKBM Aura Anugerah"
+      let namaFixed = parsed.nama || DEFAULT_TK_INFO.nama;
+      if (/^(\s*TK\b|TK\s+Aura)/i.test(namaFixed)) {
+        namaFixed = namaFixed.replace(/^(\s*TK\b)/i, 'PKBM');
+      }
+      let satpenFixed = parsed.satpen || DEFAULT_TK_INFO.satpen;
+      if (/^(\s*TK\b|TK\s+Aura)/i.test(satpenFixed)) {
+        satpenFixed = satpenFixed.replace(/^(\s*TK\b)/i, 'PKBM');
+      }
       return {
         ...DEFAULT_TK_INFO,
         ...parsed,
+        nama: namaFixed,
+        satpen: satpenFixed,
         logo_kanan: logoKananFixed,
         logo_kiri: parsed.logo_kiri || DEFAULT_TK_INFO.logo_kiri
       };
@@ -10717,6 +10728,12 @@ async function loadTKData() {
       // Pastikan logo_kanan dari cloud tidak tertimpa tut_wuri
       if (!cloudTK.logo_kanan || cloudTK.logo_kanan.includes('tut_wuri') || (typeof ASSET_LOGO_TUTWURI_B64 !== 'undefined' && cloudTK.logo_kanan === ASSET_LOGO_TUTWURI_B64)) {
         cloudTK.logo_kanan = (typeof ASSET_LOGO_AURA_B64 !== 'undefined') ? ASSET_LOGO_AURA_B64 : DEFAULT_TK_INFO.logo_kanan;
+      }
+      if (/^(\s*TK\b|TK\s+Aura)/i.test(cloudTK.nama)) {
+        cloudTK.nama = cloudTK.nama.replace(/^(\s*TK\b)/i, 'PKBM');
+      }
+      if (/^(\s*TK\b|TK\s+Aura)/i.test(cloudTK.satpen || '')) {
+        cloudTK.satpen = (cloudTK.satpen || '').replace(/^(\s*TK\b)/i, 'PKBM');
       }
       infoTKData = cloudTK;
       try { localStorage.setItem('ppdb_tk_info', JSON.stringify(infoTKData)); } catch (e) { }

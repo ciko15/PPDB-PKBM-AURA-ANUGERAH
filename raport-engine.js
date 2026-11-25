@@ -890,7 +890,12 @@ function cetakBukuRaportPDF(id, options = {}) {
   try {
     const tkStored = (typeof infoTKData !== 'undefined' && infoTKData) ? infoTKData : (typeof getStoredTKInfo === 'function' ? getStoredTKInfo() : null);
     if (tkStored) {
-      if (tkStored.nama) namaSekolahKop = tkStored.nama.toUpperCase();
+      if (tkStored.nama) {
+        namaSekolahKop = tkStored.nama.toUpperCase();
+        if (namaSekolahKop.startsWith('TK ') || namaSekolahKop.includes('TK AURA')) {
+          namaSekolahKop = namaSekolahKop.replace(/\bTK\b/g, 'PKBM');
+        }
+      }
       if (tkStored.npsn) npsnKop = tkStored.npsn;
       if (tkStored.keterangan) izinKop = tkStored.keterangan;
       if (tkStored.jalan) alamatKop = tkStored.jalan;
@@ -900,6 +905,10 @@ function cetakBukuRaportPDF(id, options = {}) {
       if (tkStored.logo_kiri) logoKiriKustom = tkStored.logo_kiri;
     }
   } catch (e) {}
+
+  if (namaSekolahKop.startsWith('TK ') || namaSekolahKop.includes('TK AURA')) {
+    namaSekolahKop = namaSekolahKop.replace(/\bTK\b/g, 'PKBM');
+  }
 
   // Helper aman untuk merender gambar base64 ke jsPDF dengan deteksi otomatis format
   function safeRenderPdfImage(targetDoc, rawSource, defaultB64, x, y, w, h) {
@@ -1817,8 +1826,19 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
     const tkStored = (typeof infoTKData !== 'undefined' && infoTKData) ? infoTKData : (typeof getStoredTKInfo === 'function' ? getStoredTKInfo() : null);
     if (tkStored) {
       if (tkStored.instansi) namaInstansiKop = tkStored.instansi;
-      if (tkStored.nama) namaSekolahKop = tkStored.nama.toUpperCase();
-      if (tkStored.satpen) namaLembagaBiodata = tkStored.satpen;
+      if (tkStored.nama) {
+        namaSekolahKop = tkStored.nama.toUpperCase();
+        // Normalisasi jika masih terbaca TK AURA ANUGERAH
+        if (namaSekolahKop.startsWith('TK ') || namaSekolahKop.startsWith('"TK ') || namaSekolahKop.includes('TK AURA')) {
+          namaSekolahKop = namaSekolahKop.replace(/\bTK\b/g, 'PKBM');
+        }
+      }
+      if (tkStored.satpen) {
+        namaLembagaBiodata = tkStored.satpen;
+        if (namaLembagaBiodata.startsWith('TK ') || namaLembagaBiodata.includes('TK Aura')) {
+          namaLembagaBiodata = namaLembagaBiodata.replace(/\bTK\b/g, 'PKBM');
+        }
+      }
       if (tkStored.npsn) npsnKop = tkStored.npsn;
       if (tkStored.keterangan) izinKop = tkStored.keterangan;
       if (tkStored.jalan) alamatKop = tkStored.jalan;
@@ -1831,6 +1851,14 @@ function cetakTranskripNilaiResmi(siswaId, options = {}) {
     }
   } catch (e) {
     console.warn("Gagal membaca infoTKData untuk transkrip:", e);
+  }
+
+  // Jaminan tegas untuk Kop & Biodata Dokumen Resmi Kesetaraan: selalu gunakan PKBM AURA ANUGERAH
+  if (namaSekolahKop.startsWith('TK ') || namaSekolahKop.includes('TK AURA')) {
+    namaSekolahKop = namaSekolahKop.replace(/\bTK\b/g, 'PKBM');
+  }
+  if (namaLembagaBiodata.startsWith('TK ') || namaLembagaBiodata.includes('TK Aura')) {
+    namaLembagaBiodata = namaLembagaBiodata.replace(/\bTK\b/g, 'PKBM');
   }
 
   // Helper fungsi untuk merender gambar base64 dengan deteksi format (PNG / JPEG) serta fallback
