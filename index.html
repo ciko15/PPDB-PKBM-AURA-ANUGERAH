@@ -38,7 +38,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- PDF.js untuk Native High-Performance Reader (Bebas iframe & full navigasi) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <link rel="stylesheet" href="style.css?v=20261125_lang_notranslate_fix5">
+  <link rel="stylesheet" href="style.css?v=20261125_sidebar_account_fix6">
 </head>
 
 <body>
@@ -1008,14 +1008,21 @@
           </ul>
         </div>
 
-        <!-- Box Profil Bawah (.who) Persis Rostering Teknik -->
-        <div class="who">Masuk sebagai
-          <button class="btn"
-            style="width: 100%; justify-content: space-between; margin-top: 4px; background: var(--surface-2); border-color: var(--border-color); text-align: left;"
-            onclick="showUserProfileModal()" id="btn-who-profile" title="Klik untuk lihat profil">
-            <span id="who-user-name"
-              style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 500;">Pengguna</span>
-            <span id="who-user-role" class="who-role-badge" style="font-size: 11px; margin-left: 4px;">Role</span>
+        <!-- Box Profil Bawah (.who) Persis Modern UI -->
+        <div class="who">
+          <div class="who-label">Masuk sebagai</div>
+          <button class="who-account-card" onclick="showUserProfileModal()" id="btn-who-profile" title="Klik untuk lihat detail akun">
+            <div class="who-avatar-wrap">
+              <img id="who-user-avatar-img" src="" alt="Avatar" class="who-avatar-img" style="display: none;">
+              <div id="who-avatar-initial" class="who-avatar-initial">S</div>
+            </div>
+            <div class="who-info">
+              <div id="who-user-name" class="who-name">Super Administrator</div>
+              <div class="who-action-link">
+                <span>Lihat Detail Akun</span>
+                <span class="who-arrow">→</span>
+              </div>
+            </div>
           </button>
           <div style="display: flex; gap: 8px; margin-top: 8px;">
             <button id="who-toggle-lang" onclick="toggleLanguageApp()" class="btn btn-icon notranslate" translate="no" aria-label="Ganti Bahasa" title="Ganti Bahasa / Switch Language" style="display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; width: auto; font-size: 11.5px; font-weight: 700;">
@@ -5747,7 +5754,7 @@
   <!-- SheetJS Library for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="transkrip-assets.js"></script>
-  <script src="app.js?v=20261125_lang_notranslate_fix5"></script>
+  <script src="app.js?v=20261125_sidebar_account_fix6"></script>
   <script src="cbt-engine.js?v=20261125_katalog_dan_acak_fix2"></script>
   <script src="raport-engine.js?v=20261117_mobile_notif_fix18"></script>
 </body>

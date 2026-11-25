@@ -1657,6 +1657,9 @@ function showDashboard() {
   if (whoNameEl) whoNameEl.textContent = currentUser.nama;
   if (whoRoleEl) whoRoleEl.textContent = currentUser.role;
 
+  // Update Avatar Bulat di Sidebar Account Card
+  updateSidebarUserAvatar();
+
   const menuApiKeys = document.getElementById('menu-api-keys');
   const menuInput = document.getElementById('menu-input');
   const menuAiReg = document.getElementById('menu-ai-reg');
@@ -4236,6 +4239,7 @@ function showUserProfileModal() {
         if (activeUserAvatar) activeUserAvatar.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.nama)}&background=0284c7&color=fff`;
         const whoNameEl = document.getElementById('who-user-name');
         if (whoNameEl) whoNameEl.textContent = currentUser.nama;
+        updateSidebarUserAvatar();
         const mobileNameEl = document.getElementById('menu-section-user-name');
         if (mobileNameEl) mobileNameEl.innerHTML = `${currentUser.nama} <i data-lucide="edit-2" style="width: 14px; height: 14px; color: var(--primary-color); opacity: 0.8;"></i>`;
         
@@ -4265,6 +4269,44 @@ function showUserProfileModal() {
     }
   });
 }
+
+function updateSidebarUserAvatar() {
+  if (!currentUser) return;
+  const initialEl = document.getElementById('who-avatar-initial');
+  const imgEl = document.getElementById('who-user-avatar-img');
+  const nameEl = document.getElementById('who-user-name');
+
+  if (nameEl) nameEl.textContent = currentUser.nama || 'Pengguna';
+
+  const siswa = currentUser.dataSiswa || {};
+  const foto = (currentUser.role === 'Siswa' && siswa.foto) ? siswa.foto : (currentUser.foto || null);
+
+  const initial = (currentUser.nama || 'U').trim().charAt(0).toUpperCase();
+
+  // Warna avatar initial berdasarkan role (seperti UI modern)
+  let avatarBg = '#16a34a'; // default hijau (Super Admin / Admin)
+  if (currentUser.role === 'Super Admin') avatarBg = '#16a34a'; // sesuai gambar user yang hijau
+  else if (currentUser.role === 'Admin') avatarBg = '#0284c7';
+  else if (currentUser.role === 'Guru') avatarBg = '#d97706';
+  else if (currentUser.role === 'Siswa') avatarBg = '#7c3aed';
+
+  if (initialEl) {
+    initialEl.textContent = initial;
+    initialEl.style.backgroundColor = avatarBg;
+  }
+
+  if (imgEl) {
+    if (foto) {
+      imgEl.src = foto;
+      imgEl.style.display = 'block';
+      if (initialEl) initialEl.style.display = 'none';
+    } else {
+      imgEl.style.display = 'none';
+      if (initialEl) initialEl.style.display = 'flex';
+    }
+  }
+}
+window.updateSidebarUserAvatar = updateSidebarUserAvatar;
 
 function toggleModalPasswordVisibility(inputId, btnEl) {
   const inp = document.getElementById(inputId);

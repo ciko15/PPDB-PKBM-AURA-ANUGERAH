@@ -787,12 +787,124 @@ aside .brand {
 
 .who {
   margin-top: auto;
-  padding: 12px 8px;
+  padding: 12px 10px;
   border-top: 1px solid var(--border-color);
   font-size: 12px;
   color: var(--text-muted);
   box-sizing: border-box;
 }
+
+.who .who-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  padding-left: 2px;
+}
+
+.who-account-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.who-account-card:hover {
+  background: var(--surface-color);
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.who-account-card:active {
+  transform: translateY(0);
+}
+
+.who-avatar-wrap {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.who-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.who-avatar-initial {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  user-select: none;
+  box-shadow: 0 2px 5px rgba(22, 163, 74, 0.3);
+}
+
+.who-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.who-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.who-action-link {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.2;
+  transition: color 0.15s ease;
+}
+
+.who-account-card:hover .who-action-link {
+  color: var(--primary-color);
+}
+
+.who-action-link .who-arrow {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.who-account-card:hover .who-action-link .who-arrow {
+  transform: translateX(3px);
+}
+
 .who .who-role-badge {
   font-size: 11px;
   padding: 2px 6px;
@@ -801,6 +913,30 @@ aside .brand {
   color: var(--primary-color);
   font-weight: 600;
 }
+
+:root[data-theme="dark"] .who-account-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+:root[data-theme="dark"] .who-account-card:hover {
+  background: #243247;
+  border-color: #38bdf8;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] .who-name {
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .who-action-link {
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] .who-account-card:hover .who-action-link {
+  color: #38bdf8;
+}
+
 :root[data-theme="dark"] .who .who-role-badge {
   background: rgba(34, 197, 94, 0.15);
   color: #4ade80;
