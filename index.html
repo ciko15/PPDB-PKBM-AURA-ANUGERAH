@@ -27,17 +27,17 @@
     rel="stylesheet">
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Lucide Icons (Identik dengan Rostering Teknik) -->
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Leaflet CSS & JS for OpenStreetMap -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- PDF.js untuk Native High-Performance Reader (Bebas iframe & full navigasi) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Heavy Libraries Loaded with Defer so Initial Render is Instant -->
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <link rel="stylesheet" href="style.css?v=20261125_btn_height_auto_fix8">
 </head>
 
@@ -47,7 +47,7 @@
   <div id="page-landing" class="landing-page">
     <header class="landing-header">
       <div class="landing-brand" id="landing-brand-logo">
-        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo SIGAP AURA PKBM Aura Anugerah"
+        <img src="logo_aura_small.png" alt="Logo SIGAP AURA PKBM Aura Anugerah"
           class="brand-logo-img">
         <div class="brand-text">
           <h1>SIGAP AURA</h1>
@@ -638,7 +638,7 @@
         <!-- Kolom Kiri: Showcase Fitur Sekolah Digital (Layar Lebar > 900px) -->
         <div class="login-brand-column">
           <div class="portal-badge-pill">
-            <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM"
+            <img src="logo_aura_small.png" alt="Logo PKBM"
               style="width: 20px; height: 20px; object-fit: contain;">
             <span>Portal Sekolah Digital</span>
           </div>
@@ -679,7 +679,7 @@
           <div class="login-card modal-content" id="login-card-box">
             <!-- 1. Logo Resmi PKBM Aura Anugerah (Transparan) -->
             <div class="login-avatar-logo">
-              <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo PKBM Aura Anugerah" class="login-logo-img">
+              <img src="logo_aura_small.png" alt="Logo PKBM Aura Anugerah" class="login-logo-img">
             </div>
 
             <!-- 2 & 3. Judul & Subjudul -->
@@ -798,7 +798,7 @@
           aria-label="Kembali ke halaman sebelumnya" title="Kembali">
           <i data-lucide="chevron-left" style="width: 22px; height: 22px;"></i>
         </button>
-        <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="app-brand-logo"
+        <img src="logo_aura_small.png" alt="Logo" class="app-brand-logo"
           style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain; flex-shrink: 0; background: var(--primary-color); padding: 4px; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);">
         <div style="display: flex; flex-direction: column;">
           <span style="font-weight: 700; font-size: 15px; color: var(--text-color);">SIGAP AURA</span>
@@ -837,7 +837,7 @@
       <aside>
         <!-- Brand Sidebar Persis Rostering Teknik -->
         <div class="brand" style="display: flex; align-items: center; gap: 12px;">
-          <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo" class="app-brand-logo"
+          <img src="logo_aura_small.png" alt="Logo" class="app-brand-logo"
             style="width: 42px; height: 42px; border-radius: 10px; object-fit: contain; flex-shrink: 0; background: var(--primary-color); padding: 4px; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);">
           <div style="display: flex; flex-direction: column; justify-content: center;">
             <span
@@ -2848,7 +2848,7 @@
             style="background: linear-gradient(135deg, rgba(22, 163, 74, 0.15), rgba(242, 169, 0, 0.1)); border: 1px solid var(--border-color); border-radius: 16px; padding: 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
             <div style="display: flex; align-items: center; gap: 14px; cursor: pointer; flex: 1;"
               onclick="showUserProfileModal()" title="Klik untuk edit profil pengguna">
-              <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="Logo"
+              <img src="logo_aura_small.png" alt="Logo"
                 style="width: 48px; height: 48px; border-radius: 12px; background: var(--primary-color); padding: 5px; object-fit: contain; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
               <div>
                 <h2
@@ -5822,7 +5822,7 @@
                 <input type="hidden" id="tk-logo-kanan-b64">
                 <div id="preview-box-logo-kanan"
                   style="display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 6px;">
-                  <img id="img-preview-logo-kanan" src="logo_PKBM_Aura_Anugerah_transparan.png"
+                  <img id="img-preview-logo-kanan" src="logo_aura_small.png"
                     style="width: 44px; height: 44px; object-fit: contain; border: 1px solid var(--border-color); border-radius: 8px; padding: 4px; background: rgba(0,0,0,0.02);">
                   <div style="font-size: 0.74rem; color: var(--text-muted);">
                     <div style="font-weight: 600; color: var(--text-color);" id="lbl-status-logo-kanan">Logo Aktif</div>
@@ -6088,7 +6088,7 @@
   <!-- ==================== PWA INSTALL POPUP BANNER (ANDROID & IPHONE) ==================== -->
   <div id="pwa-install-banner" class="pwa-install-banner">
     <div class="pwa-banner-left">
-      <img src="logo_PKBM_Aura_Anugerah_transparan.png" alt="SIGAP AURA Icon" class="pwa-banner-icon">
+      <img src="logo_aura_small.png" alt="SIGAP AURA Icon" class="pwa-banner-icon">
       <div class="pwa-banner-text">
         <span class="pwa-banner-title">Pasang SIGAP AURA</span>
         <span class="pwa-banner-desc">Instal ke layar utama HP untuk akses cepat tanpa browser & notifikasi
@@ -6110,7 +6110,7 @@
     <div class="ios-install-modal-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <img src="logo_PKBM_Aura_Anugerah_transparan.png" style="width: 38px; height: 38px; object-fit: contain;">
+          <img src="logo_aura_small.png" style="width: 38px; height: 38px; object-fit: contain;">
           <div>
             <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color);">Instal di iPhone / iPad
             </h3>
@@ -6190,7 +6190,7 @@
   <!-- SheetJS Library for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="transkrip-assets.js"></script>
-  <script src="app.js?v=20261125_user_action_row_fix01"></script>
+  <script src="app.js?v=20261125_perf_instant_reload_fix02"></script>
   <script src="cbt-engine.js?v=20261125_loader_timeout_fix11"></script>
   <script src="raport-engine.js?v=20261125_kop_logo_dual_fix01"></script>
 </body>

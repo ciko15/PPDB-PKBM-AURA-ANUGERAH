@@ -1237,13 +1237,15 @@ function handleClientRouting() {
     if (modalLogin) modalLogin.classList.add('hidden');
   }
 
-  // Render konten kegiatan publik dan profil PKBM di Landing Page
+  // Render konten kegiatan publik dan profil PKBM di Landing Page secara instan dari cache lokal
   renderLandingKegiatan();
   renderLandingTK();
 
-  // Tarik data kegiatan dan profil sekolah dari database cloud untuk halaman awal
-  loadKegiatanData();
-  loadTKData();
+  // Sinkronisasi data cloud di background tanpa memblokir kecepatan render awal
+  setTimeout(() => {
+    loadKegiatanData();
+    loadTKData();
+  }, 100);
 }
 
 // ======================= PENGATURAN KEAMANAN & CAPTCHA (SUPER ADMIN) =======================
