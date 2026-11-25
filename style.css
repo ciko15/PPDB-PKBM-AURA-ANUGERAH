@@ -1808,7 +1808,7 @@ main.main-content {
   height: 42px;
   object-fit: contain;
   background: var(--primary-color);
-  padding: 5px;
+  padding: 4px;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
   box-sizing: border-box;
@@ -4067,6 +4067,23 @@ input[type="file"] {
     font-size: 14px !important;
     justify-content: center !important;
   }
+}
+
+/* Sembunyikan banner & pop-up bawaan Google Translate agar UI tetap bersih dan native */
+.goog-te-banner-frame.skiptranslate,
+body > .skiptranslate,
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+}
+
+body {
+  top: 0px !important;
+}
+
+.goog-text-highlight {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 

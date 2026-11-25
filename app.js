@@ -409,6 +409,87 @@ function updateThemeIcons(theme) {
   }
 }
 
+// ==================== DUKUNGAN MULTI-BAHASA (INDONESIA / ENGLISH) ====================
+let currentAppLanguage = localStorage.getItem('app_language') || 'id';
+
+function updateLanguageUIIndicators(lang) {
+  const isEn = lang === 'en';
+  document.querySelectorAll('.label-lang-current').forEach(el => {
+    el.textContent = isEn ? 'EN' : 'ID';
+  });
+
+  const btnLanding = document.getElementById('btn-lang-landing');
+  if (btnLanding) {
+    btnLanding.setAttribute('title', isEn ? 'Switch to Indonesian (Bahasa Indonesia)' : 'Switch to English (Bahasa Inggris)');
+  }
+  const btnMobile = document.getElementById('btn-lang-mobile');
+  if (btnMobile) {
+    btnMobile.setAttribute('title', isEn ? 'Switch to Indonesian' : 'Switch to English');
+  }
+  const btnWho = document.getElementById('who-toggle-lang');
+  if (btnWho) {
+    btnWho.setAttribute('title', isEn ? 'Switch to Indonesian' : 'Switch to English');
+  }
+}
+
+function applyAppLanguage(lang, silent = false) {
+  currentAppLanguage = lang;
+  try {
+    localStorage.setItem('app_language', lang);
+  } catch (e) { }
+
+  updateLanguageUIIndicators(lang);
+
+  // Trigger Google Translate engine
+  const applyTranslate = () => {
+    const combo = document.querySelector('.goog-te-combo');
+    if (combo) {
+      combo.value = lang;
+      combo.dispatchEvent(new Event('change'));
+      return true;
+    }
+    return false;
+  };
+
+  if (!applyTranslate()) {
+    let retries = 0;
+    const interval = setInterval(() => {
+      retries++;
+      if (applyTranslate() || retries > 25) {
+        clearInterval(interval);
+      }
+    }, 200);
+  }
+
+  if (!silent && typeof Swal !== 'undefined') {
+    const isEn = lang === 'en';
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: isEn ? '🌐 Language switched to English' : '🌐 Bahasa dialihkan ke Bahasa Indonesia',
+      showConfirmButton: false,
+      timer: 2000
+    });
+  }
+}
+
+function toggleLanguageApp() {
+  const nextLang = currentAppLanguage === 'en' ? 'id' : 'en';
+  applyAppLanguage(nextLang, false);
+}
+
+window.toggleLanguageApp = toggleLanguageApp;
+window.applyAppLanguage = applyAppLanguage;
+
+// Inisialisasi status indikator bahasa saat start
+setTimeout(() => {
+  updateLanguageUIIndicators(currentAppLanguage);
+  if (currentAppLanguage === 'en') {
+    applyAppLanguage('en', true);
+  }
+}, 300);
+
 // Riwayat navigasi section untuk aksi tombol kembali (<)
 const mobileSectionHistory = ['section-dashboard'];
 
@@ -10516,10 +10597,15 @@ function getStoredTKInfo() {
     const raw = localStorage.getItem('ppdb_tk_info');
     if (raw) {
       const parsed = JSON.parse(raw);
+      // Validasi logo_kanan: jika mengarah ke tut_wuri atau kosong, kembalikan ke logo PKBM Aura Anugerah transparan resmi
+      let logoKananFixed = parsed.logo_kanan;
+      if (!logoKananFixed || logoKananFixed.includes('tut_wuri')) {
+        logoKananFixed = DEFAULT_TK_INFO.logo_kanan;
+      }
       return {
         ...DEFAULT_TK_INFO,
         ...parsed,
-        logo_kanan: parsed.logo_kanan || DEFAULT_TK_INFO.logo_kanan,
+        logo_kanan: logoKananFixed,
         logo_kiri: parsed.logo_kiri || DEFAULT_TK_INFO.logo_kiri
       };
     }
@@ -10549,6 +10635,10 @@ async function loadTKData() {
   try {
     const cloudTK = await callAPI({ action: "getAppSetting", key: "ppdb_tk_info" });
     if (cloudTK && typeof cloudTK === 'object' && cloudTK.nama) {
+      // Pastikan logo_kanan dari cloud tidak tertimpa tut_wuri
+      if (!cloudTK.logo_kanan || cloudTK.logo_kanan.includes('tut_wuri')) {
+        cloudTK.logo_kanan = DEFAULT_TK_INFO.logo_kanan;
+      }
       infoTKData = cloudTK;
       try { localStorage.setItem('ppdb_tk_info', JSON.stringify(infoTKData)); } catch (e) { }
       applyAppBrandLogos();
