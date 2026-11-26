@@ -383,11 +383,17 @@ function updateThemeIcons(theme) {
   const isDark = theme === 'dark';
   const navBtn = document.getElementById('btn-theme-nav');
   const landingBtn = document.getElementById('btn-theme-landing');
+  const loginBtn = document.getElementById('btn-theme-login');
   const sidebarBtn = document.getElementById('who-toggle-theme');
   const sidebarIcon = document.getElementById('icon-theme-sidebar');
   const landingIcon = document.getElementById('icon-theme-landing');
+  const loginIcon = document.getElementById('icon-theme-login');
   const themeText = document.getElementById('theme-text-sidebar');
 
+  if (loginBtn) {
+    loginBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" id="icon-theme-login" style="width: 15px; height: 15px;"></i>`;
+    loginBtn.setAttribute('title', isDark ? 'Beralih ke Mode Terang (Light Mode)' : 'Beralih ke Mode Gelap (Dark Mode)');
+  }
   if (landingBtn) {
     landingBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}" id="icon-theme-landing" style="width: 18px; height: 18px;"></i>`;
     landingBtn.setAttribute('title', isDark ? 'Beralih ke Mode Terang (Light Mode)' : 'Beralih ke Mode Gelap (Dark Mode)');
@@ -427,6 +433,12 @@ function updateLanguageUIIndicators(lang) {
     btnLanding.classList.add('notranslate');
     btnLanding.setAttribute('translate', 'no');
     btnLanding.setAttribute('title', isEn ? 'Switch to Indonesian (Bahasa Indonesia)' : 'Switch to English (Bahasa Inggris)');
+  }
+  const btnLogin = document.getElementById('btn-lang-login');
+  if (btnLogin) {
+    btnLogin.classList.add('notranslate');
+    btnLogin.setAttribute('translate', 'no');
+    btnLogin.setAttribute('title', isEn ? 'Switch to Indonesian (Bahasa Indonesia)' : 'Switch to English (Bahasa Inggris)');
   }
   const btnMobile = document.getElementById('btn-lang-mobile');
   if (btnMobile) {

@@ -676,7 +676,35 @@
 
         <!-- Kolom Kanan: Kartu Form Login -->
         <div class="login-card-container">
-          <div class="login-card modal-content" id="login-card-box">
+          <div class="login-card modal-content" id="login-card-box" style="position: relative;">
+            <!-- Action Bar: Switch Bahasa & Light/Dark Mode + Tombol Tutup (X) -->
+            <div class="login-card-top-actions"
+              style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px;">
+              <div style="display: inline-flex; align-items: center; gap: 6px;">
+                <!-- Tombol Switch Bahasa -->
+                <button type="button" id="btn-lang-login" onclick="toggleLanguageApp()"
+                  class="btn btn-icon notranslate" translate="no"
+                  style="background: var(--surface-2, rgba(0,0,0,0.05)); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; padding: 0 8px; height: 32px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s; font-size: 11.5px; font-weight: 700;"
+                  title="Ganti Bahasa / Switch Language" aria-label="Ganti Bahasa">
+                  <i data-lucide="globe" style="width: 14px; height: 14px; color: var(--primary-color);"></i>
+                  <span class="label-lang-current notranslate" translate="no">ID</span>
+                </button>
+                <!-- Tombol Toggle Tema (Terang/Gelap) -->
+                <button type="button" id="btn-theme-login" onclick="toggleTheme()" class="btn btn-icon"
+                  style="background: var(--surface-2, rgba(0,0,0,0.05)); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 8px; width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;"
+                  title="Ganti Mode Terang / Gelap" aria-label="Ganti Mode Tampilan">
+                  <i data-lucide="moon" id="icon-theme-login" style="width: 15px; height: 15px;"></i>
+                </button>
+              </div>
+
+              <!-- Tombol Tutup Modal Login -->
+              <button type="button" id="btn-close-login" class="btn btn-icon"
+                style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; border-radius: 50%; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; padding: 0;"
+                title="Tutup Form Login" aria-label="Tutup Form Login">
+                <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+              </button>
+            </div>
+
             <!-- 1. Logo Resmi PKBM Aura Anugerah (Transparan) -->
             <div class="login-avatar-logo">
               <img src="logo_aura_small.png" alt="Logo PKBM Aura Anugerah" class="login-logo-img">
@@ -6190,7 +6218,7 @@
   <!-- SheetJS Library for Excel Import / Export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="transkrip-assets.js"></script>
-  <script src="app.js?v=20261125_pkbm_name_fix03"></script>
+  <script src="app.js?v=20261126_login_actions_fix01"></script>
   <script src="cbt-engine.js?v=20261125_loader_timeout_fix11"></script>
   <script src="raport-engine.js?v=20261125_pkbm_name_fix03"></script>
 </body>

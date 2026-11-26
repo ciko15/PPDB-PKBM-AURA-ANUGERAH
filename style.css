@@ -2530,6 +2530,19 @@ main.main-content {
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
+.login-card-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.login-card-top-actions .btn-icon:hover {
+  background: var(--surface-hover, rgba(0, 0, 0, 0.08)) !important;
+  color: var(--primary-color) !important;
+}
+
 /* 1. Logo PKBM: Kotak Hijau Terang Berkilau (Persis Logo Sidebar var(--primary-color) #16a34a) */
 .login-avatar-logo {
   width: 60px;
